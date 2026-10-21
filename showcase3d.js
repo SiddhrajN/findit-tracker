@@ -89,13 +89,13 @@ function initStudentIDCard() {
   if (!container) return;
   container.innerHTML = '';
 
-  const width = container.clientWidth || 380;
-  const height = container.clientHeight || 480;
+  const width = container.clientWidth || 335;
+  const height = container.clientHeight || 510;
 
   const scene = new THREE.Scene();
-  // Camera optimized so card fits the whole box prominently
-  const camera = new THREE.PerspectiveCamera(44, width / height, 0.1, 100);
-  camera.position.set(0.6, 0.4, 5.4);
+  // Camera optimized so card fits cleanly with top clip and shadow
+  const camera = new THREE.PerspectiveCamera(43, width / height, 0.1, 100);
+  camera.position.set(0.4, 0.25, 5.3);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(width, height);
@@ -279,12 +279,12 @@ function initLeatherWallet() {
   if (!container) return;
   container.innerHTML = '';
 
-  const width = container.clientWidth || 340;
-  const height = container.clientHeight || 440;
+  const width = container.clientWidth || 315;
+  const height = container.clientHeight || 385;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
-  camera.position.set(3.8, 2.6, 5.0);
+  const camera = new THREE.PerspectiveCamera(34, width / height, 0.1, 100);
+  camera.position.set(3.4, 2.3, 4.6);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(width, height);

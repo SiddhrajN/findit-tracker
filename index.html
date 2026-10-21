@@ -47,7 +47,10 @@
   <!-- ======================================================= -->
   <!--  VIEW 1: EXPLORE / LANDING PAGE                         -->
   <!-- ======================================================= -->
-  <div id="view-explore" class="min-h-screen flex flex-col">
+  <div id="view-explore" class="min-h-screen flex flex-col relative">
+    <!-- Atmospheric Golden Sand Dust Canvas (All Over Explore Page: Bottom-Left to Right & Top-Right) -->
+    <canvas id="explore-dust-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-[25]"></canvas>
+
     <!-- Navbar -->
     <nav class="fixed top-0 w-full bg-ivory/85 backdrop-blur-lg border-b border-sand-d z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -135,13 +138,13 @@
             </div>
           </div>
 
-          <!-- Hero 3D Showcase (Interactive 3D Student ID Card & 3D Leather Wallet) -->
-          <div class="relative w-full h-[480px] sm:h-[500px] lg:h-[520px] overflow-visible">
+          <!-- Hero 3D Showcase (Interactive 3D Student ID Card & 3D Leather Wallet with Balanced Composition) -->
+          <div class="relative w-full h-[500px] sm:h-[530px] lg:h-[550px] overflow-visible select-none">
             <!-- 3D Student ID Card (Interactive Three.js Model with College ID Texture) -->
-            <div id="hero-id-container" class="absolute top-0 -left-2 sm:left-2 w-[340px] sm:w-[380px] lg:w-[410px] h-[480px] sm:h-[500px] z-20 cursor-grab active:cursor-grabbing"></div>
+            <div id="hero-id-container" class="absolute top-0 left-0 sm:left-1 lg:-left-3 w-[270px] sm:w-[310px] lg:w-[335px] h-[450px] sm:h-[480px] lg:h-[510px] z-20 cursor-grab active:cursor-grabbing"></div>
 
-            <!-- 3D Leather Wallet (Interactive Three.js Model) -->
-            <div id="hero-wallet-container" class="absolute top-10 right-0 sm:right-2 w-[300px] sm:w-[340px] lg:w-[360px] h-[440px] z-20 cursor-grab active:cursor-grabbing"></div>
+            <!-- 3D Leather Wallet (Interactive Three.js Model: positioned to gently overlap corner, never obstructing) -->
+            <div id="hero-wallet-container" class="absolute top-28 sm:top-32 lg:top-36 right-0 sm:right-1 lg:-right-3 w-[250px] sm:w-[285px] lg:w-[315px] h-[330px] sm:h-[360px] lg:h-[385px] z-20 cursor-grab active:cursor-grabbing"></div>
           </div>
         </div>
       </div>
@@ -586,6 +589,7 @@
   <script src="dsa.js"></script>
   <script src="app.js"></script>
   <script src="showcase3d.js"></script>
+  <script src="dust.js"></script>
 
 </body>
 </html>
