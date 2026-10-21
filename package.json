@@ -1,0 +1,13 @@
+{
+  "name": "findit-tracker",
+  "version": "1.0.0",
+  "description": "Campus Lost and Found Tracker with Three.js 3D Models",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "start": "npx serve . -p 3000",
+    "py": "python -m http.server 3000"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
