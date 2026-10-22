@@ -645,12 +645,16 @@ int autoAssignPriorityLLM(const char *title, const char *category, const char *d
     }
 
     /* 1. High / Urgent (Priority 3): Phones & Laptops */
-    if (strstr(titleLower, "phone") || strstr(titleLower, "mobile") ||
-        strstr(titleLower, "iphone") || strstr(titleLower, "android") ||
-        strstr(titleLower, "laptop") || strstr(titleLower, "macbook") ||
-        strstr(titleLower, "dell") || strstr(titleLower, "thinkpad") ||
-        strstr(titleLower, "ipad") || strstr(titleLower, "tablet") ||
-        strstr(combined, "smartphone") || strstr(combined, "macbook")) {
+    int isAudio = (strstr(titleLower, "headphone") != NULL ||
+                   strstr(titleLower, "earphone") != NULL ||
+                   strstr(titleLower, "microphone") != NULL);
+    if (!isAudio &&
+        (strstr(titleLower, "phone") || strstr(titleLower, "mobile") ||
+         strstr(titleLower, "iphone") || strstr(titleLower, "android") ||
+         strstr(titleLower, "laptop") || strstr(titleLower, "macbook") ||
+         strstr(titleLower, "dell") || strstr(titleLower, "thinkpad") ||
+         strstr(titleLower, "ipad") || strstr(titleLower, "tablet") ||
+         strstr(combined, "smartphone") || strstr(combined, "macbook"))) {
         return 3;
     }
 
@@ -668,6 +672,24 @@ int autoAssignPriorityLLM(const char *title, const char *category, const char *d
         strstr(combined, "license") || strstr(combined, "passport") ||
         strstr(combined, "hall ticket") || strstr(combined, "admit")) {
         return 2;
+    }
+
+    /* Explicit Low Priority utility belongings (overrides generic category) */
+    if (strstr(titleLower, "bottle") || strstr(titleLower, "flask") ||
+        strstr(titleLower, "sipper") || strstr(titleLower, "tumbler") ||
+        strstr(titleLower, "notebook") || strstr(titleLower, "register") ||
+        strstr(titleLower, "notes") || strstr(titleLower, "spiral") ||
+        strstr(titleLower, "pen") || strstr(titleLower, "pencil") ||
+        strstr(titleLower, "stationery") || strstr(titleLower, "folder") ||
+        strstr(titleLower, "umbrella") || strstr(titleLower, "raincoat") ||
+        strstr(titleLower, "jacket") || strstr(titleLower, "hoodie") ||
+        strstr(titleLower, "sweater") || strstr(titleLower, "coat") ||
+        strstr(titleLower, "scarf") || strstr(titleLower, "hat") ||
+        strstr(titleLower, "cap") || strstr(titleLower, "lunch") ||
+        strstr(titleLower, "tiffin") || strstr(titleLower, "box") ||
+        strstr(titleLower, "cable") || strstr(titleLower, "wire") ||
+        strstr(titleLower, "lanyard")) {
+        return 1;
     }
 
     /* 4. Medium (Priority 2): Calculators, Audio, Textbooks, Chargers */

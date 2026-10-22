@@ -91,23 +91,26 @@ function evaluatePriorityWithLLM(item) {
 
   // Category & Keyword Detectors
   const isPhoneOrLaptop =
-    title.includes("phone") ||
-    title.includes("mobile") ||
-    title.includes("iphone") ||
-    title.includes("smartphone") ||
-    title.includes("android") ||
-    title.includes("laptop") ||
-    title.includes("macbook") ||
-    title.includes("notebook computer") ||
-    title.includes("dell") ||
-    title.includes("hp") ||
-    title.includes("lenovo") ||
-    title.includes("thinkpad") ||
-    title.includes("ipad") ||
-    title.includes("tablet") ||
-    desc.includes("smartphone") ||
-    desc.includes("laptop") ||
-    desc.includes("macbook");
+    !title.includes("headphone") &&
+    !title.includes("earphone") &&
+    !title.includes("microphone") &&
+    (title.includes("phone") ||
+      title.includes("mobile") ||
+      title.includes("iphone") ||
+      title.includes("smartphone") ||
+      title.includes("android") ||
+      title.includes("laptop") ||
+      title.includes("macbook") ||
+      title.includes("notebook computer") ||
+      title.includes("dell") ||
+      title.includes("hp") ||
+      title.includes("lenovo") ||
+      title.includes("thinkpad") ||
+      title.includes("ipad") ||
+      title.includes("tablet") ||
+      desc.includes("smartphone") ||
+      desc.includes("laptop") ||
+      desc.includes("macbook"));
 
   const isWallet =
     title.includes("wallet") ||
@@ -149,6 +152,48 @@ function evaluatePriorityWithLLM(item) {
     fullText.includes("campus id") ||
     fullText.includes("identity card") ||
     (cat.includes("id") && !isWallet);
+
+  // Explicit Low Priority Detection: standard utility, stationery, clothing & personal daily accessories
+  const isExplicitLow =
+    title.includes("bottle") ||
+    title.includes("flask") ||
+    title.includes("sipper") ||
+    title.includes("tumbler") ||
+    title.includes("mug") ||
+    title.includes("cup") ||
+    title.includes("notebook") ||
+    title.includes("register") ||
+    title.includes("notes") ||
+    title.includes("spiral") ||
+    title.includes("pen") ||
+    title.includes("pencil") ||
+    title.includes("stationery") ||
+    title.includes("folder") ||
+    title.includes("ruler") ||
+    title.includes("eraser") ||
+    title.includes("paper") ||
+    title.includes("umbrella") ||
+    title.includes("raincoat") ||
+    title.includes("jacket") ||
+    title.includes("hoodie") ||
+    title.includes("sweater") ||
+    title.includes("coat") ||
+    title.includes("scarf") ||
+    title.includes("hat") ||
+    title.includes("cap") ||
+    title.includes("glove") ||
+    title.includes("towel") ||
+    title.includes("lunch") ||
+    title.includes("tiffin") ||
+    title.includes("box") ||
+    title.includes("cable") ||
+    title.includes("wire") ||
+    title.includes("usb") ||
+    title.includes("lanyard") ||
+    title.includes("badge") ||
+    title.includes("tote") ||
+    (title.includes("bag") && !title.includes("laptop") && !desc.includes("laptop")) ||
+    (cat.includes("book") && !fullText.includes("textbook"));
 
   // ==========================================
   // Tier 1: URGENT / HIGH PRIORITY (Priority 3)
@@ -198,7 +243,7 @@ function evaluatePriorityWithLLM(item) {
   // ==========================================
   // Tier 2: MEDIUM PRIORITY (Priority 2)
   // - Student ID Cards (Official ID, with administrative reissuance)
-  // - Calculators, AirPods, Headphones, Textbooks
+  // - Calculators, AirPods, Headphones, Textbooks, Power Banks, Smartwatches
   // ==========================================
   else if (isIDCard) {
     priority = 2;
@@ -210,13 +255,20 @@ function evaluatePriorityWithLLM(item) {
     ];
     reasoning = `Identified campus identification card (${item.title || "ID Card"}). Essential for campus building access and library check-in; however, temporary passes and administrative reissuance are readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.`;
   } else if (
-    (cat.includes("elec") && !title.includes("cable") && !title.includes("bottle")) ||
-    fullText.includes("calc") ||
-    fullText.includes("airpod") ||
-    fullText.includes("headphone") ||
-    fullText.includes("charger") ||
-    fullText.includes("watch") ||
-    fullText.includes("textbook")
+    !isExplicitLow &&
+    (fullText.includes("calc") ||
+      fullText.includes("airpod") ||
+      fullText.includes("headphone") ||
+      fullText.includes("earbud") ||
+      fullText.includes("earphone") ||
+      fullText.includes("headset") ||
+      fullText.includes("speaker") ||
+      fullText.includes("powerbank") ||
+      fullText.includes("power bank") ||
+      fullText.includes("charger") ||
+      fullText.includes("adapter") ||
+      fullText.includes("watch") ||
+      fullText.includes("textbook"))
   ) {
     priority = 2;
     score = 68;
@@ -1766,6 +1818,17 @@ function showToast(message, type = "success") {
   }, 4000);
 }
 
+// ----- Smart Category Auto-Detection -------------------------
+function detectCategoryFromTitle(title) {
+  const t = (title || "").toLowerCase();
+  if (t.includes("phone") || t.includes("mobile") || t.includes("iphone") || t.includes("android") || t.includes("laptop") || t.includes("macbook") || t.includes("airpod") || t.includes("calc") || t.includes("charger") || t.includes("headphone") || t.includes("watch") || t.includes("powerbank")) return "Electronics";
+  if (t.includes("id") || t.includes("card") || t.includes("wallet") || t.includes("purse") || t.includes("aadhaar") || t.includes("license") || t.includes("passport")) return "ID/Wallet";
+  if (t.includes("key")) return "Keys";
+  if (t.includes("notebook") || t.includes("notes") || t.includes("register") || t.includes("textbook") || t.includes("book")) return "Books";
+  if (t.includes("umbrella") || t.includes("bottle") || t.includes("flask") || t.includes("jacket") || t.includes("hoodie") || t.includes("pen") || t.includes("pencil") || t.includes("bag") || t.includes("lunch") || t.includes("tiffin")) return "Accessories";
+  return null;
+}
+
 // ----- Post Item Modal Controls & LLM Live Assessment --------
 function updateLLMPriorityPreview() {
   const inputTitle = document.getElementById("input-title");
@@ -1774,6 +1837,15 @@ function updateLLMPriorityPreview() {
   const inputDesc = document.getElementById("input-description");
 
   const titleVal = inputTitle ? inputTitle.value.trim() : "";
+
+  // Auto-detect and set appropriate category if user hasn't explicitly chosen one
+  if (inputTitle && selectCat && titleVal && !selectCat.dataset.userModified) {
+    const autoCat = detectCategoryFromTitle(titleVal);
+    if (autoCat && selectCat.value !== autoCat) {
+      selectCat.value = autoCat;
+    }
+  }
+
   const catVal = selectCat ? selectCat.value : "Other";
   const locVal = inputLocation ? inputLocation.value.trim() : "";
   const descVal = inputDesc ? inputDesc.value.trim() : "";
@@ -1848,6 +1920,8 @@ function openModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
+  const selectCat = document.getElementById("input-category");
+  if (selectCat) delete selectCat.dataset.userModified;
   updateLLMPriorityPreview();
   const titleInput = document.getElementById("input-title");
   if (titleInput) titleInput.focus();
@@ -1857,6 +1931,8 @@ function closeModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.add("hidden");
   modal.classList.remove("flex");
+  const selectCat = document.getElementById("input-category");
+  if (selectCat) delete selectCat.dataset.userModified;
   const form = document.getElementById("report-form");
   if (form) form.reset();
   updateLLMPriorityPreview();
@@ -1965,7 +2041,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputDesc = document.getElementById("input-description");
 
   if (inputTitle) inputTitle.addEventListener("input", updateLLMPriorityPreview);
-  if (selectCat) selectCat.addEventListener("change", updateLLMPriorityPreview);
+  if (selectCat) {
+    selectCat.addEventListener("change", () => {
+      selectCat.dataset.userModified = "true";
+      updateLLMPriorityPreview();
+    });
+  }
   if (inputLocation) inputLocation.addEventListener("input", updateLLMPriorityPreview);
   if (inputDesc) inputDesc.addEventListener("input", updateLLMPriorityPreview);
 
