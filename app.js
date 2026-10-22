@@ -2068,15 +2068,15 @@ function setNavigatorMode(mode) {
 }
 
 /**
- * Set BFS depth limit radius (0 hops, 1 hop, 2 hops)
+ * Set BFS search range (0 = room only, 1 = connected stairs/hall, 2 = whole floor/wing)
  */
 function setNearbyMaxHops(hops) {
   currentNearbyMaxHops = Number(hops);
   document.querySelectorAll(".nearby-hops-btn").forEach((btn) => {
     if (Number(btn.dataset.hops) === currentNearbyMaxHops) {
-      btn.className = "nearby-hops-btn py-1.5 text-xs font-bold rounded-lg transition-all bg-forest text-white shadow-xs";
+      btn.className = "nearby-hops-btn py-2 text-xs font-bold rounded-lg transition-all bg-forest text-white shadow-xs";
     } else {
-      btn.className = "nearby-hops-btn py-1.5 text-xs font-bold rounded-lg transition-all text-gray-600 hover:text-forest";
+      btn.className = "nearby-hops-btn py-2 text-xs font-bold rounded-lg transition-all text-gray-600 hover:text-forest";
     }
   });
 
@@ -2084,10 +2084,10 @@ function setNearbyMaxHops(hops) {
   if (label) {
     label.textContent =
       hops === 0
-        ? "0 Hops (This Room Only)"
+        ? "This room only"
         : hops === 1
-        ? "1 Edge (Immediate Neighbors)"
-        : "2 Edges (Expanded Campus Wing)";
+        ? "Connected halls & stairs"
+        : "Entire floor / wing";
   }
 
   renderNearbyItemsView();
@@ -2119,7 +2119,7 @@ function selectNearbySearchLocation(locName) {
     renderCampusGraphCanvas();
   }
 
-  // Scroll discovery summary into view
+  // Scroll discovery summary into view gently
   const summary = document.getElementById("nearby-discovery-summary");
   if (summary) {
     summary.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -2128,7 +2128,7 @@ function selectNearbySearchLocation(locName) {
 
 /**
  * Render matched reports near the selected location (Mode 1)
- * Uses CampusGraph.findNearbyReports (Depth-Limited BFS) + HashTable lookups
+ * Clean, simple, and friendly presentation for students
  */
 function renderNearbyItemsView() {
   const container = document.getElementById("nearby-reports-container");
@@ -2140,29 +2140,15 @@ function renderNearbyItemsView() {
   const targetLocation = nearbySelect ? nearbySelect.value : currentNearbyLocation;
   const startMeta = campusGraph.getMetadata(targetLocation);
 
-  const categoryFilter = document.getElementById("nearby-category-filter");
-  const typeFilter = document.getElementById("nearby-type-filter");
-  const selectedCat = categoryFilter ? categoryFilter.value : "All";
-  const selectedType = typeFilter ? typeFilter.value : "All";
-
   // Perform Depth-Limited BFS to retrieve nearby reports ranked by proximity & priority
   const allReports = activeReportsList.toArray();
-  let matches = campusGraph.findNearbyReports(targetLocation, allReports, currentNearbyMaxHops);
-
-  // Apply Category Filter
-  if (selectedCat !== "All") {
-    matches = matches.filter((m) => m.report.category === selectedCat);
-  }
-  // Apply Type Filter
-  if (selectedType !== "All") {
-    matches = matches.filter((m) => m.report.type === selectedType);
-  }
+  const matches = campusGraph.findNearbyReports(targetLocation, allReports, currentNearbyMaxHops);
 
   if (countBadge) {
-    countBadge.textContent = `${matches.length} Report${matches.length === 1 ? "" : "s"}`;
+    countBadge.textContent = `${matches.length} Item${matches.length === 1 ? "" : "s"}`;
   }
 
-  // Count distribution by graph hops
+  // Count distribution
   const count0 = matches.filter((m) => m.hops === 0).length;
   const count1 = matches.filter((m) => m.hops === 1).length;
   const count2 = matches.filter((m) => m.hops === 2).length;
@@ -2170,24 +2156,23 @@ function renderNearbyItemsView() {
   if (summaryBox) {
     summaryBox.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-forest/15 text-forest border border-forest/30 flex items-center justify-center text-xl shrink-0">
+        <div class="w-10 h-10 rounded-2xl bg-forest/15 text-forest border border-forest/30 flex items-center justify-center text-xl shrink-0">
           ${startMeta.icon || "📍"}
         </div>
         <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <h4 class="text-sm font-black text-gray-900">${escapeHtml(targetLocation)}</h4>
-            <span class="text-[10px] font-mono font-bold text-gray-500 bg-white/80 px-2 py-0.5 rounded border border-sand">
+          <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
+            <span>${escapeHtml(targetLocation)}</span>
+            <span class="text-[10px] font-mono text-gray-500 bg-white px-2 py-0.5 rounded border border-sand">
               ${escapeHtml(startMeta.floor)}
             </span>
-            <span class="text-[10px] font-mono font-bold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-              BFS Radius: ${currentNearbyMaxHops} Edge${currentNearbyMaxHops === 1 ? "" : "s"}
-            </span>
-          </div>
-          <p class="text-[11px] text-gray-600 mt-0.5">
+          </h4>
+          <p class="text-xs text-gray-600 mt-0.5">
             ${
               matches.length > 0
-                ? `Discovered <strong class="text-forest font-black">${matches.length} candidate belongings</strong>: ${count0} in this room · ${count1} one edge away · ${count2} two edges away.`
-                : `No active reports within ${currentNearbyMaxHops} graph edge(s) of this room.`
+                ? `Found <strong class="text-forest font-bold">${matches.length} item${
+                    matches.length > 1 ? "s" : ""
+                  }</strong> within range (${count0} inside this room, ${count1 + count2} in connected corridors/stairs).`
+                : `No items reported in or near this room right now.`
             }
           </p>
         </div>
@@ -2195,8 +2180,8 @@ function renderNearbyItemsView() {
 
       <div class="flex items-center gap-2 shrink-0">
         <button onclick="navigateToReportLocation('${escapeHtml(targetLocation)}')"
-          class="px-3 py-1.5 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5">
-          <span>🧭 Open In Route Navigator</span>
+          class="px-3.5 py-2 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5">
+          <span>🚶 Get Directions to Here</span>
         </button>
       </div>
     `;
@@ -2205,25 +2190,23 @@ function renderNearbyItemsView() {
   if (matches.length === 0) {
     container.innerHTML = `
       <div class="col-span-full visionos-panel rounded-3xl p-8 border border-sand text-center space-y-3">
-        <div class="w-14 h-14 mx-auto rounded-full bg-sand/30 flex items-center justify-center text-2xl text-gray-400">
+        <div class="w-12 h-12 mx-auto rounded-full bg-sand/30 flex items-center justify-center text-2xl text-gray-400">
           🔍
         </div>
-        <h4 class="text-sm font-bold text-gray-800">No matching reports found within ${currentNearbyMaxHops} edge(s) of ${escapeHtml(
-      targetLocation
-    )}</h4>
+        <h4 class="text-sm font-bold text-gray-800">No items reported near ${escapeHtml(targetLocation)}</h4>
         <p class="text-xs text-gray-500 max-w-md mx-auto">
-          BFS explored connected staircases and corridors but found no unresolved belongings matching your filters.
+          We checked this room and connected halls. If you lost something here, you can be the first to post a report.
         </p>
         <div class="flex items-center justify-center gap-2 pt-2">
           ${
             currentNearbyMaxHops < 2
               ? `<button onclick="setNearbyMaxHops(2)" class="visionos-btn text-white text-xs font-bold py-2 px-4 rounded-xl shadow-xs">
-                  Expand Search Radius to 2 Edges ➔
+                  Search Entire Wing / Floor ➔
                 </button>`
               : ""
           }
-          <button onclick="switchTab('feed')" class="px-4 py-2 border border-sand rounded-xl bg-white text-gray-700 text-xs font-bold hover:bg-sand/20">
-            Browse All Campus Reports
+          <button onclick="openModal()" class="px-4 py-2 border border-sand rounded-xl bg-white text-forest text-xs font-bold hover:bg-forest/10">
+            + Post Lost Item
           </button>
         </div>
       </div>
@@ -2240,29 +2223,27 @@ function renderNearbyItemsView() {
 
       let hopBadge = "";
       if (item.hops === 0) {
-        hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
-          🎯 Same Room (0 edges away)
+        hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+          📍 In this room
         </span>`;
       } else if (item.hops === 1) {
         hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
-          🚶 1 Edge Away · Immediate Connector
+          🚶 1 min walk (${escapeHtml(item.node)})
         </span>`;
       } else {
         hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-600 text-white shadow-xs">
-          🚶 2 Edges Away · Adjacent Wing
+          🚶 ~2 mins walk (${escapeHtml(item.node)})
         </span>`;
       }
-
-      const corridorBreadcrumb = item.path.join(" ➔ ");
 
       return `
       <div class="visionos-card rounded-2xl p-4 border border-sand hover:border-forest/40 transition-all shadow-xs flex flex-col justify-between space-y-3">
         <div>
-          <!-- Top Row: Proximity Hop Badge & Priority Badge -->
+          <!-- Top Row: Distance & Urgency Badges -->
           <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
             ${hopBadge}
             <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${prio.badgeBg}">
-              <span>${prio.icon}</span> ${prio.label}
+              <span>${prio.icon}</span> ${prio.label} Urgency
             </span>
           </div>
 
@@ -2276,13 +2257,11 @@ function renderNearbyItemsView() {
 
           <!-- Type and Location -->
           <div class="flex items-center gap-2 text-xs text-gray-600 mb-2">
-            <span class="font-bold ${isLost ? "text-terracotta" : "text-forest"}">${r.type}</span>
+            <span class="font-bold ${isLost ? "text-terracotta" : "text-forest"}">${r.type} Item</span>
             <span>·</span>
-            <span class="font-medium flex items-center gap-1 text-gray-700">
-              <span>📍</span> ${escapeHtml(r.location)}
-            </span>
+            <span class="font-medium text-gray-700">📍 ${escapeHtml(r.location)}</span>
             <span>·</span>
-            <span class="text-[10px] font-mono text-gray-400">${timeAgo(r.timestamp)}</span>
+            <span class="text-[10px] text-gray-400 font-mono">${timeAgo(r.timestamp)}</span>
           </div>
 
           <!-- Item Description -->
@@ -2290,23 +2269,23 @@ function renderNearbyItemsView() {
             ${escapeHtml(r.description)}
           </p>
 
-          <!-- Graph Corridor Path -->
-          <div class="p-2 rounded-xl bg-ivory border border-sand text-[11px] font-mono text-gray-600">
-            <span class="text-gray-400 font-bold block text-[10px] uppercase mb-0.5">Physical Campus Path:</span>
-            <span class="text-forest font-semibold">${escapeHtml(corridorBreadcrumb)}</span>
+          <!-- Walking Path -->
+          <div class="p-2 rounded-xl bg-ivory border border-sand text-[11px] text-gray-600 flex items-center gap-1.5">
+            <span class="text-gray-400 font-bold shrink-0">Path:</span>
+            <span class="text-forest font-semibold truncate">${escapeHtml(item.path.join(" ➔ "))}</span>
           </div>
         </div>
 
         <!-- Action Buttons: Claim and Route Navigation -->
         <div class="pt-2 border-t border-sand/60 flex items-center gap-2">
           <button onclick="showDetail('${r.id}')"
-            class="flex-1 visionos-btn text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
-            <span>🔍 Inspect &amp; Submit Claim</span>
+            class="flex-1 visionos-btn text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
+            <span>🙋‍♂️ View Item &amp; Claim</span>
           </button>
           <button onclick="navigateToReportLocation('${escapeHtml(r.location)}')"
-            class="px-3 py-2 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1"
-            title="Calculate BFS route to this item">
-            <span>🧭 Navigate</span>
+            class="px-3.5 py-2.5 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1"
+            title="Get walking directions to this item">
+            <span>🚶 Show Route</span>
           </button>
         </div>
       </div>`;
@@ -2371,8 +2350,8 @@ function filterCampusFloor(floorName) {
 }
 
 /**
- * BFS Shortest Route Navigation (Mode 2)
- * Guarantees fewest edges in unweighted graph with parent map reconstruction
+ * Walking Route Navigation (Mode 2)
+ * Computes shortest walking corridor path
  */
 function runBFSNavigation(showNotification = true) {
   if (!campusGraph) return;
@@ -2396,21 +2375,23 @@ function runBFSNavigation(showNotification = true) {
   if (!result.found) {
     dossierCard.innerHTML = `
       <div class="p-4 bg-red-50 text-red-800 rounded-2xl border border-red-200">
-        <p class="font-bold">No path found between ${escapeHtml(start)} and ${escapeHtml(dest)}.</p>
+        <p class="font-bold">No walking path found between ${escapeHtml(start)} and ${escapeHtml(dest)}.</p>
       </div>`;
     renderCampusGraphCanvas();
     return;
   }
 
+  const estMins = Math.max(1, Math.round(result.hops * 0.8));
+
   dossierCard.innerHTML = `
     <!-- Route Overview Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-sand gap-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-sand gap-3">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <span class="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
-            ⚡ BFS Shortest Route
+          <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+            🚶 Shortest Walking Route
           </span>
-          <span class="text-xs font-mono font-bold text-gray-500">Fewest Edges in Unweighted Graph</span>
+          <span class="text-xs text-gray-500 font-medium">Fewest stairs &amp; turns</span>
         </div>
         <h3 class="text-base font-black text-gray-900">
           ${escapeHtml(start)} <span class="text-emerald-600 font-black">➔</span> ${escapeHtml(dest)}
@@ -2418,8 +2399,8 @@ function runBFSNavigation(showNotification = true) {
       </div>
       <div class="flex items-center gap-3">
         <div class="text-right">
-          <p class="text-lg font-black text-emerald-700 leading-none">${result.hops} Hops</p>
-          <p class="text-[10px] font-mono text-gray-400 mt-0.5">${result.path.length} Nodes Traversed</p>
+          <p class="text-lg font-black text-emerald-700 leading-none">${result.hops} Steps</p>
+          <p class="text-[10px] text-gray-500 mt-0.5">~${estMins} min walk</p>
         </div>
         <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shadow-2xs">
           🧭
@@ -2429,7 +2410,7 @@ function runBFSNavigation(showNotification = true) {
 
     <!-- Step-by-Step Directions Chain -->
     <div class="mt-4">
-      <p class="text-xs font-black uppercase tracking-wider text-gray-600 mb-2">Step-by-Step Campus Corridor Instructions:</p>
+      <p class="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2.5">Follow these walking directions:</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
         ${result.path
           .map((locName, idx) => {
@@ -2447,6 +2428,16 @@ function runBFSNavigation(showNotification = true) {
               ? "bg-red-600 text-white"
               : "bg-emerald-600 text-white";
 
+            const actionLabel = isFirst
+              ? "Start here at your origin spot"
+              : isLast
+              ? "You have arrived at your destination!"
+              : meta.type === "stairs"
+              ? "Take stairs to connected floor"
+              : meta.type === "elevator"
+              ? "Take elevator to connected floor"
+              : "Walk through corridor";
+
             return `
             <div class="p-3 rounded-2xl border ${stepBg} shadow-2xs flex items-start gap-2.5">
               <span class="step-number-badge w-6 h-6 rounded-full ${badgeColor} flex items-center justify-center shrink-0 shadow-2xs">
@@ -2454,11 +2445,11 @@ function runBFSNavigation(showNotification = true) {
               </span>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center justify-between">
-                  <p class="text-xs font-black text-gray-900 truncate">${meta.icon || "📍"} ${escapeHtml(locName)}</p>
-                  <span class="text-[9px] font-mono font-bold text-gray-400">${escapeHtml(meta.floor)}</span>
+                  <p class="text-xs font-bold text-gray-900 truncate">${meta.icon || "📍"} ${escapeHtml(locName)}</p>
+                  <span class="text-[10px] font-mono text-gray-400">${escapeHtml(meta.floor)}</span>
                 </div>
-                <p class="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-1">
-                  ${isFirst ? "Start here at origin point" : isLast ? "Final destination reached" : escapeHtml(meta.description || "Walk along corridor")}
+                <p class="text-[11px] text-gray-600 mt-0.5 leading-snug">
+                  ${actionLabel}
                 </p>
               </div>
             </div>`;
@@ -2467,30 +2458,24 @@ function runBFSNavigation(showNotification = true) {
       </div>
     </div>
 
-    <!-- BFS Traversal Sequence Collapsible Drawer -->
-    <div class="mt-4 pt-3 border-t border-sand-d/40">
+    <!-- BFS Traversal Sequence Collapsible Drawer (for Examiner/Viva) -->
+    <div class="mt-3 pt-3 border-t border-sand-d/40">
       <details class="cursor-pointer group">
-        <summary class="text-xs font-bold text-gray-700 hover:text-forest flex items-center justify-between list-none">
-          <span class="flex items-center gap-1.5">
-            <span>🔬</span>
-            <span>BFS Queue Node Exploration Sequence (${result.visitedOrder.length} nodes visited in queue before finding target)</span>
-          </span>
+        <summary class="text-xs text-gray-500 hover:text-forest flex items-center justify-between list-none font-medium">
+          <span>🔬 View BFS Algorithm Queue Sequence (${result.visitedOrder.length} nodes inspected)</span>
           <span class="text-[10px] font-mono text-forest group-open:rotate-180 transition-transform">▼</span>
         </summary>
-        <div class="mt-2.5 p-3 rounded-xl bg-ivory border border-sand text-xs font-mono text-gray-600 space-y-1">
-          <p class="text-[11px] text-gray-500 mb-1">Queue First-In First-Out (FIFO) Exploration Order:</p>
-          <div class="flex flex-wrap gap-1">
-            ${result.visitedOrder
-              .map(
-                (node, i) =>
-                  `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${
-                    result.path.includes(node)
-                      ? "bg-emerald-600 text-white font-bold"
-                      : "bg-white border border-sand text-gray-700"
-                  }">[${i + 1}] ${escapeHtml(node)}</span>`
-              )
-              .join("")}
-          </div>
+        <div class="mt-2 p-2.5 rounded-xl bg-ivory border border-sand text-xs font-mono text-gray-600 flex flex-wrap gap-1">
+          ${result.visitedOrder
+            .map(
+              (node, i) =>
+                `<span class="px-1.5 py-0.5 rounded text-[10px] ${
+                  result.path.includes(node)
+                    ? "bg-emerald-600 text-white font-bold"
+                    : "bg-white border border-sand text-gray-600"
+                }">[${i + 1}] ${escapeHtml(node)}</span>`
+            )
+            .join("")}
         </div>
       </details>
     </div>
@@ -2499,7 +2484,7 @@ function runBFSNavigation(showNotification = true) {
   renderCampusGraphCanvas();
 
   if (showNotification) {
-    showToast(`⚡ Shortest route calculated: ${result.hops} hops to ${dest}!`, "success");
+    showToast(`🚶 Route ready: ${result.hops} steps to ${dest}!`, "success");
   }
 }
 
@@ -2517,25 +2502,26 @@ function runDFSExploration() {
 
   const resultBox = document.getElementById("nav-dfs-result-box");
   const panel = document.getElementById("nav-adjacency-panel");
-  if (panel && panel.classList.contains("hidden")) {
-    panel.classList.remove("hidden");
+  if (panel) {
+    panel.open = true;
+    panel.scrollIntoView({ behavior: "smooth" });
   }
 
   if (resultBox) {
     resultBox.classList.remove("hidden");
     resultBox.innerHTML = `
-      <div class="p-4 bg-amber-50 rounded-2xl border border-amber-300 space-y-2 mb-3">
+      <div class="p-3.5 bg-amber-50 rounded-2xl border border-amber-300 space-y-2 mb-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="text-base">🔍</span>
-            <span class="text-xs font-black uppercase text-amber-900 tracking-wide">DFS Traversal Preorder Tree</span>
+            <span class="text-xs font-black uppercase text-amber-900 tracking-wide">DFS Traversal Preorder Sequence</span>
           </div>
           <span class="text-[10px] font-mono font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
             Reachable: ${result.reachableCount} / ${campusGraph.getAllLocations().length} (100% Connected)
           </span>
         </div>
         <p class="text-xs text-amber-800">
-          Explored campus from <strong>${escapeHtml(start)}</strong> via recursive depth-first backtracking across ${result.discoveryEdges.length} discovery edges.
+          Recursively explored campus from <strong>${escapeHtml(start)}</strong> across ${result.discoveryEdges.length} discovery edges.
         </p>
         <div class="flex flex-wrap gap-1 pt-1 max-h-36 overflow-y-auto">
           ${result.visitedOrder
@@ -2584,19 +2570,19 @@ function renderCampusGraphCanvas() {
   const floorKeys = Object.keys(floorClusters);
 
   container.innerHTML = `
-    <div class="space-y-6">
+    <div class="space-y-5">
       ${floorKeys
         .map((floorName) => {
           const rooms = floorClusters[floorName];
           return `
-        <div class="bg-white/60 rounded-2xl p-4 border border-sand/70 shadow-2xs">
+        <div class="bg-white/70 rounded-2xl p-4 border border-sand/70 shadow-2xs">
           <div class="flex items-center justify-between mb-3 pb-2 border-b border-sand/50">
             <div class="flex items-center gap-2">
-              <span class="text-base font-black text-gray-800">${escapeHtml(floorName)}</span>
-              <span class="text-[10px] font-mono text-gray-400 font-bold">(${rooms.length} locations)</span>
+              <span class="text-sm font-bold text-gray-800">${escapeHtml(floorName)}</span>
+              <span class="text-xs text-gray-400 font-medium">(${rooms.length} rooms)</span>
             </div>
-            <span class="text-[10px] font-mono font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-              Physical Adjacency Graph · Corridors, Stairs &amp; Lifts
+            <span class="text-[10px] text-gray-400">
+              Connected via corridors &amp; stairs
             </span>
           </div>
 
@@ -2637,9 +2623,10 @@ function renderCampusGraphCanvas() {
 
                 if (hasFoundItem && !isSelectedNearby && !isStart && !isDest) {
                   stateClass += " ring-2 ring-emerald-500 bg-emerald-50/70 border-emerald-300";
+                  if (!badge) {
+                    badge = `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white animate-pulse">🎉 Found Item</span>`;
+                  }
                 }
-
-                const neighbors = campusGraph.getNeighbors(loc.name);
 
                 return `
                 <div onclick="onCampusRoomCardClick('${escapeHtml(loc.name)}')"
@@ -2650,23 +2637,15 @@ function renderCampusGraphCanvas() {
                       ${badge}
                     </div>
                     <h4 class="text-xs font-bold text-gray-900 leading-tight mb-1">${escapeHtml(loc.name)}</h4>
-                    <p class="text-[10px] text-gray-500 line-clamp-1 leading-snug">${escapeHtml(loc.description || loc.type)}</p>
-                    
-                    ${
-                      hasFoundItem
-                        ? `<div class="mt-1.5 flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-md border border-emerald-300 animate-pulse">
-                            <span>🎉</span> Found Item Reported Here!
-                          </div>`
-                        : ""
-                    }
+                    <p class="text-[11px] text-gray-500 line-clamp-1">${escapeHtml(loc.description || loc.type)}</p>
                   </div>
 
-                  <div class="mt-2.5 pt-1.5 border-t border-sand/40 flex items-center justify-between text-[10px]">
+                  <div class="mt-2.5 pt-1.5 border-t border-sand/40 flex items-center justify-between text-[11px]">
                     <span class="font-bold ${reportCount > 0 ? "text-forest bg-forest/10 px-2 py-0.5 rounded-full" : "text-gray-400"}">
-                      ${reportCount > 0 ? `${reportCount} report${reportCount > 1 ? "s" : ""}` : "0 reports"}
+                      ${reportCount > 0 ? `${reportCount} item${reportCount > 1 ? "s" : ""} reported` : "0 items"}
                     </span>
-                    <span class="font-bold text-forest hover:underline">
-                      ${activeNavigatorMode === "find" ? "Inspect ➔" : "Route to ➔"}
+                    <span class="font-semibold text-forest hover:underline">
+                      ${activeNavigatorMode === "find" ? "Click to view ➔" : "Walk here ➔"}
                     </span>
                   </div>
                 </div>`;
