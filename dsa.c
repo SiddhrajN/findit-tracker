@@ -32,6 +32,7 @@ typedef struct {
     char status[16];         /* "Active" or "Recovered"         */
     char timestamp[32];      /* Date/time string                */
     char recoveredAt[32];    /* When recovered (empty if active)*/
+    int  priority;           /* 3 = Urgent, 2 = Medium, 1 = Low */
 } Report;
 
 /* ==========================================================
@@ -294,14 +295,229 @@ void freeHashTable(HashTable *ht) {
 
 
 /* ==========================================================
- *  3.  HELPER — Create a Report struct
+ *  3.  PRIORITY QUEUE (Binary Max-Heap)
+ *      - Root stored at index 0 (highest priority report)
+ *      - Parent index for node i: (i - 1) / 2
+ *      - Left child index:  2 * i + 1
+ *      - Right child index: 2 * i + 2
+ *      - Insertion: O(log n) via Bubble-Up
+ *      - Extract-Max: O(log n) via Bubble-Down
+ *      - Change-Priority: O(n + log n)
+ * ========================================================== */
+
+typedef struct {
+    int    priority;    /* 3 = Urgent, 2 = Medium, 1 = Low */
+    int    insertOrder; /* Tie-breaker for stable FIFO */
+    Report report;
+} HeapNode;
+
+typedef struct {
+    HeapNode data[MAX_REPORTS];
+    int      size;
+    int      orderCounter;
+} PriorityQueue;
+
+PriorityQueue* createPriorityQueue(void) {
+    PriorityQueue *pq = (PriorityQueue *)malloc(sizeof(PriorityQueue));
+    if (!pq) { perror("malloc"); exit(EXIT_FAILURE); }
+    pq->size = 0;
+    pq->orderCounter = 0;
+    return pq;
+}
+
+/* Compare two heap nodes: returns > 0 if a has higher priority than b */
+int pqCompare(HeapNode a, HeapNode b) {
+    if (a.priority != b.priority) {
+        return a.priority - b.priority;
+    }
+    /* FIFO tie-breaker: smaller insertOrder was reported first */
+    return b.insertOrder - a.insertOrder;
+}
+
+void pqSwap(HeapNode *a, HeapNode *b) {
+    HeapNode tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+/* Bubble up from index towards root — O(log n) */
+void pqBubbleUp(PriorityQueue *pq, int index) {
+    while (index > 0) {
+        int parent = (index - 1) / 2;
+        if (pqCompare(pq->data[index], pq->data[parent]) > 0) {
+            pqSwap(&pq->data[index], &pq->data[parent]);
+            index = parent;
+        } else {
+            break;
+        }
+    }
+}
+
+/* Bubble down from index towards leaves — O(log n) */
+void pqBubbleDown(PriorityQueue *pq, int index) {
+    while (2 * index + 1 < pq->size) {
+        int largest = index;
+        int left = 2 * index + 1;
+        int right = 2 * index + 2;
+
+        if (left < pq->size && pqCompare(pq->data[left], pq->data[largest]) > 0) {
+            largest = left;
+        }
+        if (right < pq->size && pqCompare(pq->data[right], pq->data[largest]) > 0) {
+            largest = right;
+        }
+
+        if (largest != index) {
+            pqSwap(&pq->data[index], &pq->data[largest]);
+            index = largest;
+        } else {
+            break;
+        }
+    }
+}
+
+/* Insert report into Priority Queue — O(log n) */
+void pqInsert(PriorityQueue *pq, Report report, int priority) {
+    if (pq->size >= MAX_REPORTS) {
+        printf("  [!] Priority Queue is full!\n");
+        return;
+    }
+    report.priority = priority;
+    HeapNode node;
+    node.priority = priority;
+    node.insertOrder = pq->orderCounter++;
+    node.report = report;
+
+    pq->data[pq->size] = node;
+    pqBubbleUp(pq, pq->size);
+    pq->size++;
+}
+
+/* Extract and remove highest priority report (Root) — O(log n) */
+int pqExtractMax(PriorityQueue *pq, Report *extracted) {
+    if (pq->size == 0) return 0;
+    if (extracted) *extracted = pq->data[0].report;
+
+    pq->data[0] = pq->data[pq->size - 1];
+    pq->size--;
+    if (pq->size > 0) {
+        pqBubbleDown(pq, 0);
+    }
+    return 1;
+}
+
+/* Peek highest priority report without removing — O(1) */
+int pqPeek(PriorityQueue *pq, Report *peeked) {
+    if (pq->size == 0) return 0;
+    if (peeked) *peeked = pq->data[0].report;
+    return 1;
+}
+
+/* Change priority of a report by ID — O(n + log n) */
+int pqChangePriority(PriorityQueue *pq, const char *id, int newPriority) {
+    int idx = -1;
+    for (int i = 0; i < pq->size; i++) {
+        if (strcmp(pq->data[i].report.id, id) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1) return 0;
+
+    int oldPriority = pq->data[idx].priority;
+    pq->data[idx].priority = newPriority;
+    pq->data[idx].report.priority = newPriority;
+
+    if (newPriority > oldPriority) {
+        pqBubbleUp(pq, idx);
+    } else if (newPriority < oldPriority) {
+        pqBubbleDown(pq, idx);
+    }
+    return 1;
+}
+
+/* Remove a report by ID — O(n + log n) */
+int pqRemoveById(PriorityQueue *pq, const char *id, Report *removed) {
+    int idx = -1;
+    for (int i = 0; i < pq->size; i++) {
+        if (strcmp(pq->data[i].report.id, id) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1) return 0;
+
+    if (removed) *removed = pq->data[idx].report;
+    pq->data[idx] = pq->data[pq->size - 1];
+    pq->size--;
+    if (idx < pq->size) {
+        pqBubbleUp(pq, idx);
+        pqBubbleDown(pq, idx);
+    }
+    return 1;
+}
+
+const char* priorityLabel(int p) {
+    switch (p) {
+        case 3: return "URGENT";
+        case 2: return "MEDIUM";
+        case 1: return "LOW";
+        default: return "NORMAL";
+    }
+}
+
+/* Display heap array representation and tree parent-child links */
+void displayPriorityQueueHeap(PriorityQueue *pq) {
+    printf("\n  Priority Queue Max-Heap (size: %d):\n", pq->size);
+    printf("  ----------------------------------------------------------------------\n");
+    printf("  [Index]  Priority  Report ID    Title                         Parent\n");
+    printf("  ----------------------------------------------------------------------\n");
+    for (int i = 0; i < pq->size; i++) {
+        int parent = (i > 0) ? (i - 1) / 2 : -1;
+        char parentStr[16];
+        if (parent >= 0) {
+            snprintf(parentStr, sizeof(parentStr), "[%d]", parent);
+        } else {
+            strcpy(parentStr, "ROOT");
+        }
+        printf("  [%2d]     %-7s   %-10s   %-28s  %s\n",
+               i, priorityLabel(pq->data[i].priority),
+               pq->data[i].report.id, pq->data[i].report.title, parentStr);
+    }
+    printf("  ----------------------------------------------------------------------\n");
+}
+
+/* Display reports sorted by Priority Queue (Heap Sort demonstration) */
+void displayPrioritySortedReports(PriorityQueue *pq) {
+    /* Copy heap to temporary priority queue to avoid destroying active heap */
+    PriorityQueue temp = *pq;
+    printf("\n  REPORTS RANKED BY PRIORITY (Heap-Sort Extraction):\n");
+    printf("  ----------------------------------------------------------------------\n");
+    printf("  Rank  Priority  Type   ID         Title                         Location\n");
+    printf("  ----------------------------------------------------------------------\n");
+    int rank = 1;
+    Report r;
+    while (pqExtractMax(&temp, &r)) {
+        printf("  #%-3d  %-7s   %-5s  %-9s  %-28s  %s\n",
+               rank++, priorityLabel(r.priority), r.type, r.id, r.title, r.location);
+    }
+    printf("  ----------------------------------------------------------------------\n");
+}
+
+void freePriorityQueue(PriorityQueue *pq) {
+    free(pq);
+}
+
+
+/* ==========================================================
+ *  4.  HELPER — Create a Report struct
  * ========================================================== */
 
 int reportCounter = 1000;
 
 Report createReport(const char *type, const char *title,
                     const char *category, const char *location,
-                    const char *description) {
+                    const char *description, int priority) {
     Report r;
     reportCounter++;
     snprintf(r.id, sizeof(r.id), "REP-%d", reportCounter);
@@ -310,6 +526,7 @@ Report createReport(const char *type, const char *title,
     strncpy(r.category,    category,    sizeof(r.category) - 1);
     strncpy(r.location,    location,    sizeof(r.location) - 1);
     strncpy(r.description, description, sizeof(r.description) - 1);
+    r.priority = (priority >= 1 && priority <= 3) ? priority : 1;
     strcpy(r.status, "Active");
     r.recoveredAt[0] = '\0';
 
@@ -396,23 +613,27 @@ void printMenu(void) {
     printf("\n");
     printSeparator();
     printf("  FindIt: Campus Lost-and-Found Tracker\n");
-    printf("  Data Structures: Linked List + Hash Table\n");
+    printf("  Data Structures: Linked List + Hash Table + Priority Queue (Heap)\n");
     printSeparator();
     printf("  1. Add a Lost Report\n");
     printf("  2. Add a Found Report\n");
-    printf("  3. Search by Keyword / Category\n");
-    printf("  4. View All Active Reports\n");
-    printf("  5. Mark Item as Recovered\n");
-    printf("  6. View Recovery History\n");
-    printf("  7. Find Potential Matches\n");
-    printf("  8. DSA Debug View\n");
-    printf("  9. Exit\n");
+    printf("  3. Search by Keyword / Category (Hash Table O(1))\n");
+    printf("  4. View All Active Reports (Linked List)\n");
+    printf("  5. View Reports Ranked by Priority (Priority Queue / Heap Sort)\n");
+    printf("  6. Process Next Highest-Priority Report (Heap Extract-Max O(log n))\n");
+    printf("  7. Adjust Report Priority (Heap Bubble-Up/Down)\n");
+    printf("  8. Mark Item as Recovered\n");
+    printf("  9. View Recovery History\n");
+    printf("  10. Find Potential Matches\n");
+    printf("  11. DSA Debug View (Heap Array + Tree + Buckets + List)\n");
+    printf("  12. Exit\n");
     printSeparator();
     printf("  Enter choice: ");
 }
 
-void addReportInteractive(LinkedList *activeList, HashTable *ht, const char *type) {
+void addReportInteractive(LinkedList *activeList, PriorityQueue *pq, HashTable *ht, const char *type) {
     char title[MAX_STR], category[MAX_STR], location[MAX_STR], desc[256];
+    int priority = 1;
 
     printf("\n  --- Add %s Report ---\n", type);
     printf("  Item Name: ");
@@ -432,11 +653,18 @@ void addReportInteractive(LinkedList *activeList, HashTable *ht, const char *typ
     fgets(desc, 256, stdin);
     desc[strcspn(desc, "\n")] = '\0';
 
-    Report r = createReport(type, title, category, location, desc);
+    printf("  Priority Level (3 = Urgent [ID/Keys/Wallet], 2 = Medium [Electronics], 1 = Low [General]): ");
+    if (scanf("%d", &priority) != 1 || priority < 1 || priority > 3) {
+        priority = 1;
+    }
+
+    Report r = createReport(type, title, category, location, desc, priority);
     insertAtHead(activeList, r);
+    pqInsert(pq, r, priority);
     indexReport(ht, r);
 
-    printf("\n  [OK] %s report added: %s (%s)\n", type, r.title, r.id);
+    printf("\n  [OK] %s report added: %s (%s) [Priority: %s]\n",
+           type, r.title, r.id, priorityLabel(priority));
 }
 
 void searchInteractive(HashTable *ht) {
@@ -451,15 +679,80 @@ void searchInteractive(HashTable *ht) {
 
     printf("\n  Search results for \"%s\": %d found\n", query, count);
     for (int i = 0; i < count; i++) {
-        printf("  [%d] %s | %s | %s | %s | %s\n",
+        printf("  [%d] %s | %s | %-7s | %s | %s | %s\n",
                i + 1, results[i].id, results[i].type,
+               priorityLabel(results[i].priority),
                results[i].title, results[i].category, results[i].location);
     }
     if (count == 0)
         printf("  No results found.\n");
 }
 
-void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, HashTable *ht) {
+void processTopPriorityInteractive(LinkedList *activeList, PriorityQueue *pq, LinkedList *recoveryList, HashTable *ht) {
+    Report top;
+    if (!pqExtractMax(pq, &top)) {
+        printf("\n  [!] Priority Queue is empty. No reports to process.\n");
+        return;
+    }
+
+    printf("\n  ======================================================\n");
+    printf("  PROCESSING HIGHEST-PRIORITY REPORT (Heap Extract-Max)\n");
+    printf("  ======================================================\n");
+    printf("  ID:       %s\n", top.id);
+    printf("  Priority: %s (Weight: %d)\n", priorityLabel(top.priority), top.priority);
+    printf("  Type:     %s\n", top.type);
+    printf("  Item:     %s\n", top.title);
+    printf("  Category: %s\n", top.category);
+    printf("  Location: %s\n", top.location);
+    printf("  Details:  %s\n", top.description);
+    printf("  ======================================================\n");
+
+    printf("  Resolve and mark as recovered now? (1 = Yes, 0 = Keep Active): ");
+    int resolve = 0;
+    if (scanf("%d", &resolve) == 1 && resolve == 1) {
+        Report removed;
+        removeById(activeList, top.id, &removed);
+        strcpy(top.status, "Recovered");
+        time_t now = time(NULL);
+        struct tm *t = localtime(&now);
+        strftime(top.recoveredAt, sizeof(top.recoveredAt), "%d/%m/%Y %H:%M", t);
+        insertAtHead(recoveryList, top);
+        hashRemoveById(ht, top.id);
+        printf("  [OK] \"%s\" marked as recovered and moved to history!\n", top.title);
+    } else {
+        /* Re-insert back into heap if admin just wanted to inspect */
+        pqInsert(pq, top, top.priority);
+        printf("  [INFO] Report returned to Priority Queue.\n");
+    }
+}
+
+void adjustPriorityInteractive(LinkedList *activeList, PriorityQueue *pq) {
+    char id[16];
+    int newPriority;
+    printf("\n  Enter Report ID to adjust priority (e.g. REP-1001): ");
+    getchar();
+    fgets(id, 16, stdin);
+    id[strcspn(id, "\n")] = '\0';
+
+    Report *r = findById(activeList, id);
+    if (!r) {
+        printf("  [!] Report %s not found in active list.\n", id);
+        return;
+    }
+
+    printf("  Current Priority: %s (%d)\n", priorityLabel(r->priority), r->priority);
+    printf("  Enter New Priority (3 = Urgent, 2 = Medium, 1 = Low): ");
+    if (scanf("%d", &newPriority) == 1 && newPriority >= 1 && newPriority <= 3) {
+        r->priority = newPriority;
+        pqChangePriority(pq, id, newPriority);
+        printf("  [OK] Priority for %s updated to %s (Binary Heap rebalanced in O(log n))!\n",
+               id, priorityLabel(newPriority));
+    } else {
+        printf("  [!] Invalid priority.\n");
+    }
+}
+
+void markRecoveredInteractive(LinkedList *activeList, PriorityQueue *pq, LinkedList *recoveryList, HashTable *ht) {
     char id[16];
     printf("\n  Enter Report ID to recover (e.g. REP-1001): ");
     getchar();
@@ -474,6 +767,7 @@ void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, 
         strftime(removed.recoveredAt, sizeof(removed.recoveredAt), "%d/%m/%Y %H:%M", t);
 
         insertAtHead(recoveryList, removed);
+        pqRemoveById(pq, id, NULL);
         hashRemoveById(ht, id);
         printf("\n  [OK] \"%s\" marked as recovered!\n", removed.title);
     } else {
@@ -487,40 +781,42 @@ void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, 
  * ========================================================== */
 
 int main(void) {
-    LinkedList *activeList   = createLinkedList();
-    LinkedList *recoveryList = createLinkedList();
-    HashTable  *ht           = createHashTable();
+    LinkedList    *activeList   = createLinkedList();
+    LinkedList    *recoveryList = createLinkedList();
+    HashTable     *ht           = createHashTable();
+    PriorityQueue *pq           = createPriorityQueue();
 
-    /* --- Seed dummy campus data --- */
+    /* --- Seed dummy campus data with explicit priority ratings --- */
     Report seed[] = {
         createReport("Lost",  "Black Leather Wallet",
                      "ID-Wallet", "Canteen",
-                     "Contains student ID and two credit cards. Roll No: 23CS101"),
+                     "Contains student ID and two credit cards. Roll No: 23CS101", 3),
         createReport("Found", "Casio Scientific Calculator",
                      "Electronics", "Library 2nd Floor",
-                     "Casio fx-991EX on study desk. Turned in at front desk."),
+                     "Casio fx-991EX on study desk. Turned in at front desk.", 2),
         createReport("Lost",  "Blue Spiral Notebook",
                      "Books", "Lab 302",
-                     "100-page notebook, Physics notes, name Ananya S. on cover."),
+                     "100-page notebook, Physics notes, name Ananya S. on cover.", 1),
         createReport("Found", "Honda Bike Key with Red Keychain",
                      "Keys", "Parking Lot B",
-                     "Single Honda key, red silicone keychain. Near bike stand."),
+                     "Single Honda key, red silicone keychain. Near bike stand.", 3),
         createReport("Lost",  "Apple AirPods Pro",
                      "Electronics", "Auditorium",
-                     "White AirPods Pro, black case, initials VS engraved."),
+                     "White AirPods Pro, black case, initials VS engraved.", 2),
         createReport("Found", "Student ID Card",
                      "ID-Wallet", "Canteen",
-                     "ID for Priya M., Dept of CSE, found near counter 3."),
+                     "ID for Priya M., Dept of CSE, found near counter 3.", 3),
     };
 
     int seedCount = sizeof(seed) / sizeof(seed[0]);
     for (int i = 0; i < seedCount; i++) {
         insertAtHead(activeList, seed[i]);
+        pqInsert(pq, seed[i], seed[i].priority);
         indexReport(ht, seed[i]);
     }
 
     printf("\n  *** FindIt: Campus Lost-and-Found Tracker ***\n");
-    printf("  Loaded %d seed reports.\n", seedCount);
+    printf("  Loaded %d seed reports into Linked List, Hash Table, & Binary Heap.\n", seedCount);
 
     /* --- Menu loop --- */
     int choice;
@@ -534,10 +830,10 @@ int main(void) {
 
         switch (choice) {
             case 1:
-                addReportInteractive(activeList, ht, "Lost");
+                addReportInteractive(activeList, pq, ht, "Lost");
                 break;
             case 2:
-                addReportInteractive(activeList, ht, "Found");
+                addReportInteractive(activeList, pq, ht, "Found");
                 break;
             case 3:
                 searchInteractive(ht);
@@ -545,24 +841,33 @@ int main(void) {
             case 4:
                 printf("\n");
                 printSeparator();
-                printf("  ALL ACTIVE REPORTS\n");
+                printf("  ALL ACTIVE REPORTS (Linked List Chronological Order)\n");
                 printSeparator();
                 {
                     Report arr[MAX_REPORTS];
                     int n = toArray(activeList, arr, MAX_REPORTS);
                     for (int i = 0; i < n; i++) {
-                        printf("  %-8s | %-6s | %-28s | %-12s | %s\n",
-                               arr[i].id, arr[i].type, arr[i].title,
-                               arr[i].category, arr[i].location);
+                        printf("  %-8s | %-5s | %-7s | %-28s | %-12s | %s\n",
+                               arr[i].id, arr[i].type, priorityLabel(arr[i].priority),
+                               arr[i].title, arr[i].category, arr[i].location);
                     }
                     if (n == 0) printf("  (empty)\n");
                 }
                 displayList(activeList, "Active Reports Linked List");
                 break;
             case 5:
-                markRecoveredInteractive(activeList, recoveryList, ht);
+                displayPrioritySortedReports(pq);
                 break;
             case 6:
+                processTopPriorityInteractive(activeList, pq, recoveryList, ht);
+                break;
+            case 7:
+                adjustPriorityInteractive(activeList, pq);
+                break;
+            case 8:
+                markRecoveredInteractive(activeList, pq, recoveryList, ht);
+                break;
+            case 9:
                 printf("\n");
                 printSeparator();
                 printf("  RECOVERY HISTORY\n");
@@ -579,30 +884,32 @@ int main(void) {
                 }
                 displayList(recoveryList, "Recovery History Linked List");
                 break;
-            case 7:
+            case 10:
                 findAndPrintMatches(activeList);
                 break;
-            case 8:
+            case 11:
                 printf("\n");
                 printSeparator();
-                printf("  DSA DEBUG VIEW\n");
+                printf("  DSA DEBUG VIEW — ALL DATA STRUCTURES\n");
                 printSeparator();
+                displayPriorityQueueHeap(pq);
                 displayList(activeList, "Active Reports Linked List");
                 displayList(recoveryList, "Recovery History Linked List");
                 displayHashTable(ht);
                 break;
-            case 9:
+            case 12:
                 printf("\n  Goodbye!\n\n");
                 break;
             default:
                 printf("  Invalid choice. Try again.\n");
         }
-    } while (choice != 9);
+    } while (choice != 12);
 
     /* Cleanup */
     freeLinkedList(activeList);
     freeLinkedList(recoveryList);
     freeHashTable(ht);
+    freePriorityQueue(pq);
 
     return 0;
 }

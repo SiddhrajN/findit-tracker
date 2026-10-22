@@ -362,3 +362,47 @@ body {
     opacity: 0.14;
   }
 }
+
+/* ============================================================
+ *  BINARY MAX-HEAP & PRIORITY QUEUE INSPECTOR
+ * ============================================================ */
+.heap-node-urgent {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  border: 1px solid rgba(254, 202, 202, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(220, 38, 38, 0.35);
+}
+
+.heap-node-medium {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border: 1px solid rgba(254, 243, 199, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.30);
+}
+
+.heap-node-low {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: #ffffff;
+  border: 1px solid rgba(243, 244, 246, 0.4);
+  box-shadow: 0 4px 12px -2px rgba(75, 85, 99, 0.25);
+}
+
+.heap-pill-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+@keyframes pulseUrgentGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+.urgent-pulse {
+  animation: pulseUrgentGlow 2.5s infinite;
+}

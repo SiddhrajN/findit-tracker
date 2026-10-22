@@ -11,9 +11,87 @@ let authMode = "login"; // "login" or "signup"
 
 // ----- Global Data Structures --------------------------------
 let activeReportsList = new LinkedList();
+let activePriorityQueue = new PriorityQueue();
 let recoveryHistoryList = new LinkedList();
 let categoryHashTable = new HashTable();
 let reportCounter = 1000;
+let adminMode = true; // Admin privileges enabled for Campus Lost & Found administrators
+let heapInspectorOpen = false;
+
+// ----- Priority Levels Configuration & Visual Mapping ------
+const PRIORITY_CONFIG = {
+  3: {
+    level: 3,
+    key: "urgent",
+    name: "Urgent",
+    label: "URGENT",
+    icon: "🚨",
+    badgeBg: "bg-red-600 text-white shadow-xs shadow-red-500/30 ring-1 ring-red-400/40",
+    pillBg: "bg-red-50 text-red-700 border border-red-200",
+    borderHighlight: "border-red-400/80 shadow-md shadow-red-500/10",
+    glowDot: "bg-red-500",
+    desc: "Critical items: College IDs, Wallets, Keys, Essential Official Belongings",
+  },
+  2: {
+    level: 2,
+    key: "medium",
+    name: "Medium",
+    label: "MEDIUM",
+    icon: "⚡",
+    badgeBg: "bg-amber-500 text-white shadow-xs shadow-amber-500/20",
+    pillBg: "bg-amber-50 text-amber-800 border border-amber-200",
+    borderHighlight: "border-amber-300",
+    glowDot: "bg-amber-400",
+    desc: "Electronics, Calculators, Audio devices, Textbooks",
+  },
+  1: {
+    level: 1,
+    key: "low",
+    name: "Low",
+    label: "LOW",
+    icon: "🟢",
+    badgeBg: "bg-stone-500 text-white shadow-xs",
+    pillBg: "bg-stone-100 text-stone-700 border border-stone-200",
+    borderHighlight: "border-sand-d",
+    glowDot: "bg-stone-400",
+    desc: "Standard items: Stationery, Umbrellas, Water bottles, Accessories",
+  },
+};
+
+function getPriorityInfo(priority) {
+  const p = Number(priority) || 1;
+  return PRIORITY_CONFIG[p] || PRIORITY_CONFIG[1];
+}
+
+function autoDetectPriority(title = "", category = "") {
+  const combined = `${title} ${category}`.toLowerCase();
+  if (
+    combined.includes("id") ||
+    combined.includes("card") ||
+    combined.includes("wallet") ||
+    combined.includes("key") ||
+    combined.includes("license") ||
+    combined.includes("passport") ||
+    combined.includes("aadhaar") ||
+    category === "ID/Wallet" ||
+    category === "Keys"
+  ) {
+    return 3; // Urgent
+  }
+  if (
+    combined.includes("calc") ||
+    combined.includes("phone") ||
+    combined.includes("laptop") ||
+    combined.includes("airpod") ||
+    combined.includes("headphone") ||
+    combined.includes("charger") ||
+    combined.includes("watch") ||
+    category === "Electronics"
+  ) {
+    return 2; // Medium
+  }
+  return 1; // Low
+}
 
 // ----- Category Palette & Visual Mapping --------------------
 const CATEGORY_MAP = {
@@ -38,6 +116,7 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Contains campus student ID card and cash. Contact Roll No: 23CS101 (Siddhraj Nimje).",
+    priority: 3, // Urgent: College ID & Cash
     status: "Active",
     timestamp: new Date("2026-10-20T09:15:00").toISOString(),
   },
@@ -48,6 +127,7 @@ const SEED_DATA = [
     category: "Electronics",
     location: "Library 2nd Floor",
     description: "Casio fx-991EX found on study desk near window. Turned in at front desk.",
+    priority: 2, // Medium
     status: "Active",
     timestamp: new Date("2026-10-20T11:30:00").toISOString(),
   },
@@ -58,6 +138,7 @@ const SEED_DATA = [
     category: "Books",
     location: "Lab 302",
     description: "100-page notebook with Physics and DSA notes, name 'Siddhraj' on cover.",
+    priority: 1, // Low
     status: "Active",
     timestamp: new Date("2026-10-20T14:00:00").toISOString(),
   },
@@ -68,6 +149,7 @@ const SEED_DATA = [
     category: "Keys",
     location: "Parking Lot B",
     description: "Single Honda key with a red silicone keychain. Found near bike stand.",
+    priority: 3, // Urgent: Vehicle keys
     status: "Active",
     timestamp: new Date("2026-10-21T08:00:00").toISOString(),
   },
@@ -78,6 +160,7 @@ const SEED_DATA = [
     category: "Electronics",
     location: "Auditorium",
     description: "White AirPods Pro in a matte case. Left on 3rd row right seat.",
+    priority: 2, // Medium
     status: "Active",
     timestamp: new Date("2026-10-21T10:45:00").toISOString(),
   },
@@ -88,6 +171,7 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
+    priority: 3, // Urgent: Official College ID Card
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
   },
@@ -110,13 +194,30 @@ function loadFromLocalStorage() {
   const counterRaw = localStorage.getItem(STORAGE_KEY_COUNTER);
 
   if (activeRaw) {
-    const activeArr = JSON.parse(activeRaw);
+    let activeArr = JSON.parse(activeRaw);
+    let migrated = false;
+    // Upgrade existing stored records if missing priority
+    activeArr = activeArr.map((item) => {
+      if (!item.priority) {
+        item.priority = autoDetectPriority(item.title, item.category);
+        migrated = true;
+      }
+      return item;
+    });
+
     activeReportsList = LinkedList.fromArray(activeArr);
+    activePriorityQueue = PriorityQueue.fromReports(activeArr);
     categoryHashTable = HashTable.fromReports(activeArr);
     reportCounter = counterRaw ? parseInt(counterRaw, 10) : 1000 + activeArr.length;
+
+    if (migrated) {
+      saveToLocalStorage();
+    }
   } else {
+    activePriorityQueue = new PriorityQueue();
     SEED_DATA.forEach((item) => {
       activeReportsList.insertAtHead(item);
+      activePriorityQueue.insert(item, item.priority || 1);
       categoryHashTable.insert(item.category, item);
       item.title
         .toLowerCase()
@@ -329,20 +430,205 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ----- Stats Counter ----------------------------------------
+// ----- Stats Counter & Heap Status ------------------------
 function updateStats() {
   const all = activeReportsList.toArray();
   const lostCount = all.filter((r) => r.type === "Lost").length;
   const foundCount = all.filter((r) => r.type === "Found").length;
   const recoveredCount = recoveryHistoryList.length;
+  const urgentCount = all.filter((r) => r.priority === 3).length;
 
   const statLost = document.getElementById("stat-lost");
   const statFound = document.getElementById("stat-found");
   const statRecovered = document.getElementById("stat-recovered");
+  const statUrgent = document.getElementById("stat-urgent");
 
   if (statLost) statLost.textContent = lostCount;
   if (statFound) statFound.textContent = foundCount;
   if (statRecovered) statRecovered.textContent = recoveredCount;
+  if (statUrgent) statUrgent.textContent = urgentCount;
+
+  // Update Priority Queue Console Desk
+  const pqHeapCount = document.getElementById("pq-heap-count");
+  const pqUrgentCount = document.getElementById("pq-urgent-count");
+  const pqTopTitle = document.getElementById("pq-top-title");
+  const pqTopBadge = document.getElementById("pq-top-badge");
+
+  if (pqHeapCount) pqHeapCount.textContent = activePriorityQueue.size();
+  if (pqUrgentCount) pqUrgentCount.textContent = urgentCount;
+
+  const topReport = activePriorityQueue.peek();
+  if (topReport) {
+    const pInfo = getPriorityInfo(topReport.priority);
+    if (pqTopTitle) pqTopTitle.textContent = `[${topReport.id}] ${topReport.title} — ${topReport.location}`;
+    if (pqTopBadge) {
+      pqTopBadge.className = `inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full ${pInfo.badgeBg}`;
+      pqTopBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} (Level ${pInfo.level})</span>`;
+      pqTopBadge.classList.remove("hidden");
+    }
+  } else {
+    if (pqTopTitle) pqTopTitle.textContent = "Queue Empty (No active reports to process)";
+    if (pqTopBadge) pqTopBadge.classList.add("hidden");
+  }
+
+  if (heapInspectorOpen) {
+    renderHeapInspector();
+  }
+}
+
+// ----- Admin Controls & Priority Queue Actions --------------
+function toggleAdminMode() {
+  adminMode = !adminMode;
+  const btnText = document.getElementById("admin-toggle-label");
+  const btn = document.getElementById("btn-admin-toggle");
+  if (btnText) {
+    btnText.textContent = adminMode ? "Admin: Active" : "Admin: Off";
+  }
+  if (btn) {
+    if (adminMode) {
+      btn.className = "inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-all bg-forest/10 border-forest/30 text-forest hover:bg-forest hover:text-white shadow-xs";
+    } else {
+      btn.className = "inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-all bg-stone-100 border-stone-300 text-stone-500 hover:bg-stone-200 shadow-xs";
+    }
+  }
+  refreshAll();
+  showToast(
+    adminMode
+      ? "🛡️ Admin mode active: priority adjustment and high-priority processing enabled."
+      : "👤 Switched to standard student view (read-only priority tags).",
+    "success"
+  );
+}
+
+function setReportPriority(id, newPriority) {
+  const pVal = Number(newPriority) || 1;
+  // 1. Binary Heap restructure: bubble-up if increased, bubble-down if decreased — O(log n)
+  activePriorityQueue.changePriority(id, pVal);
+
+  // 2. Synchronize report in Linked List
+  const rep = activeReportsList.findById(id);
+  if (rep) {
+    rep.priority = pVal;
+  }
+
+  saveToLocalStorage();
+  refreshAll();
+
+  const pInfo = getPriorityInfo(pVal);
+  showToast(
+    `⭐ ${rep ? rep.title : id} priority set to ${pInfo.name} (${pInfo.icon}) — Binary Heap reorganized in O(log n)`,
+    "success"
+  );
+}
+
+function processHighestPriorityReport() {
+  const top = activePriorityQueue.peek();
+  if (!top) {
+    showToast("⚠️ Priority Queue is empty. No reports to process.", "error");
+    return;
+  }
+  showDetail(top.id, /* isProcessingMode = */ true);
+  const pInfo = getPriorityInfo(top.priority);
+  showToast(
+    `⚡ Processing highest-priority item from Binary Heap: [${top.id}] ${top.title} (${pInfo.name})`,
+    "match"
+  );
+}
+
+function toggleHeapInspector() {
+  heapInspectorOpen = !heapInspectorOpen;
+  const panel = document.getElementById("heap-inspector-panel");
+  const chevron = document.getElementById("heap-chevron");
+  if (!panel) return;
+
+  if (heapInspectorOpen) {
+    panel.classList.remove("hidden");
+    if (chevron) chevron.classList.add("rotate-180");
+    renderHeapInspector();
+  } else {
+    panel.classList.add("hidden");
+    if (chevron) chevron.classList.remove("rotate-180");
+  }
+}
+
+function renderHeapInspector() {
+  const arrayContainer = document.getElementById("heap-array-view");
+  const treeContainer = document.getElementById("heap-tree-view");
+  if (!arrayContainer || !treeContainer) return;
+
+  const snapshot = activePriorityQueue.debugSnapshot();
+  if (snapshot.length === 0) {
+    arrayContainer.innerHTML = `<span class="text-xs text-gray-400 italic">Binary Heap is currently empty.</span>`;
+    treeContainer.innerHTML = `<span class="text-xs text-gray-400 italic">Binary Heap is currently empty.</span>`;
+    return;
+  }
+
+  // 1. Array Memory Representation
+  arrayContainer.innerHTML = snapshot
+    .map((node) => {
+      const pInfo = getPriorityInfo(node.priority);
+      const nodeClass =
+        node.priority === 3
+          ? "heap-node-urgent"
+          : node.priority === 2
+          ? "heap-node-medium"
+          : "heap-node-low";
+
+      return `
+      <div class="flex flex-col items-center">
+        <div class="${nodeClass} rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
+          <span class="heap-pill-badge">[${node.index}]</span>
+          <span class="text-xs font-black truncate max-w-[130px]">${escapeHtml(node.title)}</span>
+          <span class="text-[10px] font-black bg-white/20 px-1 rounded">${pInfo.icon} P${node.priority}</span>
+        </div>
+        <span class="text-[9px] text-gray-400 font-mono mt-0.5">${node.id}</span>
+      </div>`;
+    })
+    .join("");
+
+  // 2. Binary Tree Structure (Levels)
+  const levels = [];
+  let levelStart = 0;
+  let levelCount = 1;
+  while (levelStart < snapshot.length) {
+    levels.push(snapshot.slice(levelStart, levelStart + levelCount));
+    levelStart += levelCount;
+    levelCount *= 2;
+  }
+
+  treeContainer.innerHTML = `
+    <div class="space-y-4">
+      ${levels
+        .map((levelNodes, lvlIdx) => {
+          return `
+        <div class="flex flex-col items-center">
+          <div class="text-[10px] font-mono font-bold text-gray-400 mb-1.5">
+            ── Level ${lvlIdx} ${lvlIdx === 0 ? '(Root • Highest Priority)' : ''} ──
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            ${levelNodes
+              .map((node) => {
+                const pInfo = getPriorityInfo(node.priority);
+                const isRoot = node.index === 0;
+                return `
+                <div class="p-3 rounded-2xl bg-white border ${isRoot ? 'border-red-400 ring-2 ring-red-400/40 shadow-md' : 'border-sand'} flex flex-col items-center text-center min-w-[140px] shadow-xs">
+                  <div class="flex items-center gap-1 mb-1">
+                    <span class="text-[10px] font-mono font-bold text-gray-400">[${node.index}]</span>
+                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full ${pInfo.badgeBg}">${pInfo.icon} ${pInfo.label}</span>
+                  </div>
+                  <p class="text-xs font-bold text-gray-800 line-clamp-1">${escapeHtml(node.title)}</p>
+                  <p class="text-[10px] font-mono text-terracotta font-semibold">${node.id}</p>
+                  <div class="mt-1 text-[9px] text-gray-400 font-mono">
+                    ${node.parentIndex !== null ? `Parent: [${node.parentIndex}]` : '<span class="text-forest font-black">HEAP ROOT</span>'}
+                  </div>
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>`;
+        })
+        .join("")}
+    </div>`;
 }
 
 // ============================================================
@@ -558,12 +844,14 @@ function renderReports(items) {
     .map((r) => {
       const isLost = r.type === "Lost";
       const catInfo = getCategoryInfo(r.category);
-      const badgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
-      const badgeDot = isLost ? "🔴" : "🟢";
-      const badgeLabel = isLost ? "LOST" : "FOUND";
+      const prioInfo = getPriorityInfo(r.priority);
+      const isUrgent = prioInfo.level === 3;
+      const typeBadgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
+      const typeBadgeDot = isLost ? "🔴" : "🟢";
+      const typeBadgeLabel = isLost ? "LOST" : "FOUND";
 
       return `
-      <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col"
+      <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col ${isUrgent ? 'ring-2 ring-red-500/40 shadow-lg shadow-red-500/10' : ''}"
            onclick="showDetail('${r.id}')">
 
         <!-- Glass Sheen & Specular Glare Highlights -->
@@ -575,17 +863,30 @@ function renderReports(items) {
           <div class="depth-item w-full h-full flex items-center justify-center">
             ${create3DItemHTML(r.category, r.title)}
           </div>
+          <!-- Priority Badge floating on Top-Right -->
+          <div class="absolute top-3 right-3 z-30">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-md ${prioInfo.badgeBg}">
+              <span>${prioInfo.icon}</span>
+              <span>${prioInfo.label}</span>
+              ${isUrgent ? '<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping ml-0.5"></span>' : ''}
+            </span>
+          </div>
         </div>
 
         <!-- Card Content with Z-Depth Stacking -->
         <div class="preserve-3d-space p-5 flex flex-col flex-1 relative z-30">
           <!-- Badges Row -->
           <div class="depth-badge flex items-center justify-between mb-3">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-xs ${badgeBg}">
-              ${badgeDot} ${badgeLabel}
-            </span>
-            <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
-              ${escapeHtml(r.category)}
+            <div class="flex items-center gap-1.5">
+              <span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${typeBadgeBg}">
+                ${typeBadgeDot} ${typeBadgeLabel}
+              </span>
+              <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
+                ${escapeHtml(r.category)}
+              </span>
+            </div>
+            <span class="text-[10px] font-mono font-bold text-gray-400 bg-sand/30 px-2 py-0.5 rounded border border-sand/60">
+              ${escapeHtml(r.id)}
             </span>
           </div>
 
@@ -599,24 +900,56 @@ function renderReports(items) {
             ${escapeHtml(r.description)}
           </p>
 
-          <!-- Location & Date -->
+          <!-- Location, Date & Priority Status -->
           <div class="depth-meta mt-auto space-y-1.5 pt-2 border-t border-sand-d/60">
-            <div class="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-              <span class="text-terracotta">📍</span>
-              <span>${escapeHtml(r.location)}</span>
+            <div class="flex items-center justify-between text-xs text-gray-700 font-medium">
+              <div class="flex items-center gap-1.5">
+                <span class="text-terracotta">📍</span>
+                <span>${escapeHtml(r.location)}</span>
+              </div>
+              <span class="text-[11px] font-bold ${isUrgent ? 'text-red-700' : 'text-gray-500'}">
+                Priority: <span class="font-extrabold">${prioInfo.level}/3</span>
+              </span>
             </div>
             <div class="flex items-center justify-between text-xs text-gray-500">
               <span class="flex items-center gap-1">
                 <span>📅</span> ${formatDate(r.timestamp)}
               </span>
-              <span class="font-mono text-[10px] text-gray-400 font-bold">${escapeHtml(r.id)}</span>
+              <span class="text-[10px] text-gray-400 font-mono">Heap Ranked</span>
             </div>
           </div>
 
+          ${
+            adminMode
+              ? `
+          <!-- Admin Direct Priority Adjuster Strip -->
+          <div class="mt-3 pt-2.5 border-t border-sand-d/40 flex items-center justify-between" onclick="event.stopPropagation()">
+            <span class="text-[10px] font-extrabold uppercase text-forest tracking-wider flex items-center gap-1">
+              <span>🛡️ Set Priority:</span>
+            </span>
+            <div class="inline-flex rounded-lg shadow-2xs border border-sand bg-white/90 p-0.5 text-[10px] font-bold">
+              <button onclick="setReportPriority('${r.id}', 3)" title="Assign Urgent Priority (P3)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 3 ? 'bg-red-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-red-700 hover:bg-red-50'}">
+                🚨 Urgent
+              </button>
+              <button onclick="setReportPriority('${r.id}', 2)" title="Assign Medium Priority (P2)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 2 ? 'bg-amber-500 text-white font-black shadow-xs' : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50'}">
+                ⚡ Med
+              </button>
+              <button onclick="setReportPriority('${r.id}', 1)" title="Assign Low Priority (P1)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 1 ? 'bg-stone-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-stone-800 hover:bg-stone-100'}">
+                🟢 Low
+              </button>
+            </div>
+          </div>
+          `
+              : ""
+          }
+
           <!-- View Details Button -->
           <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-            class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
-            <span>View Details</span>
+            class="depth-btn mt-3 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
+            <span>View Details &amp; Actions</span>
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
         </div>
@@ -668,7 +1001,7 @@ function attach3DTiltListeners() {
 // ============================================================
 //  ITEM DETAIL MODAL
 // ============================================================
-function showDetail(id) {
+function showDetail(id, isProcessingMode = false) {
   const report = activeReportsList.findById(id);
   if (!report) return;
 
@@ -676,19 +1009,48 @@ function showDetail(id) {
   const isLost = report.type === "Lost";
   const badgeBg = isLost ? "bg-red-600 text-white" : "bg-forest text-white";
   const badgeDot = isLost ? "🔴" : "🟢";
+  const prioInfo = getPriorityInfo(report.priority);
 
   const container = document.getElementById("detail-content");
   container.innerHTML = `
-    <div class="h-44 -mx-6 -mt-6 rounded-t-3xl bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
+    ${
+      isProcessingMode
+        ? `
+      <div class="mb-4 -mx-6 -mt-6 p-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white rounded-t-3xl shadow-md flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">⚡</span>
+          <div>
+            <p class="text-xs font-black uppercase tracking-wider">Priority Queue Active Dispatch Desk</p>
+            <p class="text-[11px] text-white/90">This report occupies the ROOT node of the Binary Max-Heap.</p>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono font-black bg-white/20 px-2.5 py-1 rounded-full border border-white/30">O(1) Peek</span>
+      </div>
+      `
+        : ""
+    }
+
+    <div class="h-44 -mx-6 ${isProcessingMode ? '' : '-mt-6 rounded-t-3xl'} bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
       <div class="scale-110">
         ${create3DItemHTML(report.category, report.title)}
+      </div>
+      <!-- Priority Badge on Header -->
+      <div class="absolute top-3 right-3">
+        <span class="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md ${prioInfo.badgeBg}">
+          ${prioInfo.icon} ${prioInfo.label} PRIORITY
+        </span>
       </div>
     </div>
 
     <div class="flex items-center justify-between mb-3">
-      <span class="inline-flex items-center gap-1.5 text-xs font-black ${badgeBg} px-3 py-1 rounded-full shadow-xs">
-        ${badgeDot} ${report.type.toUpperCase()} ITEM
-      </span>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 text-xs font-black ${badgeBg} px-3 py-1 rounded-full shadow-xs">
+          ${badgeDot} ${report.type.toUpperCase()} ITEM
+        </span>
+        <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
+          ${prioInfo.icon} Score: ${prioInfo.level}/3
+        </span>
+      </div>
       <span class="text-xs text-gray-500 font-mono font-bold bg-ivory px-2.5 py-1 rounded-md border border-sand">
         ${escapeHtml(report.id)}
       </span>
@@ -708,16 +1070,73 @@ function showDetail(id) {
       </span>
     </div>
 
-    <div class="bg-ivory rounded-2xl p-4 mb-5 border border-sand">
+    <div class="bg-ivory rounded-2xl p-4 mb-4 border border-sand">
       <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Description &amp; Contact Info</h4>
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
+
+    <!-- Priority Status Explanation -->
+    <div class="bg-amber-50/70 rounded-2xl p-3.5 mb-4 border border-amber-200/80 text-xs">
+      <div class="flex items-center gap-1.5 font-bold text-amber-900 mb-0.5">
+        <span>${prioInfo.icon}</span>
+        <span>Priority Level: ${prioInfo.name}</span>
+      </div>
+      <p class="text-[11px] text-amber-800">${prioInfo.desc}</p>
+    </div>
+
+    ${
+      adminMode
+        ? `
+    <!-- Admin Priority Assignment Panel -->
+    <div class="bg-white rounded-2xl p-4 mb-5 border-2 border-forest/30 shadow-xs">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-xs font-black uppercase text-forest tracking-wide flex items-center gap-1.5">
+          <span>🛡️ Admin Controls: Adjust Priority</span>
+        </h4>
+        <span class="text-[10px] font-mono text-gray-400">Binary Heap Rebalance</span>
+      </div>
+      <p class="text-[11px] text-gray-600 mb-3">
+        Assign urgency to reposition this report in the Priority Queue (bubble-up/down in O(log n)).
+      </p>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setReportPriority('${report.id}', 3); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 3
+              ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-400 shadow-sm'
+              : 'border-sand hover:border-red-400 hover:bg-red-50 text-gray-700'
+          }">
+          <span>🚨 Urgent</span>
+          <span class="text-[9px] opacity-80">P-Score: 3</span>
+        </button>
+        <button onclick="setReportPriority('${report.id}', 2); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 2
+              ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 shadow-sm'
+              : 'border-sand hover:border-amber-400 hover:bg-amber-50 text-gray-700'
+          }">
+          <span>⚡ Medium</span>
+          <span class="text-[9px] opacity-80">P-Score: 2</span>
+        </button>
+        <button onclick="setReportPriority('${report.id}', 1); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 1
+              ? 'bg-stone-600 text-white border-stone-700 ring-2 ring-stone-400 shadow-sm'
+              : 'border-sand hover:border-stone-400 hover:bg-stone-100 text-gray-700'
+          }">
+          <span>🟢 Low</span>
+          <span class="text-[9px] opacity-80">P-Score: 1</span>
+        </button>
+      </div>
+    </div>
+    `
+        : ""
+    }
 
     <div class="flex gap-3">
       <button onclick="markRecovered('${report.id}'); closeDetailModal();"
         class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-        <span>Mark as Recovered</span>
+        <span>${isProcessingMode ? 'Resolve &amp; Mark as Recovered' : 'Mark as Recovered'}</span>
       </button>
       <button onclick="closeDetailModal()"
         class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs">
@@ -897,6 +1316,9 @@ function renderMatches() {
 //  CORE OPERATIONS: Add Report, Recover, Search
 // ============================================================
 function addReport(formData) {
+  const detectedPrio = autoDetectPriority(formData.title, formData.category);
+  const priority = Number(formData.priority) || detectedPrio;
+
   const report = {
     id: generateId(),
     type: formData.type,
@@ -904,14 +1326,18 @@ function addReport(formData) {
     category: formData.category,
     location: formData.location.trim(),
     description: formData.description.trim(),
+    priority: priority,
     status: "Active",
     timestamp: new Date().toISOString(),
   };
 
-  // Singly Linked List — O(1) prepend
+  // 1. Singly Linked List — O(1) prepend
   activeReportsList.insertAtHead(report);
 
-  // Hash Table — index category and title keywords
+  // 2. Binary Max-Heap Priority Queue — O(log n) bubble-up insertion
+  activePriorityQueue.insert(report, priority);
+
+  // 3. Hash Table — O(1) average index by category and title keywords
   categoryHashTable.insert(report.category, report);
   report.title
     .toLowerCase()
@@ -934,14 +1360,15 @@ function addReport(formData) {
         r.id !== report.id
     );
 
+  const prioInfo = getPriorityInfo(priority);
   if (categoryMatches.length > 0) {
     showToast(
-      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}".`,
+      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". Enqueued with ${prioInfo.name} Priority.`,
       "match"
     );
     switchTab("matches");
   } else {
-    showToast(`✅ ${report.type} report posted: ${report.title}`, "success");
+    showToast(`✅ ${report.type} report posted with ${prioInfo.name} Priority (${prioInfo.icon}): ${report.title}`, "success");
   }
 
   return report;
@@ -951,6 +1378,9 @@ function markRecovered(id) {
   const report = activeReportsList.removeById(id);
   if (!report) return;
 
+  // Remove from Binary Heap Priority Queue — O(n + log n)
+  activePriorityQueue.removeById(id);
+
   report.status = "Recovered";
   report.recoveredAt = new Date().toISOString();
 
@@ -959,7 +1389,7 @@ function markRecovered(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`🎉 "${report.title}" marked as recovered!`, "success");
+  showToast(`🎉 "${report.title}" marked as recovered and removed from Priority Queue!`, "success");
 }
 
 function searchAndFilter() {
@@ -969,6 +1399,10 @@ function searchAndFilter() {
   const categoryFilter = catFilter ? catFilter.value : "All";
   const tFilter = document.getElementById("filter-type");
   const typeFilter = tFilter ? tFilter.value : "All";
+  const prioFilter = document.getElementById("filter-priority");
+  const priorityFilter = prioFilter ? prioFilter.value : "All";
+  const sortFilter = document.getElementById("filter-sort");
+  const sortMode = sortFilter ? sortFilter.value : "priority";
 
   let results;
 
@@ -995,15 +1429,42 @@ function searchAndFilter() {
       }
     });
   } else {
-    results = activeReportsList.toArray();
+    // When priority sort is requested, retrieve reports ranked by Binary Heap!
+    if (sortMode === "priority") {
+      results = activePriorityQueue.getSortedReports();
+    } else {
+      results = activeReportsList.toArray();
+    }
   }
 
+  // Filter by Category
   if (categoryFilter !== "All") {
     results = results.filter((r) => r.category === categoryFilter);
   }
 
+  // Filter by Type
   if (typeFilter !== "All") {
     results = results.filter((r) => r.type === typeFilter);
+  }
+
+  // Filter by Priority Level
+  if (priorityFilter !== "All") {
+    const pNum = Number(priorityFilter);
+    results = results.filter((r) => r.priority === pNum);
+  }
+
+  // Sorting
+  if (sortMode === "priority") {
+    results.sort((a, b) => {
+      if ((b.priority || 1) !== (a.priority || 1)) {
+        return (b.priority || 1) - (a.priority || 1);
+      }
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    });
+  } else if (sortMode === "newest") {
+    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  } else if (sortMode === "oldest") {
+    results.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }
 
   renderReports(results);
@@ -1071,6 +1532,8 @@ function closeModal() {
   modal.classList.remove("flex");
   const form = document.getElementById("report-form");
   if (form) form.reset();
+  const defaultPrio = document.getElementById("prio-opt-1");
+  if (defaultPrio) defaultPrio.checked = true;
 }
 
 // ----- Refresh All Views ------------------------------------
@@ -1164,10 +1627,38 @@ document.addEventListener("DOMContentLoaded", () => {
         category: fd.get("category"),
         location: fd.get("location"),
         description: fd.get("description"),
+        priority: fd.get("priority") || "1",
       });
       closeModal();
     });
   }
+
+  // Intelligent Priority Auto-detection on Post Modal
+  const inputTitle = document.getElementById("input-title");
+  const selectCat = document.getElementById("input-category");
+  const prioHint = document.getElementById("prio-auto-hint");
+
+  function triggerPriorityAutoDetect() {
+    const titleVal = inputTitle ? inputTitle.value : "";
+    const catVal = selectCat ? selectCat.value : "";
+    const detected = autoDetectPriority(titleVal, catVal);
+
+    const optRadio = document.getElementById(`prio-opt-${detected}`);
+    if (optRadio) optRadio.checked = true;
+
+    if (prioHint) {
+      if (detected === 3) {
+        prioHint.innerHTML = `<span class="text-red-700 font-bold">🚨 Auto-detected URGENT:</span> Essential items (IDs, Keys, Wallets) receive peak priority in Binary Heap.`;
+      } else if (detected === 2) {
+        prioHint.innerHTML = `<span class="text-amber-700 font-bold">⚡ Auto-detected MEDIUM:</span> Electronics and textbooks receive medium priority.`;
+      } else {
+        prioHint.innerHTML = `💡 <em>Standard priority assigned. You can manually adjust options above.</em>`;
+      }
+    }
+  }
+
+  if (inputTitle) inputTitle.addEventListener("input", triggerPriorityAutoDetect);
+  if (selectCat) selectCat.addEventListener("change", triggerPriorityAutoDetect);
 
   // Search & Filter listeners
   const searchInput = document.getElementById("search-input");
@@ -1178,6 +1669,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const filterType = document.getElementById("filter-type");
   if (filterType) filterType.addEventListener("change", searchAndFilter);
+
+  const filterPriority = document.getElementById("filter-priority");
+  if (filterPriority) filterPriority.addEventListener("change", searchAndFilter);
+
+  const filterSort = document.getElementById("filter-sort");
+  if (filterSort) filterSort.addEventListener("change", searchAndFilter);
 
   // Tab Buttons
   const tabReports = document.getElementById("tab-btn-reports");
