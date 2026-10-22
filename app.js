@@ -132,6 +132,11 @@ function loadFromLocalStorage() {
   if (recoveredRaw) {
     recoveryHistoryList = LinkedList.fromArray(JSON.parse(recoveredRaw));
   }
+
+  // Load persisted claims & reconstruct FIFO queue
+  if (typeof loadClaimsFromLocalStorage === "function") {
+    loadClaimsFromLocalStorage();
+  }
 }
 
 // ----- Authentication Management ----------------------------
@@ -152,7 +157,7 @@ function getCurrentUser() {
 function setCurrentUser(user) {
   localStorage.setItem(
     AUTH_KEY,
-    JSON.stringify({ id: user.id, name: user.name, rollNo: user.rollNo })
+    JSON.stringify({ id: user.id, name: user.name, rollNo: user.rollNo, role: user.role })
   );
 }
 
@@ -232,6 +237,8 @@ function renderAppView() {
     document.getElementById("user-name").textContent = user.name || "Siddhraj Nimje";
     document.getElementById("user-roll").textContent = user.rollNo || "23CS101";
     document.getElementById("user-avatar").textContent = getUserInitials(user.name || "Siddhraj Nimje");
+
+    if (typeof updateRoleUI === "function") updateRoleUI();
 
     refreshAll();
   } else {
@@ -613,12 +620,25 @@ function renderReports(items) {
             </div>
           </div>
 
-          <!-- View Details Button -->
-          <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-            class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
-            <span>View Details</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-          </button>
+          <!-- Action Buttons -->
+          ${
+            isLost
+              ? `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
+                  class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
+                  <span>View Details</span>
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>`
+              : `<div class="depth-btn mt-4 flex gap-2 w-full">
+                  <button onclick="event.stopPropagation(); showDetail('${r.id}')"
+                    class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1">
+                    <span>Details</span>
+                  </button>
+                  <button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
+                    class="visionos-btn-terracotta text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 shadow-sm">
+                    <span>🛡️ Claim</span>
+                  </button>
+                </div>`
+          }
         </div>
       </div>`;
     })
@@ -714,11 +734,18 @@ function showDetail(id) {
     </div>
 
     <div class="flex gap-3">
-      <button onclick="markRecovered('${report.id}'); closeDetailModal();"
-        class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-        <span>Mark as Recovered</span>
-      </button>
+      ${
+        report.type === "Found"
+          ? `<button onclick="closeDetailModal(); openClaimModal('${report.id}');"
+              class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
+              <span>🛡️ Claim This Found Item</span>
+            </button>`
+          : `<button onclick="markRecovered('${report.id}'); closeDetailModal();"
+              class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>Mark as Recovered</span>
+            </button>`
+      }
       <button onclick="closeDetailModal()"
         class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs">
         Close
@@ -897,6 +924,7 @@ function renderMatches() {
 //  CORE OPERATIONS: Add Report, Recover, Search
 // ============================================================
 function addReport(formData) {
+  const user = getCurrentUser();
   const report = {
     id: generateId(),
     type: formData.type,
@@ -904,6 +932,8 @@ function addReport(formData) {
     category: formData.category,
     location: formData.location.trim(),
     description: formData.description.trim(),
+    creatorRoll: user ? user.rollNo : null,
+    creatorName: user ? user.name : null,
     status: "Active",
     timestamp: new Date().toISOString(),
   };
@@ -948,14 +978,59 @@ function addReport(formData) {
 }
 
 function markRecovered(id) {
-  const report = activeReportsList.removeById(id);
+  const report = activeReportsList.findById(id);
   if (!report) return;
 
+  // Snapshot before removal for undo stack
+  const reportSnapshot = JSON.parse(JSON.stringify(report));
+  const invalidatedClaims = (typeof allClaims !== "undefined" && Array.isArray(allClaims))
+    ? allClaims
+        .filter((c) => c.itemId === id && c.status === "Pending")
+        .map((c) => ({
+          id: c.id,
+          previousStatus: c.status,
+          previousRejectionReason: c.rejectionReason,
+          previousReviewedAt: c.reviewedAt,
+          previousReviewedBy: c.reviewedBy,
+        }))
+    : [];
+
+  if (typeof recordAdminAction === "function") {
+    recordAdminAction(
+      "DIRECT_RECOVERY",
+      `Marked "${report.title}" as recovered`,
+      {
+        itemId: id,
+        itemTitle: report.title,
+        reportSnapshot: reportSnapshot,
+        invalidatedClaims: invalidatedClaims,
+      }
+    );
+  }
+
+  activeReportsList.removeById(id);
   report.status = "Recovered";
   report.recoveredAt = new Date().toISOString();
 
   recoveryHistoryList.insertAtHead(report);
   categoryHashTable.removeById(id);
+
+  // Invalidate any active pending claims for this recovered item
+  if (typeof allClaims !== "undefined" && Array.isArray(allClaims)) {
+    allClaims.forEach((c) => {
+      if (c.itemId === id && c.status === "Pending") {
+        c.status = "Rejected";
+        c.reviewedAt = new Date().toISOString();
+        c.rejectionReason = "Item was marked as recovered and removed from active listings.";
+        if (typeof pendingClaimQueue !== "undefined" && pendingClaimQueue.removeById) {
+          pendingClaimQueue.removeById(c.id);
+        }
+      }
+    });
+    if (typeof saveClaimsToLocalStorage === "function") {
+      saveClaimsToLocalStorage();
+    }
+  }
 
   saveToLocalStorage();
   refreshAll();
@@ -1011,7 +1086,18 @@ function searchAndFilter() {
 
 // ----- Tab Switching ----------------------------------------
 function switchTab(tabName) {
-  const tabs = ["reports", "matches", "recovery"];
+  if (tabName === "claim-requests") {
+    const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+    const reviewerMode = typeof isReviewer === "function" && isReviewer(user);
+    if (!reviewerMode) {
+      if (typeof showToast === "function") {
+        showToast("Access Restricted: Reviewer authorization required.", "error");
+      }
+      tabName = "reports";
+    }
+  }
+
+  const tabs = ["reports", "matches", "recovery", "my-claims", "claim-requests"];
   tabs.forEach((t) => {
     const btn = document.getElementById(`tab-btn-${t}`);
     const panel = document.getElementById(`tab-panel-${t}`);
@@ -1079,6 +1165,9 @@ function refreshAll() {
   searchAndFilter();
   renderMatches();
   renderRecoveryHistory();
+  if (typeof renderClaimsUI === "function") {
+    renderClaimsUI();
+  }
 }
 
 // ============================================================
@@ -1188,6 +1277,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const tabRecovery = document.getElementById("tab-btn-recovery");
   if (tabRecovery) tabRecovery.addEventListener("click", () => switchTab("recovery"));
+
+  const tabMyClaims = document.getElementById("tab-btn-my-claims");
+  if (tabMyClaims) tabMyClaims.addEventListener("click", () => switchTab("my-claims"));
+
+  const tabClaimRequests = document.getElementById("tab-btn-claim-requests");
+  if (tabClaimRequests) tabClaimRequests.addEventListener("click", () => switchTab("claim-requests"));
 
   // Modal Controls
   const btnOpenModal = document.getElementById("btn-open-modal");

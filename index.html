@@ -117,7 +117,11 @@
               </button>
               <button onclick="quickDemoLogin()"
                 class="inline-flex items-center gap-2 text-gray-700 hover:text-forest font-semibold text-base px-6 py-4 rounded-2xl border-2 border-sand-d hover:border-forest/40 hover:bg-forest/5 transition-all">
-                <span>🚀 Quick Demo Login</span>
+                <span>🚀 Student Demo Login</span>
+              </button>
+              <button onclick="quickReviewerLogin()"
+                class="inline-flex items-center gap-2 text-gray-700 hover:text-terracotta font-semibold text-base px-6 py-4 rounded-2xl border-2 border-sand-d hover:border-terracotta/40 hover:bg-terracotta/5 transition-all">
+                <span>🛡️ Reviewer Login</span>
               </button>
             </div>
 
@@ -280,9 +284,28 @@
                 SN
               </div>
               <div class="hidden sm:block text-left">
-                <p id="user-name" class="text-xs font-bold text-gray-800 leading-tight">Siddhraj Nimje</p>
+                <div class="flex items-center gap-1.5">
+                  <p id="user-name" class="text-xs font-bold text-gray-800 leading-tight">Siddhraj Nimje</p>
+                  <span id="user-role-badge" class="text-[9px] font-bold px-2 py-0.5 bg-forest/10 text-forest rounded-full border border-forest/20 shadow-xs">Student</span>
+                </div>
                 <p id="user-roll" class="text-[10px] font-mono text-terracotta leading-tight">23CS101</p>
               </div>
+              <button id="btn-toggle-role" onclick="toggleDemoRole()"
+                class="hidden md:inline-flex text-[10px] font-semibold text-forest hover:text-forest-d bg-forest/5 hover:bg-forest/10 px-2 py-1 rounded-lg border border-forest/15 transition-all cursor-pointer"
+                title="Switch between Student and Reviewer mode for testing">
+                ⇄ Switch to Reviewer
+              </button>
+
+              <!-- Header Undo Action Button -->
+              <button id="btn-undo-header" onclick="handleUndoClick()" disabled
+                class="hidden md:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-white/90 border-sand text-gray-700 hover:border-terracotta hover:text-terracotta hover:bg-terracotta/5 shadow-xs cursor-pointer"
+                title="No actions to undo">
+                <svg class="w-3.5 h-3.5 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/>
+                </svg>
+                <span>Undo</span>
+                <span id="undo-stack-badge" class="hidden text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-terracotta text-white font-bold">0</span>
+              </button>
             </div>
 
             <!-- Logout -->
@@ -377,7 +400,7 @@
 
       <!-- Navigation Tabs -->
       <div class="border-b border-sand mb-6">
-        <nav class="flex gap-6 -mb-px">
+        <nav class="flex flex-wrap gap-4 sm:gap-6 -mb-px">
           <button id="tab-btn-reports"
             class="pb-3 px-1 text-sm font-bold border-b-2 border-forest text-forest transition-colors">
             📋 All Items
@@ -393,6 +416,22 @@
           <button id="tab-btn-recovery"
             class="pb-3 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-forest transition-colors">
             ✅ Recovery History
+          </button>
+          <button id="tab-btn-my-claims"
+            class="pb-3 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-forest transition-colors relative flex items-center gap-1.5">
+            <span>🙋 My Claims</span>
+            <span id="my-claims-badge"
+              class="hidden inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-bold text-white bg-forest rounded-full shadow-xs">
+              0
+            </span>
+          </button>
+          <button id="tab-btn-claim-requests"
+            class="hidden pb-3 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-forest transition-colors relative flex items-center gap-1.5">
+            <span>🛡️ Claim Requests</span>
+            <span id="claims-queue-badge"
+              class="hidden inline-flex items-center justify-center px-2 py-0.2 text-[10px] font-bold text-white bg-terracotta rounded-full shadow-xs">
+              0
+            </span>
           </button>
         </nav>
       </div>
@@ -410,6 +449,150 @@
       <!-- Tab 3: Recovery History Panel -->
       <div id="tab-panel-recovery" class="hidden">
         <div id="recovery-list" class="visionos-panel rounded-2xl p-6"></div>
+      </div>
+
+      <!-- Tab 4: Student's My Claims Panel -->
+      <div id="tab-panel-my-claims" class="hidden">
+        <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-xl font-extrabold text-gray-900">My Ownership Claims</h3>
+            <p class="text-xs text-gray-500 mt-0.5">Track review decisions and physical handover status for items you've claimed.</p>
+          </div>
+          <button onclick="switchTab('reports')"
+            class="text-xs font-bold text-forest hover:text-forest-d bg-forest/10 hover:bg-forest/15 px-3.5 py-2 rounded-xl transition-all self-start sm:self-auto border border-forest/20 flex items-center gap-1.5">
+            <span>🔍 Browse Found Items to Claim</span>
+          </button>
+        </div>
+        <div id="my-claims-list"></div>
+      </div>
+
+      <!-- Tab 5: Reviewer's Claim Requests Panel (FIFO Queue Integration) -->
+      <div id="tab-panel-claim-requests" class="hidden">
+        <!-- FIFO Queue Processing Inspector Banner -->
+        <div class="visionos-panel rounded-3xl p-6 mb-6 border border-white/80 shadow-md bg-gradient-to-r from-amber-50/80 via-white to-emerald-50/60">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center text-2xl font-black shrink-0 border border-terracotta/20">
+                ⚡
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base font-black text-gray-900">FIFO Claim Verification Queue</h3>
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-forest/10 text-forest border border-forest/20">
+                    dsa.js · Custom ClaimQueue (Linked List)
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">
+                  Pending claims are strictly ordered in FIFO sequence (submission order). Deciding or handing over a claim removes it from the processing queue in O(1)/O(n).
+                </p>
+                <!-- Queue Stats & Chain Display -->
+                <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold">
+                  <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
+                    <span class="text-terracotta font-bold">Queue Size:</span>
+                    <span id="queue-count-display" class="font-mono font-black text-gray-900">0 Pending</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
+                    <span class="text-forest font-bold">Next in Queue:</span>
+                    <span id="queue-front-display" class="font-mono font-bold text-gray-800">None</span>
+                  </div>
+                </div>
+                <!-- Visual Data Structure Chain -->
+                <div class="mt-2 text-[11px] font-mono text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Queue State:</span>
+                  <span id="queue-chain-display" class="font-bold text-forest">FRONT → NULL (empty queue)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- FIFO Quick Action -->
+            <div class="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-2">
+              <button onclick="processNextInQueue()"
+                class="visionos-btn text-white text-xs font-bold px-5 py-3 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-2 shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>Inspect Next in Queue (FIFO)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIFO Admin Undo Stack Inspector Card (Feature B & DSA Demo) -->
+        <div class="visionos-panel rounded-3xl p-6 mb-6 border border-white/80 shadow-md bg-gradient-to-r from-orange-50/80 via-white to-amber-50/60">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center text-2xl font-black shrink-0 border border-terracotta/20">
+                ↶
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base font-black text-gray-900">LIFO Admin Undo Stack</h3>
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-terracotta/15 text-terracotta border border-terracotta/25">
+                    dsa.js · Custom ActionStack (Max 20)
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">
+                  Tracks undoable administrative operations in LIFO order (Last-In, First-Out). Fully restores Linked List membership, Hash Table indices, and claim states.
+                </p>
+                <!-- Stack Stats & Chain Display -->
+                <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold">
+                  <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
+                    <span class="text-terracotta font-bold">Stack Depth:</span>
+                    <span id="undo-stack-size-display" class="font-mono font-black text-gray-900">0 Actions</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
+                    <span class="text-forest font-bold">Top of Stack (Next Undo):</span>
+                    <span id="undo-top-action-display" class="font-bold text-gray-800">None (Stack Empty)</span>
+                  </div>
+                </div>
+                <!-- Visual Data Structure Chain -->
+                <div class="mt-2 text-[11px] font-mono text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Stack State:</span>
+                  <span id="undo-chain-display" class="font-bold text-terracotta">TOP → NULL (empty stack)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stack Quick Actions -->
+            <div class="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-2">
+              <button id="btn-undo-panel" onclick="handleUndoClick()" disabled
+                class="visionos-btn-terracotta text-white text-xs font-bold px-5 py-3 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-2 shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/>
+                </svg>
+                <span>Undo Last Admin Action</span>
+              </button>
+              <button onclick="openUndoHistoryModal()"
+                class="text-xs font-bold text-gray-700 hover:text-gray-900 bg-white/90 hover:bg-white border border-sand px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+                <span>📜 View Action Stack History</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters Row -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide mr-1">Filter:</span>
+            <button id="filter-claim-all" onclick="filterClaims('All')"
+              class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-forest text-white shadow-xs transition-all">
+              All Claims
+            </button>
+            <button id="filter-claim-pending" onclick="filterClaims('Pending')"
+              class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-sand text-gray-700 hover:border-forest/40 transition-all">
+              ⏳ Pending Queue
+            </button>
+            <button id="filter-claim-approved" onclick="filterClaims('Approved')"
+              class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-sand text-gray-700 hover:border-forest/40 transition-all">
+              ✓ Approved
+            </button>
+            <button id="filter-claim-rejected" onclick="filterClaims('Rejected')"
+              class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-sand text-gray-700 hover:border-forest/40 transition-all">
+              ✕ Rejected
+            </button>
+          </div>
+        </div>
+
+        <!-- Claims Requests Cards Container -->
+        <div id="claim-requests-list"></div>
       </div>
     </main>
 
@@ -488,7 +671,12 @@
 
       <button type="button" onclick="quickDemoLogin()"
         class="w-full py-2.5 border-2 border-sand rounded-xl text-xs font-bold text-gray-700 hover:border-terracotta hover:bg-terracotta/5 transition-all flex items-center justify-center gap-1.5">
-        <span>🚀 Instant Demo Login (Siddhraj Nimje · 23CS101)</span>
+        <span>🚀 Student Demo Login (Siddhraj Nimje · 23CS101)</span>
+      </button>
+
+      <button type="button" onclick="quickReviewerLogin()"
+        class="w-full mt-2 py-2.5 border-2 border-sand rounded-xl text-xs font-bold text-gray-700 hover:border-forest hover:bg-forest/5 transition-all flex items-center justify-center gap-1.5">
+        <span>🛡️ Reviewer Login (Dr. Aris Thorne · FAC-901)</span>
       </button>
 
       <!-- Toggle mode -->
@@ -585,9 +773,464 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!--  MODAL: SUBMIT ITEM CLAIM (FEATURE A)                   -->
+  <!-- ======================================================= -->
+  <div id="claim-modal" class="hidden fixed inset-0 z-[85] items-center justify-center p-4">
+    <div id="claim-backdrop" onclick="closeClaimModal()" class="absolute inset-0 bg-neutral-950/60 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto z-10 border border-sand">
+      <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-sand-l">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🛡️</span>
+            <h2 class="text-xl font-extrabold text-gray-900">Claim This Item</h2>
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5">Submit private proof to verify ownership with campus reviewer</p>
+        </div>
+        <button onclick="closeClaimModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Item & Claimant Summary (Read-Only) -->
+      <div class="px-6 pt-4 pb-2">
+        <div class="bg-gradient-to-r from-amber-50 to-stone-100 rounded-2xl p-4 border border-sand mb-4">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-mono font-bold text-gray-500 bg-white px-2 py-0.5 rounded border border-sand" id="claim-item-id">REP-0000</span>
+            <span class="text-[10px] font-bold text-forest bg-forest/10 px-2 py-0.5 rounded-full" id="claim-item-category">Category</span>
+          </div>
+          <h3 id="claim-item-title" class="text-base font-extrabold text-gray-900">Item Title</h3>
+          <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            <span>📍 Found at:</span>
+            <strong id="claim-item-location" class="text-gray-700">Location</strong>
+          </p>
+        </div>
+
+        <div class="bg-white/90 rounded-xl p-3 border border-sand/80 flex items-center justify-between text-xs">
+          <div>
+            <span class="text-gray-500 font-medium">Claimant: </span>
+            <strong id="claimant-name-display" class="text-gray-900">Student Name</strong>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">Roll No: </span>
+            <strong id="claimant-roll-display" class="font-mono text-terracotta font-bold">23CS101</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Error Container -->
+      <div id="claim-form-error" class="hidden mx-6 mt-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"></div>
+
+      <!-- Claim Submission Form -->
+      <form id="claim-submission-form" onsubmit="handleClaimSubmit(event)" class="px-6 pb-6 pt-2 space-y-4">
+        <div>
+          <label for="claim-explanation" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">
+            Why do you believe this is your item? <span class="text-red-500">*</span>
+          </label>
+          <textarea id="claim-explanation" rows="3" required
+            placeholder="Explain where and when you lost it, how it looks, or circumstances that match this found report..."
+            class="w-full px-4 py-2.5 text-xs sm:text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory resize-none"></textarea>
+          <p class="text-[10px] text-gray-500 mt-1">General description of your loss circumstances.</p>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="claim-details" class="block text-xs font-bold text-gray-700 uppercase tracking-wide">
+              Private Identifying Details <span class="text-red-500">*</span>
+            </label>
+            <span class="text-[10px] text-forest font-bold bg-forest/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>🔒</span> Private to Reviewer
+            </span>
+          </div>
+          <textarea id="claim-details" rows="3" required
+            placeholder="Specific hidden details only the true owner would know: e.g. distinctive scratch, sticker, engraving, phone case color, exact contents inside, lock pattern..."
+            class="w-full px-4 py-2.5 text-xs sm:text-sm border border-forest/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-emerald-50/20 resize-none"></textarea>
+          <p class="text-[10px] text-forest font-medium mt-1">
+            Never posted publicly. Used exclusively by the campus reviewer to authenticate your claim.
+          </p>
+        </div>
+
+        <div>
+          <label for="claim-notes" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">
+            Additional Note / Preferred Pickup Time (Optional)
+          </label>
+          <input id="claim-notes" type="text"
+            placeholder="e.g. Can visit security desk between 2-4 PM; Phone: 9876543210"
+            class="w-full px-4 py-2.5 text-xs sm:text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory" />
+        </div>
+
+        <div class="pt-2 flex gap-3">
+          <button type="submit"
+            class="flex-1 visionos-btn text-white font-bold py-3.5 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
+            <span>Submit Ownership Claim</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+          <button type="button" onclick="closeClaimModal()"
+            class="px-5 py-3.5 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: CLAIM REVIEW DOSSIER (FEATURE C)                -->
+  <!-- ======================================================= -->
+  <div id="claim-review-modal" class="hidden fixed inset-0 z-[85] items-center justify-center p-4">
+    <div id="review-backdrop" onclick="closeReviewModal()" class="absolute inset-0 bg-neutral-950/60 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto z-10 border border-sand">
+      <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-sand-l">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🛡️</span>
+            <h2 class="text-xl font-extrabold text-gray-900">Claim Verification Dossier</h2>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="review-claim-id" class="font-mono text-xs font-bold text-gray-600 bg-sand/40 px-2 py-0.5 rounded">CLM-0000</span>
+            <span id="review-claim-status-badge"></span>
+            <span id="review-queue-position" class="hidden text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300"></span>
+          </div>
+        </div>
+        <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Item Overview & Claimant Card -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-ivory rounded-2xl p-4 border border-sand">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Found Item Reported</p>
+            <h4 id="review-item-title" class="font-extrabold text-sm text-gray-900">Item Title</h4>
+            <div class="text-xs text-gray-600 mt-1 space-y-0.5">
+              <p>📍 <span id="review-item-location">Location</span></p>
+              <p>🏷️ <span id="review-item-category">Category</span></p>
+              <p class="font-mono text-[10px] text-gray-500">ID: <span id="review-item-id">REP-0000</span></p>
+            </div>
+          </div>
+
+          <div class="bg-ivory rounded-2xl p-4 border border-sand">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Claimant Identity</p>
+            <h4 id="review-claimant-name" class="font-extrabold text-sm text-gray-900">Student Name</h4>
+            <div class="text-xs text-gray-600 mt-1 space-y-0.5">
+              <p>🎓 Roll: <strong id="review-claimant-roll" class="font-mono text-terracotta">23CS101</strong></p>
+              <p>📅 Filed: <span id="review-claim-submitted" class="text-gray-500">Timestamp</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ownership Explanation -->
+        <div class="bg-white rounded-2xl p-4 border border-sand shadow-xs">
+          <h5 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Submitted Ownership Explanation</h5>
+          <p id="review-explanation-text" class="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap"></p>
+        </div>
+
+        <!-- Confidential Private Details (Highlighted) -->
+        <div class="bg-gradient-to-r from-emerald-50 to-teal-50/50 rounded-2xl p-4 border-2 border-forest/30 shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <h5 class="text-xs font-bold text-forest uppercase tracking-wide flex items-center gap-1.5">
+              <span>🔒</span> Private Identifying Evidence (Confidential)
+            </h5>
+            <span class="text-[10px] font-bold text-forest-d bg-forest/10 px-2 py-0.5 rounded-full">
+              For Reviewer Eyes Only
+            </span>
+          </div>
+          <div id="review-details-text" class="text-xs sm:text-sm text-gray-800 leading-relaxed font-medium bg-white/80 p-3 rounded-xl border border-forest/20 whitespace-pre-wrap"></div>
+          <p class="text-[10px] text-forest/80 mt-2 italic">
+            Check whether these private characteristics (scratches, marks, internal contents, etc.) match the physical found item in possession.
+          </p>
+        </div>
+
+        <!-- Notes -->
+        <div class="bg-sand/30 rounded-xl p-3 border border-sand text-xs">
+          <span class="font-bold text-gray-600">Claimant Notes: </span>
+          <span id="review-notes-text" class="text-gray-700">None</span>
+        </div>
+
+        <!-- Audit & Decision History -->
+        <div id="review-audit-section" class="hidden bg-stone-50 rounded-2xl p-4 border border-sand space-y-2 text-xs">
+          <h5 class="font-bold text-gray-800 uppercase tracking-wide text-[10px]">Review Audit Record</h5>
+          <div class="flex items-center justify-between text-gray-600">
+            <span>Reviewed by: <strong id="review-decision-by" class="text-gray-900">Staff</strong></span>
+            <span id="review-decision-at" class="text-gray-500 font-mono">Date</span>
+          </div>
+          <div id="review-decision-reason-container" class="mt-2 bg-white p-2.5 rounded-lg border border-sand">
+            <span id="review-decision-reason-title" class="font-bold text-gray-800">Reason: </span>
+            <span id="review-decision-reason-text" class="text-gray-700"></span>
+          </div>
+          <div id="review-handover-audit" class="hidden pt-2 border-t border-sand text-forest font-semibold">
+            🤝 Handed over by <span id="review-handover-by">Staff</span> on <span id="review-handover-at">Date</span>
+          </div>
+        </div>
+
+        <!-- Non-Reviewer Notice (if viewed in student mode) -->
+        <div id="review-non-reviewer-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-center justify-between">
+          <span>Logged in as Student. Switch to Reviewer mode to approve or reject claims.</span>
+          <button onclick="toggleDemoRole()" class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-[10px] transition-all">
+            Switch to Reviewer
+          </button>
+        </div>
+
+        <!-- Reviewer Action Buttons -->
+        <div id="review-actions-area">
+          <!-- Pending Claims: Approve or Reject -->
+          <div id="review-pending-actions" class="space-y-3 pt-2">
+            <!-- Inline Approve Input Group -->
+            <div id="approve-input-group" class="hidden bg-emerald-50/70 p-4 rounded-2xl border border-emerald-300 space-y-2">
+              <label for="review-note-input" class="block text-xs font-bold text-forest">
+                Verification Note for Approval (Optional):
+              </label>
+              <input id="review-note-input" type="text"
+                placeholder="e.g. Scratches and serial marks matched physical item."
+                class="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest" />
+              <div class="flex gap-2 justify-end pt-1">
+                <button type="button" onclick="toggleApproveInput()" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                <button type="button" onclick="confirmApproveClaim()" class="visionos-btn text-white text-xs font-bold px-4 py-1.5 rounded-xl">
+                  Confirm Approval
+                </button>
+              </div>
+            </div>
+
+            <!-- Inline Reject Input Group -->
+            <div id="reject-input-group" class="hidden bg-red-50 p-4 rounded-2xl border border-red-300 space-y-2">
+              <label for="review-reject-reason-input" class="block text-xs font-bold text-red-700">
+                Reason for Rejection <span class="text-red-500">* (Required)</span>:
+              </label>
+              <textarea id="review-reject-reason-input" rows="2"
+                placeholder="Explain why the claim is rejected (e.g. Described markings did not match the calculator model)..."
+                class="w-full px-3 py-2 text-xs bg-white border border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
+              <div class="flex gap-2 justify-end pt-1">
+                <button type="button" onclick="toggleRejectInput()" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                <button type="button" onclick="confirmRejectClaim()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-xl transition-all">
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+
+            <!-- Primary Action Triggers -->
+            <div class="flex gap-3">
+              <button type="button" onclick="toggleApproveInput()"
+                class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-1.5 shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Approve Claim</span>
+              </button>
+              <button type="button" onclick="toggleRejectInput()"
+                class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>Reject Claim</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Approved Claims: Handover Confirmation Trigger -->
+          <div id="review-handover-actions" class="hidden pt-2">
+            <div class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 mb-3 text-xs text-emerald-900">
+              <p class="font-bold flex items-center gap-1 text-forest">
+                <span>✓</span> Claim is Approved. Item remains in Found status until physical handover.
+              </p>
+              <p class="mt-1 text-emerald-700">
+                When the claimant arrives at the lost &amp; found desk and receives the item, click below to finalize handover.
+              </p>
+            </div>
+            <button type="button" onclick="triggerHandoverConfirmation()"
+              class="w-full visionos-btn-terracotta text-white font-extrabold py-3.5 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
+              <span>🤝 Confirm Physical Handover &amp; Mark as Recovered</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: CONFIRM PHYSICAL HANDOVER (FEATURE D)           -->
+  <!-- ======================================================= -->
+  <div id="handover-confirm-modal" class="hidden fixed inset-0 z-[95] items-center justify-center p-4">
+    <div onclick="closeHandoverConfirmModal()" class="absolute inset-0 bg-neutral-950/70 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 z-10 border border-sand">
+      <div class="w-14 h-14 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center text-3xl mx-auto mb-4 border border-terracotta/20">
+        🤝
+      </div>
+
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Physical Handover</h3>
+      <p class="text-xs text-center text-gray-600 mb-4">
+        Are you certain you want to confirm handover of this item?
+      </p>
+
+      <div class="bg-ivory rounded-2xl p-4 border border-sand mb-5 text-xs space-y-1.5">
+        <div class="flex justify-between">
+          <span class="text-gray-500">Claim ID:</span>
+          <span id="handover-claim-id" class="font-mono font-bold text-gray-800">CLM-0000</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Item:</span>
+          <span id="handover-item-title" class="font-bold text-gray-900">Item Title</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500">Receiving Owner:</span>
+          <span id="handover-claimant-name" class="font-bold text-forest">Student Name</span>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-200 text-[11px] text-emerald-800 mb-5 space-y-1">
+        <p class="font-bold">✨ What happens next:</p>
+        <p>• Item is unlinked from Active Reports Linked List in O(n).</p>
+        <p>• Prepended into Recovery History Linked List in O(1).</p>
+        <p>• Category Hash Table index entries are cleaned up.</p>
+        <p>• Any other pending claims for this item are closed.</p>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="executeHandover()"
+          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs">
+          Yes, Confirm Handover
+        </button>
+        <button onclick="closeHandoverConfirmModal()"
+          class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: STUDENT'S SUBMITTED EVIDENCE DETAIL (FEATURE E) -->
+  <!-- ======================================================= -->
+  <div id="my-claim-detail-modal" class="hidden fixed inset-0 z-[85] items-center justify-center p-4">
+    <div onclick="closeMyClaimDetailModal()" class="absolute inset-0 bg-neutral-950/60 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto z-10 border border-sand p-6">
+      <div class="flex items-center justify-between pb-3 border-b border-sand">
+        <div>
+          <span id="my-claim-detail-id" class="font-mono text-xs font-bold text-gray-500">CLM-0000</span>
+          <h3 id="my-claim-detail-title" class="text-base font-extrabold text-gray-900 mt-0.5">Item Title</h3>
+        </div>
+        <div id="my-claim-detail-status"></div>
+      </div>
+
+      <div class="mt-4 space-y-3.5 text-xs">
+        <div>
+          <h5 class="font-bold text-gray-700 uppercase tracking-wide text-[10px] mb-1">Your Ownership Explanation</h5>
+          <p id="my-claim-detail-explanation" class="bg-ivory p-3 rounded-xl border border-sand text-gray-700 leading-relaxed whitespace-pre-wrap"></p>
+        </div>
+
+        <div>
+          <h5 class="font-bold text-forest uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
+            <span>🔒</span> Your Private Identifying Details
+          </h5>
+          <p id="my-claim-detail-evidence" class="bg-emerald-50/50 p-3 rounded-xl border border-forest/20 text-gray-800 leading-relaxed whitespace-pre-wrap font-medium"></p>
+        </div>
+
+        <div>
+          <h5 class="font-bold text-gray-500 uppercase tracking-wide text-[10px] mb-1">Additional Notes</h5>
+          <p id="my-claim-detail-notes" class="bg-sand/30 p-2.5 rounded-xl border border-sand text-gray-600"></p>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-sand flex justify-end">
+        <button onclick="closeMyClaimDetailModal()"
+          class="visionos-btn text-white text-xs font-bold px-5 py-2.5 rounded-xl">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: CONFIRM UNDO ACTION (FEATURE B)                 -->
+  <!-- ======================================================= -->
+  <div id="undo-confirm-modal" class="hidden fixed inset-0 z-[95] items-center justify-center p-4">
+    <div onclick="closeUndoConfirmModal()" class="absolute inset-0 bg-neutral-950/70 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 z-10 border border-sand">
+      <div class="w-14 h-14 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center text-3xl mx-auto mb-4 border border-terracotta/20">
+        ↶
+      </div>
+
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Undo Last Action</h3>
+      <p class="text-xs text-center text-gray-600 mb-4">
+        Are you sure you want to reverse this administrative action?
+      </p>
+
+      <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Action Type:</span>
+          <span id="undo-modal-action-type" class="font-mono font-bold text-terracotta bg-white px-2 py-0.5 rounded border border-sand">ACTION</span>
+        </div>
+        <div>
+          <span class="text-gray-500 font-medium">Description:</span>
+          <p id="undo-modal-action-title" class="font-bold text-gray-900 mt-0.5 text-xs">Action description</p>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Recorded At:</span>
+          <span id="undo-modal-action-time" class="text-gray-600 font-medium text-[11px]">Timestamp</span>
+        </div>
+      </div>
+
+      <div class="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[11px] text-amber-900 mb-5">
+        <p class="font-bold mb-1">⚠️ What will be restored:</p>
+        <p id="undo-modal-impact-text" class="whitespace-pre-line leading-relaxed font-medium">Reversal impact details...</p>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="confirmUndoModalAction()"
+          class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/></svg>
+          <span>Yes, Undo Action</span>
+        </button>
+        <button onclick="closeUndoConfirmModal()"
+          class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: ACTION STACK HISTORY (LIFO AUDIT)               -->
+  <!-- ======================================================= -->
+  <div id="undo-history-modal" class="hidden fixed inset-0 z-[85] items-center justify-center p-4">
+    <div onclick="closeUndoHistoryModal()" class="absolute inset-0 bg-neutral-950/60 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden z-10 border border-sand flex flex-col">
+      <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-sand-l">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📜</span>
+            <h3 class="text-lg font-extrabold text-gray-900">Admin Undo Stack History</h3>
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5">LIFO Order · Most recent action is at the top of the stack</p>
+        </div>
+        <button onclick="closeUndoHistoryModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1">
+        <div id="undo-history-list" class="space-y-3"></div>
+      </div>
+
+      <div class="p-4 bg-stone-50 border-t border-sand flex items-center justify-between gap-3">
+        <button onclick="clearUndoHistory()"
+          class="text-xs font-bold text-red-600 hover:text-red-700 px-3 py-2 rounded-xl hover:bg-red-50 border border-red-200 transition-all cursor-pointer">
+          🗑️ Clear Stack
+        </button>
+        <button onclick="closeUndoHistoryModal()"
+          class="visionos-btn text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="dsa.js"></script>
   <script src="app.js"></script>
+  <script src="claims.js"></script>
   <script src="showcase3d.js"></script>
   <script src="dust.js"></script>
 
