@@ -183,6 +183,234 @@ class HashTable {
   }
 }
 
+// ----- Queue Node (Queue building block) --------------------
+class QueueNode {
+  constructor(data) {
+    this.data = data;
+    this.next = null;
+  }
+}
+
+// ----- Claim Queue (FIFO using Linked List) -----------------
+class ClaimQueue {
+  constructor() {
+    this.front = null;
+    this.rear = null;
+    this._size = 0;
+  }
+
+  /** Add a claim to the back of the queue — O(1) */
+  enqueue(claim) {
+    if (this.contains(claim.id)) return false;
+    const node = new QueueNode(claim);
+    if (this.rear) {
+      this.rear.next = node;
+    } else {
+      this.front = node;
+    }
+    this.rear = node;
+    this._size++;
+    return true;
+  }
+
+  /** Remove and return the front claim — O(1) */
+  dequeue() {
+    if (!this.front) return null;
+    const data = this.front.data;
+    this.front = this.front.next;
+    if (!this.front) this.rear = null;
+    this._size--;
+    return data;
+  }
+
+  /** Inspect front claim without removing — O(1) */
+  peek() {
+    return this.front ? this.front.data : null;
+  }
+
+  /** Check if queue is empty — O(1) */
+  isEmpty() {
+    return this._size === 0;
+  }
+
+  /** Number of claims in the queue — O(1) */
+  size() {
+    return this._size;
+  }
+
+  /** Check if a claim with given ID exists in the queue — O(n) */
+  contains(claimId) {
+    let current = this.front;
+    while (current) {
+      if (current.data.id === claimId) return true;
+      current = current.next;
+    }
+    return false;
+  }
+
+  /** Remove a specific claim by ID — O(n) */
+  removeById(claimId) {
+    if (!this.front) return null;
+    if (this.front.data.id === claimId) {
+      return this.dequeue();
+    }
+    let current = this.front;
+    while (current.next) {
+      if (current.next.data.id === claimId) {
+        const removed = current.next.data;
+        current.next = current.next.next;
+        if (!current.next) this.rear = current;
+        this._size--;
+        return removed;
+      }
+      current = current.next;
+    }
+    return null;
+  }
+
+  /** Convert queue to array (front to rear, for rendering) */
+  toArray() {
+    const arr = [];
+    let current = this.front;
+    while (current) {
+      arr.push(current.data);
+      current = current.next;
+    }
+    return arr;
+  }
+
+  /** Rebuild queue from an array */
+  static fromArray(arr) {
+    const q = new ClaimQueue();
+    arr.forEach((item) => q.enqueue(item));
+    return q;
+  }
+
+  /** Visual chain string for the DSA debug panel */
+  toChainString() {
+    if (!this.front) return "FRONT → NULL (empty queue)";
+    const parts = [];
+    let current = this.front;
+    while (current) {
+      parts.push(`[${current.data.id}]`);
+      current = current.next;
+    }
+    parts.push("NULL");
+    return "FRONT → " + parts.join(" → ");
+  }
+}
+
+// ----- Stack Node (Stack building block) ---------------------
+class StackNode {
+  constructor(data) {
+    this.data = data;
+    this.next = null;
+  }
+}
+
+// ----- Action Stack (LIFO for Undo Operations) ---------------
+class ActionStack {
+  constructor(maxSize = 20) {
+    this.top = null;
+    this._size = 0;
+    this.maxSize = maxSize;
+  }
+
+  /** Push an action onto the top of the stack — O(1) */
+  push(action) {
+    const node = new StackNode(action);
+    node.next = this.top;
+    this.top = node;
+    this._size++;
+
+    // Enforce max capacity (bounded stack)
+    if (this._size > this.maxSize) {
+      this._trimBottom();
+    }
+    return true;
+  }
+
+  /** Remove and return the top action — O(1) */
+  pop() {
+    if (!this.top) return null;
+    const data = this.top.data;
+    this.top = this.top.next;
+    this._size--;
+    return data;
+  }
+
+  /** Inspect the top action without removing — O(1) */
+  peek() {
+    return this.top ? this.top.data : null;
+  }
+
+  /** Check if the stack is empty — O(1) */
+  isEmpty() {
+    return this._size === 0;
+  }
+
+  /** Number of actions on the stack — O(1) */
+  size() {
+    return this._size;
+  }
+
+  /** Clear all actions from the stack */
+  clear() {
+    this.top = null;
+    this._size = 0;
+  }
+
+  /** Trim bottom element when size exceeds maxSize */
+  _trimBottom() {
+    if (this._size <= 1) return;
+    let current = this.top;
+    while (current.next && current.next.next) {
+      current = current.next;
+    }
+    current.next = null;
+    this._size--;
+  }
+
+  /** Convert stack to array (from top to bottom) */
+  toArray() {
+    const arr = [];
+    let current = this.top;
+    while (current) {
+      arr.push(current.data);
+      current = current.next;
+    }
+    return arr;
+  }
+
+  /** Rebuild stack from an array (where arr[0] was top) */
+  static fromArray(arr, maxSize = 20) {
+    const stack = new ActionStack(maxSize);
+    if (!Array.isArray(arr)) return stack;
+    // Iterate in reverse so arr[0] ends up at the top
+    for (let i = arr.length - 1; i >= 0; i--) {
+      stack.push(arr[i]);
+    }
+    return stack;
+  }
+
+  /** Visual chain string for the DSA debug panel */
+  toChainString() {
+    if (!this.top) return "TOP → NULL (empty stack)";
+    const parts = [];
+    let current = this.top;
+    while (current) {
+      const label = current.data.type || current.data.id || "Action";
+      parts.push(`[${label}]`);
+      current = current.next;
+    }
+    parts.push("BOTTOM");
+    return "TOP → " + parts.join(" → ");
+  }
+}
+
 // Export for use in app.js (global scope since we're using vanilla <script> tags)
 window.LinkedList = LinkedList;
 window.HashTable = HashTable;
+window.ClaimQueue = ClaimQueue;
+window.ActionStack = ActionStack;
+
