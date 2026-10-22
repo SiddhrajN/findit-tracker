@@ -510,6 +510,402 @@ void freePriorityQueue(PriorityQueue *pq) {
 
 
 /* ==========================================================
+ *  4.  CAMPUS GRAPH & LOCATION NAVIGATOR (Person 2)
+ *      - Graph represented using an Adjacency List
+ *      - BFS to find shortest path with fewest edges
+ *      - DFS to explore connected campus locations
+ * ========================================================== */
+
+#define MAX_CAMPUS_LOCATIONS 60
+
+typedef struct AdjNode {
+    int destIndex;
+    struct AdjNode *next;
+} AdjNode;
+
+typedef struct {
+    char name[64];
+    char floor[32];
+    AdjNode *head;
+} CampusVertex;
+
+typedef struct {
+    CampusVertex vertices[MAX_CAMPUS_LOCATIONS];
+    int numVertices;
+} CampusGraph;
+
+CampusGraph* createCampusGraph(void) {
+    CampusGraph *g = (CampusGraph *)malloc(sizeof(CampusGraph));
+    if (!g) { perror("malloc"); exit(EXIT_FAILURE); }
+    g->numVertices = 0;
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) {
+        g->vertices[i].head = NULL;
+        g->vertices[i].name[0] = '\0';
+        g->vertices[i].floor[0] = '\0';
+    }
+    return g;
+}
+
+int findVertexIndex(CampusGraph *g, const char *name) {
+    if (!name || strlen(name) == 0) return -1;
+    for (int i = 0; i < g->numVertices; i++) {
+        if (strcasecmp(g->vertices[i].name, name) == 0 ||
+            strstr(g->vertices[i].name, name) != NULL) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int addCampusLocation(CampusGraph *g, const char *name, const char *floor) {
+    int existing = findVertexIndex(g, name);
+    if (existing != -1) return existing;
+
+    if (g->numVertices >= MAX_CAMPUS_LOCATIONS) {
+        printf("  [!] Campus graph is full!\n");
+        return -1;
+    }
+
+    int idx = g->numVertices++;
+    strncpy(g->vertices[idx].name, name, sizeof(g->vertices[idx].name) - 1);
+    g->vertices[idx].name[sizeof(g->vertices[idx].name) - 1] = '\0';
+    strncpy(g->vertices[idx].floor, floor, sizeof(g->vertices[idx].floor) - 1);
+    g->vertices[idx].floor[sizeof(g->vertices[idx].floor) - 1] = '\0';
+    g->vertices[idx].head = NULL;
+    return idx;
+}
+
+void addCampusEdge(CampusGraph *g, const char *srcName, const char *destName) {
+    int u = findVertexIndex(g, srcName);
+    int v = findVertexIndex(g, destName);
+    if (u == -1 || v == -1) return;
+
+    /* Add v to u's list */
+    AdjNode *n1 = (AdjNode *)malloc(sizeof(AdjNode));
+    if (!n1) { perror("malloc"); exit(EXIT_FAILURE); }
+    n1->destIndex = v;
+    n1->next = g->vertices[u].head;
+    g->vertices[u].head = n1;
+
+    /* Add u to v's list (Undirected graph) */
+    AdjNode *n2 = (AdjNode *)malloc(sizeof(AdjNode));
+    if (!n2) { perror("malloc"); exit(EXIT_FAILURE); }
+    n2->destIndex = u;
+    n2->next = g->vertices[v].head;
+    g->vertices[v].head = n2;
+}
+
+/* Breadth-First Search: Shortest path with fewest edges in unweighted graph */
+void bfsShortestRoute(CampusGraph *g, const char *startName, const char *destName) {
+    int start = findVertexIndex(g, startName);
+    int dest = findVertexIndex(g, destName);
+
+    if (start == -1) {
+        printf("\n  [!] Starting location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+    if (dest == -1) {
+        printf("\n  [!] Destination location \"%s\" not found in campus graph.\n", destName);
+        return;
+    }
+
+    int queue[MAX_CAMPUS_LOCATIONS];
+    int front = 0, rear = 0;
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+    int parent[MAX_CAMPUS_LOCATIONS];
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) parent[i] = -1;
+
+    int visitedOrder[MAX_CAMPUS_LOCATIONS];
+    int visitedCount = 0;
+
+    queue[rear++] = start;
+    visited[start] = 1;
+
+    int found = 0;
+
+    while (front < rear) {
+        int u = queue[front++];
+        visitedOrder[visitedCount++] = u;
+
+        if (u == dest) {
+            found = 1;
+            break;
+        }
+
+        AdjNode *curr = g->vertices[u].head;
+        while (curr) {
+            int v = curr->destIndex;
+            if (!visited[v]) {
+                visited[v] = 1;
+                parent[v] = u;
+                queue[rear++] = v;
+            }
+            curr = curr->next;
+        }
+    }
+
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS SHORTEST ROUTE (BFS — Fewest Edges in Unweighted Graph)\n");
+    printf("  ==============================================================\n");
+    printf("    Origin:       %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Destination:  %s (%s)\n", g->vertices[dest].name, g->vertices[dest].floor);
+
+    if (!found) {
+        printf("    [!] No path found between \"%s\" and \"%s\".\n", startName, destName);
+        printf("  ==============================================================\n");
+        return;
+    }
+
+    /* Reconstruct path */
+    int path[MAX_CAMPUS_LOCATIONS];
+    int pathLen = 0;
+    int currNode = dest;
+    while (currNode != -1) {
+        path[pathLen++] = currNode;
+        currNode = parent[currNode];
+    }
+
+    printf("    Total Hops:   %d edges (Fewest edges route)\n", pathLen - 1);
+    printf("    Exploration:  %d nodes inspected by queue before finding target\n", visitedCount);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Step-by-Step Campus Corridor & Stair Instructions:\n");
+
+    for (int i = pathLen - 1; i >= 0; i--) {
+        int nodeIdx = path[i];
+        int step = (pathLen - 1 - i) + 1;
+        const char *tag = (i == pathLen - 1) ? "[START]" : (i == 0) ? "[ARRIVED]" : "[CORRIDOR]";
+        printf("    Step %d: %-10s %-32s (%s)\n",
+               step, tag, g->vertices[nodeIdx].name, g->vertices[nodeIdx].floor);
+    }
+
+    printf("  ==============================================================\n");
+}
+
+/* Depth-First Search exploration */
+void dfsExploreHelper(CampusGraph *g, int u, int visited[], int visitedOrder[], int *count) {
+    visited[u] = 1;
+    visitedOrder[(*count)++] = u;
+
+    AdjNode *curr = g->vertices[u].head;
+    while (curr) {
+        int v = curr->destIndex;
+        if (!visited[v]) {
+            dfsExploreHelper(g, v, visited, visitedOrder, count);
+        }
+        curr = curr->next;
+    }
+}
+
+void dfsExplore(CampusGraph *g, const char *startName) {
+    int start = findVertexIndex(g, startName);
+    if (start == -1) {
+        printf("\n  [!] Location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+    int visitedOrder[MAX_CAMPUS_LOCATIONS];
+    int count = 0;
+
+    dfsExploreHelper(g, start, visited, visitedOrder, &count);
+
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS DEPTH-FIRST EXPLORATION (DFS Traversal & Discovery Tree)\n");
+    printf("  ==============================================================\n");
+    printf("    Starting Location: %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Reachable Nodes:   %d / %d campus locations connected\n", count, g->numVertices);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Preorder Depth-First Exploration Sequence:\n");
+
+    for (int i = 0; i < count; i++) {
+        int u = visitedOrder[i];
+        printf("    [%2d] %-30s (%s)\n", i + 1, g->vertices[u].name, g->vertices[u].floor);
+    }
+    printf("  ==============================================================\n");
+}
+
+/* Display formal syllabus Adjacency List */
+void displayAdjacencyList(CampusGraph *g) {
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS GRAPH ADJACENCY LIST REPRESENTATION: G = (V, E)\n");
+    printf("  ==============================================================\n");
+    printf("    Total Vertices: %d locations\n", g->numVertices);
+    printf("  --------------------------------------------------------------\n");
+
+    for (int i = 0; i < g->numVertices; i++) {
+        printf("  [%2d] %-28s (%-12s) -> ", i, g->vertices[i].name, g->vertices[i].floor);
+        AdjNode *curr = g->vertices[i].head;
+        if (!curr) {
+            printf("NULL\n");
+            continue;
+        }
+        while (curr) {
+            printf("[%s]", g->vertices[curr->destIndex].name);
+            if (curr->next) printf(" -> ");
+            curr = curr->next;
+        }
+        printf(" -> NULL\n");
+    }
+    printf("  ==============================================================\n");
+}
+
+/* Free graph memory */
+void freeCampusGraph(CampusGraph *g) {
+    if (!g) return;
+    for (int i = 0; i < g->numVertices; i++) {
+        AdjNode *curr = g->vertices[i].head;
+        while (curr) {
+            AdjNode *tmp = curr;
+            curr = curr->next;
+            free(tmp);
+        }
+    }
+    free(g);
+}
+
+/* Populate FRCRCE college campus graph matching floormaps.vercel.app */
+CampusGraph* buildCollegeCampusGraph(void) {
+    CampusGraph *g = createCampusGraph();
+
+    /* Ground Floor */
+    addCampusLocation(g, "Gate 1 / Main Entrance", "Ground Floor");
+    addCampusLocation(g, "Parking Lot B", "Ground Floor");
+    addCampusLocation(g, "Campus Quadrangle", "Ground Floor");
+
+    addCampusEdge(g, "Gate 1 / Main Entrance", "Parking Lot B");
+    addCampusEdge(g, "Gate 1 / Main Entrance", "Campus Quadrangle");
+    addCampusEdge(g, "Parking Lot B", "Campus Quadrangle");
+
+    /* Floor 1 */
+    addCampusLocation(g, "Open Canteen", "Floor 1");
+    addCampusLocation(g, "Closed Canteen", "Floor 1");
+    addCampusLocation(g, "Central Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "East Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "West Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 1)", "Floor 1");
+    addCampusLocation(g, "Physics Lab", "Floor 1");
+    addCampusLocation(g, "Chemistry Lab", "Floor 1");
+    addCampusLocation(g, "Principal Cabin", "Floor 1");
+    addCampusLocation(g, "Exam Cell", "Floor 1");
+    addCampusLocation(g, "Fr. Diniz Hall", "Floor 1");
+
+    addCampusEdge(g, "Campus Quadrangle", "Central Stairs (Floor 1)");
+    addCampusEdge(g, "Campus Quadrangle", "Open Canteen");
+    addCampusEdge(g, "Open Canteen", "Closed Canteen");
+    addCampusEdge(g, "Open Canteen", "Central Stairs (Floor 1)");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "Principal Cabin");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "East Stairs (Floor 1)");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "West Stairs (Floor 1)");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Lifts N1/N2 (Floor 1)");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Exam Cell");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Fr. Diniz Hall");
+    addCampusEdge(g, "West Stairs (Floor 1)", "Physics Lab");
+    addCampusEdge(g, "West Stairs (Floor 1)", "Chemistry Lab");
+
+    /* Floor 2 */
+    addCampusLocation(g, "Library 2nd Floor", "Floor 2");
+    addCampusLocation(g, "Central Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "East Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "West Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 2)", "Floor 2");
+
+    addCampusEdge(g, "Library 2nd Floor", "Central Stairs (Floor 2)");
+    addCampusEdge(g, "Library 2nd Floor", "East Stairs (Floor 2)");
+    addCampusEdge(g, "Library 2nd Floor", "Lifts N1/N2 (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "West Stairs (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "East Stairs (Floor 2)");
+
+    /* Floor 3 (Labs & Classrooms) */
+    addCampusLocation(g, "Lab 301", "Floor 3");
+    addCampusLocation(g, "Lab 302", "Floor 3");
+    addCampusLocation(g, "Classroom 303", "Floor 3");
+    addCampusLocation(g, "Lab 304", "Floor 3");
+    addCampusLocation(g, "Classroom 305", "Floor 3");
+    addCampusLocation(g, "Classroom 306", "Floor 3");
+    addCampusLocation(g, "Classroom 307", "Floor 3");
+    addCampusLocation(g, "STUCO Room", "Floor 3");
+    addCampusLocation(g, "Incubation Cell", "Floor 3");
+    addCampusLocation(g, "Classroom 309", "Floor 3");
+    addCampusLocation(g, "Classroom 310", "Floor 3");
+    addCampusLocation(g, "Classroom 311", "Floor 3");
+    addCampusLocation(g, "Classroom 312", "Floor 3");
+    addCampusLocation(g, "HVAC Lab 313", "Floor 3");
+    addCampusLocation(g, "Central Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "East Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "West Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 3)", "Floor 3");
+
+    addCampusEdge(g, "West Stairs (Floor 3)", "Lab 301");
+    addCampusEdge(g, "West Stairs (Floor 3)", "Lab 302");
+    addCampusEdge(g, "Lab 302", "Classroom 303");
+    addCampusEdge(g, "Classroom 303", "Lab 304");
+    addCampusEdge(g, "Lab 304", "Central Stairs (Floor 3)");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Classroom 305");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Classroom 306");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "STUCO Room");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Incubation Cell");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "East Stairs (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Lifts N1/N2 (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Classroom 307");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Classroom 309");
+    addCampusEdge(g, "Classroom 309", "Classroom 310");
+    addCampusEdge(g, "Classroom 310", "Classroom 311");
+    addCampusEdge(g, "Classroom 311", "Classroom 312");
+    addCampusEdge(g, "Classroom 312", "HVAC Lab 313");
+
+    /* Floor 4 */
+    addCampusLocation(g, "CAD Lab (Floor 4)", "Floor 4");
+    addCampusLocation(g, "I.E. Lab (Floor 4)", "Floor 4");
+    addCampusLocation(g, "Classroom 401", "Floor 4");
+    addCampusLocation(g, "Central Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "East Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "West Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 4)", "Floor 4");
+
+    addCampusEdge(g, "Central Stairs (Floor 4)", "CAD Lab (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "I.E. Lab (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "Classroom 401");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "East Stairs (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "West Stairs (Floor 4)");
+    addCampusEdge(g, "East Stairs (Floor 4)", "Lifts N1/N2 (Floor 4)");
+
+    /* Floor 9 */
+    addCampusLocation(g, "Auditorium (Samvad Hall)", "Floor 9");
+    addCampusLocation(g, "Activity Room", "Floor 9");
+    addCampusLocation(g, "Central Stairs (Floor 9)", "Floor 9");
+    addCampusLocation(g, "West Stairs (Floor 9)", "Floor 9");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 9)", "Floor 9");
+
+    addCampusEdge(g, "Auditorium (Samvad Hall)", "Central Stairs (Floor 9)");
+    addCampusEdge(g, "Auditorium (Samvad Hall)", "West Stairs (Floor 9)");
+    addCampusEdge(g, "Central Stairs (Floor 9)", "Activity Room");
+    addCampusEdge(g, "Central Stairs (Floor 9)", "Lifts N1/N2 (Floor 9)");
+
+    /* Vertical Stairs & Elevators */
+    addCampusEdge(g, "Central Stairs (Floor 1)", "Central Stairs (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "Central Stairs (Floor 3)");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Central Stairs (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "Central Stairs (Floor 9)");
+
+    addCampusEdge(g, "West Stairs (Floor 1)", "West Stairs (Floor 2)");
+    addCampusEdge(g, "West Stairs (Floor 2)", "West Stairs (Floor 3)");
+    addCampusEdge(g, "West Stairs (Floor 3)", "West Stairs (Floor 4)");
+    addCampusEdge(g, "West Stairs (Floor 4)", "West Stairs (Floor 9)");
+
+    addCampusEdge(g, "East Stairs (Floor 1)", "East Stairs (Floor 2)");
+    addCampusEdge(g, "East Stairs (Floor 2)", "East Stairs (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "East Stairs (Floor 4)");
+
+    addCampusEdge(g, "Lifts N1/N2 (Floor 1)", "Lifts N1/N2 (Floor 2)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 2)", "Lifts N1/N2 (Floor 3)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 3)", "Lifts N1/N2 (Floor 4)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 4)", "Lifts N1/N2 (Floor 9)");
+
+    return g;
+}
+
+
+/* ==========================================================
  *  4.  HELPER — Create a Report struct
  * ========================================================== */
 
@@ -613,7 +1009,7 @@ void printMenu(void) {
     printf("\n");
     printSeparator();
     printf("  FindIt: Campus Lost-and-Found Tracker\n");
-    printf("  Data Structures: Linked List + Hash Table + Priority Queue (Heap)\n");
+    printf("  Data Structures: Linked List + Hash Table + Priority Queue + Graph (BFS/DFS)\n");
     printSeparator();
     printf("  1. Add a Lost Report\n");
     printf("  2. Add a Found Report\n");
@@ -626,9 +1022,38 @@ void printMenu(void) {
     printf("  9. View Recovery History\n");
     printf("  10. Find Potential Matches\n");
     printf("  11. DSA Debug View (Heap Array + Tree + Buckets + List)\n");
-    printf("  12. Exit\n");
+    printf("  12. Campus Navigator: Find Shortest Route (BFS — Fewest Edges)\n");
+    printf("  13. Campus Navigator: Explore Reachable Locations (DFS)\n");
+    printf("  14. Campus Navigator: Display Graph Adjacency List\n");
+    printf("  15. Exit\n");
     printSeparator();
     printf("  Enter choice: ");
+}
+
+void navigatorBfsInteractive(CampusGraph *g) {
+    char start[64], dest[64];
+    printf("\n  --- Campus Location Navigator (BFS Shortest Path) ---\n");
+    printf("  Enter Origin / Current Location (e.g. Parking Lot B, Open Canteen, Gate 1): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    printf("  Enter Target Destination (e.g. Lab 302, Library 2nd Floor, Auditorium): ");
+    fgets(dest, sizeof(dest), stdin);
+    dest[strcspn(dest, "\n")] = '\0';
+
+    bfsShortestRoute(g, start, dest);
+}
+
+void navigatorDfsInteractive(CampusGraph *g) {
+    char start[64];
+    printf("\n  --- Campus Location Navigator (DFS Area Exploration) ---\n");
+    printf("  Enter Location to Explore (e.g. STUCO Room, Open Canteen, Gate 1): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    dfsExplore(g, start);
 }
 
 int autoAssignPriorityLLM(const char *title, const char *category, const char *desc) {
@@ -863,6 +1288,7 @@ int main(void) {
     LinkedList    *recoveryList = createLinkedList();
     HashTable     *ht           = createHashTable();
     PriorityQueue *pq           = createPriorityQueue();
+    CampusGraph   *campusGraph  = buildCollegeCampusGraph();
 
     /* --- Seed dummy campus data with explicit priority ratings --- */
     Report seed[] = {
@@ -895,6 +1321,7 @@ int main(void) {
 
     printf("\n  *** FindIt: Campus Lost-and-Found Tracker ***\n");
     printf("  Loaded %d seed reports into Linked List, Hash Table, & Binary Heap.\n", seedCount);
+    printf("  Initialized Campus Graph with %d locations from FRCRCE Floor Plans.\n", campusGraph->numVertices);
 
     /* --- Menu loop --- */
     int choice;
@@ -976,18 +1403,28 @@ int main(void) {
                 displayHashTable(ht);
                 break;
             case 12:
+                navigatorBfsInteractive(campusGraph);
+                break;
+            case 13:
+                navigatorDfsInteractive(campusGraph);
+                break;
+            case 14:
+                displayAdjacencyList(campusGraph);
+                break;
+            case 15:
                 printf("\n  Goodbye!\n\n");
                 break;
             default:
                 printf("  Invalid choice. Try again.\n");
         }
-    } while (choice != 12);
+    } while (choice != 15);
 
     /* Cleanup */
     freeLinkedList(activeList);
     freeLinkedList(recoveryList);
     freeHashTable(ht);
     freePriorityQueue(pq);
+    freeCampusGraph(campusGraph);
 
     return 0;
 }

@@ -184,8 +184,10 @@ class HashTable {
 }
 
 // Export for use in app.js (global scope since we're using vanilla <script> tags)
-window.LinkedList = LinkedList;
-window.HashTable = HashTable;
+if (typeof window !== "undefined") {
+  window.LinkedList = LinkedList;
+  window.HashTable = HashTable;
+}
 
 // ============================================================
 //  3.  PRIORITY QUEUE (Binary Max-Heap Implementation)
@@ -415,4 +417,700 @@ class PriorityQueue {
   }
 }
 
-window.PriorityQueue = PriorityQueue;
+// ============================================================
+//  4.  CAMPUS GRAPH & LOCATION NAVIGATOR (Person 2)
+//  Represents campus places (Library, Canteen, Labs, Classrooms)
+//  as an unweighted undirected graph using an Adjacency List.
+//  - Show connected locations (Adjacency List)
+//  - BFS: Route with fewest edges (Shortest path in unweighted graph)
+//  - DFS: Explore connected campus locations
+// ============================================================
+class CampusGraph {
+  constructor() {
+    // Map of locationName -> Array of neighbor names
+    this.adjacencyList = new Map();
+    // Map of locationName -> metadata { floor, type, description, icon }
+    this.nodeMetadata = new Map();
+  }
+
+  addLocation(name, metadata = {}) {
+    if (!this.adjacencyList.has(name)) {
+      this.adjacencyList.set(name, []);
+      this.nodeMetadata.set(name, {
+        floor: metadata.floor || "Floor 1",
+        type: metadata.type || "room",
+        description: metadata.description || "",
+        icon: metadata.icon || "📍",
+      });
+    }
+  }
+
+  addEdge(loc1, loc2) {
+    if (!this.adjacencyList.has(loc1)) this.addLocation(loc1);
+    if (!this.adjacencyList.has(loc2)) this.addLocation(loc2);
+
+    if (!this.adjacencyList.get(loc1).includes(loc2)) {
+      this.adjacencyList.get(loc1).push(loc2);
+    }
+    if (!this.adjacencyList.get(loc2).includes(loc1)) {
+      this.adjacencyList.get(loc2).push(loc1);
+    }
+  }
+
+  getNeighbors(name) {
+    return this.adjacencyList.get(name) || [];
+  }
+
+  getMetadata(name) {
+    return this.nodeMetadata.get(name) || { floor: "Unknown", type: "room", icon: "📍", description: "" };
+  }
+
+  getAllLocations() {
+    return Array.from(this.adjacencyList.keys());
+  }
+
+  getLocationsByFloor(floorName) {
+    const locations = [];
+    for (const [name, meta] of this.nodeMetadata.entries()) {
+      if (!floorName || floorName === "All" || meta.floor.toLowerCase().includes(floorName.toLowerCase())) {
+        locations.push({ name, ...meta, degree: (this.adjacencyList.get(name) || []).length });
+      }
+    }
+    return locations;
+  }
+
+  /**
+   * Fuzzy resolve location name from user inputs or report strings
+   * E.g. "canteen" -> "Open Canteen", "library" -> "Library 2nd Floor", "lab 302" -> "Lab 302"
+   */
+  resolveLocation(query) {
+    if (!query) return null;
+    const q = query.trim().toLowerCase();
+    const all = this.getAllLocations();
+
+    // 1. Exact match
+    const exact = all.find((loc) => loc.toLowerCase() === q);
+    if (exact) return exact;
+
+    // 2. Contains match
+    const contains = all.find((loc) => loc.toLowerCase().includes(q) || q.includes(loc.toLowerCase()));
+    if (contains) return contains;
+
+    // 3. Known campus keywords
+    if (q.includes("canteen") || q.includes("food") || q.includes("cafeteria")) return "Open Canteen";
+    if (q.includes("library") || q.includes("book") || q.includes("reading")) return "Library 2nd Floor";
+    if (q.includes("302")) return "Lab 302";
+    if (q.includes("301")) return "Lab 301";
+    if (q.includes("303")) return "Classroom 303";
+    if (q.includes("304")) return "Lab 304";
+    if (q.includes("parking") || q.includes("bike") || q.includes("car")) return "Parking Lot B";
+    if (q.includes("gate") || q.includes("entrance")) return "Gate 1 / Main Entrance";
+    if (q.includes("audi") || q.includes("auditorium") || q.includes("hall") || q.includes("samvad")) return "Auditorium (Samvad Hall)";
+    if (q.includes("physics")) return "Physics Lab";
+    if (q.includes("chem")) return "Chemistry Lab";
+    if (q.includes("stuco") || q.includes("council")) return "STUCO Room";
+    if (q.includes("exam")) return "Exam Cell";
+
+    return all[0] || null;
+  }
+
+  /**
+   * Breadth-First Search (BFS)
+   * Finds the path with the fewest edges in an unweighted graph.
+   * Guarantees the shortest path in terms of steps/hops!
+   * Returns: { found, path, hops, visitedOrder, edgesExplored }
+   */
+  bfsShortestPath(start, destination) {
+    const resolvedStart = this.resolveLocation(start);
+    const resolvedDest = this.resolveLocation(destination);
+
+    if (!resolvedStart || !resolvedDest || !this.adjacencyList.has(resolvedStart) || !this.adjacencyList.has(resolvedDest)) {
+      return { found: false, path: [], hops: 0, visitedOrder: [] };
+    }
+
+    if (resolvedStart === resolvedDest) {
+      return {
+        found: true,
+        start: resolvedStart,
+        destination: resolvedDest,
+        path: [resolvedStart],
+        hops: 0,
+        visitedOrder: [resolvedStart],
+      };
+    }
+
+    const queue = [resolvedStart];
+    const visited = new Set([resolvedStart]);
+    const parent = new Map();
+    const visitedOrder = [];
+
+    let found = false;
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      visitedOrder.push(current);
+
+      if (current === resolvedDest) {
+        found = true;
+        break;
+      }
+
+      const neighbors = this.adjacencyList.get(current) || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          parent.set(neighbor, current);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    if (!found) {
+      return {
+        found: false,
+        start: resolvedStart,
+        destination: resolvedDest,
+        path: [],
+        hops: 0,
+        visitedOrder,
+      };
+    }
+
+    // Reconstruct path from destination backwards to start
+    const path = [];
+    let curr = resolvedDest;
+    while (curr) {
+      path.unshift(curr);
+      curr = parent.get(curr);
+    }
+
+    return {
+      found: true,
+      start: resolvedStart,
+      destination: resolvedDest,
+      path,
+      hops: path.length - 1,
+      visitedOrder,
+    };
+  }
+
+  /**
+   * Depth-First Search (DFS)
+   * Explores all connected locations starting from a node.
+   * Demonstrates graph traversal, discovery edges & connected component reachability.
+   * Returns: { start, visitedOrder, discoveryEdges, reachableCount }
+   */
+  dfsExplore(start) {
+    const resolvedStart = this.resolveLocation(start);
+    if (!resolvedStart || !this.adjacencyList.has(resolvedStart)) {
+      return { start: null, visitedOrder: [], discoveryEdges: [], reachableCount: 0 };
+    }
+
+    const visited = new Set();
+    const visitedOrder = [];
+    const discoveryEdges = [];
+
+    const dfs = (node) => {
+      visited.add(node);
+      visitedOrder.push(node);
+
+      const neighbors = this.adjacencyList.get(node) || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          discoveryEdges.push({ from: node, to: neighbor });
+          dfs(neighbor);
+        }
+      }
+    };
+
+    dfs(resolvedStart);
+
+    return {
+      start: resolvedStart,
+      visitedOrder,
+      discoveryEdges,
+      reachableCount: visited.size,
+    };
+  }
+
+  /**
+   * Diagnostic snapshot for DSA Adjacency List inspector
+   */
+  debugAdjacencyList() {
+    const list = {};
+    for (const [node, neighbors] of this.adjacencyList.entries()) {
+      list[node] = {
+        meta: this.nodeMetadata.get(node) || {},
+        neighbors: [...neighbors],
+        degree: neighbors.length,
+      };
+    }
+    return list;
+  }
+
+  /**
+   * Factory method: Builds the complete FRCRCE campus graph
+   * Modeled directly from https://floormaps.vercel.app/?floor=floor3
+   */
+  static createCampusGraph() {
+    const g = new CampusGraph();
+
+    // ==========================================
+    // Ground Floor: Entrances & Parking
+    // ==========================================
+    g.addLocation("Gate 1 / Main Entrance", {
+      floor: "Ground Floor",
+      type: "facility",
+      icon: "🚪",
+      description: "Primary campus security checkpoint, visitor registration & main gate.",
+    });
+    g.addLocation("Parking Lot B", {
+      floor: "Ground Floor",
+      type: "facility",
+      icon: "🅿️",
+      description: "Student two-wheeler & staff vehicle parking stand near campus gate.",
+    });
+    g.addLocation("Campus Quadrangle", {
+      floor: "Ground Floor",
+      type: "facility",
+      icon: "🏛️",
+      description: "Central open-air courtyard connecting entrance gate and main academic wings.",
+    });
+
+    g.addEdge("Gate 1 / Main Entrance", "Parking Lot B");
+    g.addEdge("Gate 1 / Main Entrance", "Campus Quadrangle");
+    g.addEdge("Parking Lot B", "Campus Quadrangle");
+
+    // ==========================================
+    // Floor 1: Canteen, Labs, Admin & Seminar Hall
+    // ==========================================
+    g.addLocation("Open Canteen", {
+      floor: "Floor 1",
+      type: "facility",
+      icon: "☕",
+      description: "Open-air student dining space & social lounge.",
+    });
+    g.addLocation("Closed Canteen", {
+      floor: "Floor 1",
+      type: "facility",
+      icon: "🥪",
+      description: "Indoor cafeteria serving counter, food preparation & kitchen.",
+    });
+    g.addLocation("Central Stairs (Floor 1)", {
+      floor: "Floor 1",
+      type: "stairs",
+      icon: "🪜",
+      description: "Main central staircase connecting ground foyer to upper floors.",
+    });
+    g.addLocation("East Stairs (Floor 1)", {
+      floor: "Floor 1",
+      type: "stairs",
+      icon: "🪜",
+      description: "East wing staircase adjacent to elevator bank.",
+    });
+    g.addLocation("West Stairs (Floor 1)", {
+      floor: "Floor 1",
+      type: "stairs",
+      icon: "🪜",
+      description: "West wing staircase connecting physics and chemistry science labs.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 1)", {
+      floor: "Floor 1",
+      type: "elevator",
+      icon: "🛗",
+      description: "North passenger elevator bank servicing floors 1 through 9.",
+    });
+    g.addLocation("Physics Lab", {
+      floor: "Floor 1",
+      type: "academic",
+      icon: "🔬",
+      description: "Engineering Physics & Optics experimental lab.",
+    });
+    g.addLocation("Chemistry Lab", {
+      floor: "Floor 1",
+      type: "academic",
+      icon: "🧪",
+      description: "Applied Chemistry & Environmental Engineering lab.",
+    });
+    g.addLocation("Principal Cabin", {
+      floor: "Floor 1",
+      type: "admin",
+      icon: "🏢",
+      description: "Executive leadership & Principal administrative office.",
+    });
+    g.addLocation("Exam Cell", {
+      floor: "Floor 1",
+      type: "admin",
+      icon: "📄",
+      description: "University examination control division & verification desk.",
+    });
+    g.addLocation("Fr. Diniz Hall", {
+      floor: "Floor 1",
+      type: "hall",
+      icon: "🎭",
+      description: "Air-conditioned seminar hall for department orientations & workshops.",
+    });
+
+    g.addEdge("Campus Quadrangle", "Central Stairs (Floor 1)");
+    g.addEdge("Campus Quadrangle", "Open Canteen");
+    g.addEdge("Open Canteen", "Closed Canteen");
+    g.addEdge("Open Canteen", "Central Stairs (Floor 1)");
+    g.addEdge("Central Stairs (Floor 1)", "Principal Cabin");
+    g.addEdge("Central Stairs (Floor 1)", "East Stairs (Floor 1)");
+    g.addEdge("Central Stairs (Floor 1)", "West Stairs (Floor 1)");
+    g.addEdge("East Stairs (Floor 1)", "Lifts N1/N2 (Floor 1)");
+    g.addEdge("East Stairs (Floor 1)", "Exam Cell");
+    g.addEdge("East Stairs (Floor 1)", "Fr. Diniz Hall");
+    g.addEdge("West Stairs (Floor 1)", "Physics Lab");
+    g.addEdge("West Stairs (Floor 1)", "Chemistry Lab");
+
+    // ==========================================
+    // Floor 2: Central College Library
+    // ==========================================
+    g.addLocation("Library 2nd Floor", {
+      floor: "Floor 2",
+      type: "academic",
+      icon: "📚",
+      description: "Central Academic Library, digital catalog, reference stacks & silent study desks.",
+    });
+    g.addLocation("Central Stairs (Floor 2)", {
+      floor: "Floor 2",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 2 central staircase connector.",
+    });
+    g.addLocation("East Stairs (Floor 2)", {
+      floor: "Floor 2",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 2 east staircase connector.",
+    });
+    g.addLocation("West Stairs (Floor 2)", {
+      floor: "Floor 2",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 2 west staircase connector.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 2)", {
+      floor: "Floor 2",
+      type: "elevator",
+      icon: "🛗",
+      description: "Floor 2 elevator landing at library entrance.",
+    });
+
+    g.addEdge("Library 2nd Floor", "Central Stairs (Floor 2)");
+    g.addEdge("Library 2nd Floor", "East Stairs (Floor 2)");
+    g.addEdge("Library 2nd Floor", "Lifts N1/N2 (Floor 2)");
+    g.addEdge("Central Stairs (Floor 2)", "West Stairs (Floor 2)");
+    g.addEdge("Central Stairs (Floor 2)", "East Stairs (Floor 2)");
+
+    // ==========================================
+    // Floor 3: Engineering Labs & Classrooms (floormaps.vercel.app/?floor=floor3)
+    // ==========================================
+    g.addLocation("Lab 301", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "💻",
+      description: "Computer Engineering Hardware & Microprocessor Lab.",
+    });
+    g.addLocation("Lab 302", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🖥️",
+      description: "Advanced Computing, Algorithms & Data Structures (DSA) Lab.",
+    });
+    g.addLocation("Classroom 303", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Third-year Computer Engineering lecture hall.",
+    });
+    g.addLocation("Lab 304", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "💻",
+      description: "Software Engineering & Database Management Lab.",
+    });
+    g.addLocation("Classroom 305", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Interactive smart classroom equipped with digital projectors.",
+    });
+    g.addLocation("Classroom 306", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Second-year CSE core lecture hall.",
+    });
+    g.addLocation("Classroom 307", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Department lecture & tutorial room.",
+    });
+    g.addLocation("STUCO Room", {
+      floor: "Floor 3",
+      type: "facility",
+      icon: "🤝",
+      description: "CRCE Student Council Headquarters & club coordination office.",
+    });
+    g.addLocation("Incubation Cell", {
+      floor: "Floor 3",
+      type: "facility",
+      icon: "💡",
+      description: "Student Innovation, Prototyping & Startup Incubation center.",
+    });
+    g.addLocation("Classroom 309", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "East wing engineering lecture room.",
+    });
+    g.addLocation("Classroom 310", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "East wing engineering lecture room.",
+    });
+    g.addLocation("Classroom 311", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Engineering lecture room.",
+    });
+    g.addLocation("Classroom 312", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "🎓",
+      description: "Advanced elective seminar room.",
+    });
+    g.addLocation("HVAC Lab 313", {
+      floor: "Floor 3",
+      type: "academic",
+      icon: "⚙️",
+      description: "Mechanical Engineering HVAC & Thermal Systems research lab.",
+    });
+    g.addLocation("Central Stairs (Floor 3)", {
+      floor: "Floor 3",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 3 central lobby corridor & staircase landing.",
+    });
+    g.addLocation("East Stairs (Floor 3)", {
+      floor: "Floor 3",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 3 east wing staircase connector.",
+    });
+    g.addLocation("West Stairs (Floor 3)", {
+      floor: "Floor 3",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 3 west wing staircase directly serving Lab 301 and Lab 302.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 3)", {
+      floor: "Floor 3",
+      type: "elevator",
+      icon: "🛗",
+      description: "Floor 3 north elevator lobby.",
+    });
+
+    g.addEdge("West Stairs (Floor 3)", "Lab 301");
+    g.addEdge("West Stairs (Floor 3)", "Lab 302");
+    g.addEdge("Lab 302", "Classroom 303");
+    g.addEdge("Classroom 303", "Lab 304");
+    g.addEdge("Lab 304", "Central Stairs (Floor 3)");
+    g.addEdge("Central Stairs (Floor 3)", "Classroom 305");
+    g.addEdge("Central Stairs (Floor 3)", "Classroom 306");
+    g.addEdge("Central Stairs (Floor 3)", "STUCO Room");
+    g.addEdge("Central Stairs (Floor 3)", "Incubation Cell");
+    g.addEdge("Central Stairs (Floor 3)", "East Stairs (Floor 3)");
+    g.addEdge("East Stairs (Floor 3)", "Lifts N1/N2 (Floor 3)");
+    g.addEdge("East Stairs (Floor 3)", "Classroom 307");
+    g.addEdge("East Stairs (Floor 3)", "Classroom 309");
+    g.addEdge("Classroom 309", "Classroom 310");
+    g.addEdge("Classroom 310", "Classroom 311");
+    g.addEdge("Classroom 311", "Classroom 312");
+    g.addEdge("Classroom 312", "HVAC Lab 313");
+
+    // ==========================================
+    // Floor 4: CAD, I.E. Labs & Common Rooms
+    // ==========================================
+    g.addLocation("CAD Lab (Floor 4)", {
+      floor: "Floor 4",
+      type: "academic",
+      icon: "📐",
+      description: "Computer-Aided Design & Simulation workstation suite.",
+    });
+    g.addLocation("I.E. Lab (Floor 4)", {
+      floor: "Floor 4",
+      type: "academic",
+      icon: "🔬",
+      description: "Industrial Electronics & Mechatronics Lab.",
+    });
+    g.addLocation("Classroom 401", {
+      floor: "Floor 4",
+      type: "academic",
+      icon: "🎓",
+      description: "Engineering lecture hall.",
+    });
+    g.addLocation("Central Stairs (Floor 4)", {
+      floor: "Floor 4",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 4 central staircase landing.",
+    });
+    g.addLocation("East Stairs (Floor 4)", {
+      floor: "Floor 4",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 4 east wing staircase connector.",
+    });
+    g.addLocation("West Stairs (Floor 4)", {
+      floor: "Floor 4",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 4 west wing staircase connector.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 4)", {
+      floor: "Floor 4",
+      type: "elevator",
+      icon: "🛗",
+      description: "Floor 4 north elevator lobby.",
+    });
+
+    g.addEdge("Central Stairs (Floor 4)", "CAD Lab (Floor 4)");
+    g.addEdge("Central Stairs (Floor 4)", "I.E. Lab (Floor 4)");
+    g.addEdge("Central Stairs (Floor 4)", "Classroom 401");
+    g.addEdge("Central Stairs (Floor 4)", "East Stairs (Floor 4)");
+    g.addEdge("Central Stairs (Floor 4)", "West Stairs (Floor 4)");
+    g.addEdge("East Stairs (Floor 4)", "Lifts N1/N2 (Floor 4)");
+
+    // ==========================================
+    // Floor 5: Language & Seminar
+    // ==========================================
+    g.addLocation("Language Lab (Floor 5)", {
+      floor: "Floor 5",
+      type: "academic",
+      icon: "🎧",
+      description: "Professional Communication & Digital Language learning laboratory.",
+    });
+    g.addLocation("Presentation Room 508", {
+      floor: "Floor 5",
+      type: "facility",
+      icon: "📽️",
+      description: "Equipped presentation theater for capstone defenses & seminars.",
+    });
+    g.addLocation("Central Stairs (Floor 5)", {
+      floor: "Floor 5",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 5 central staircase landing.",
+    });
+    g.addLocation("West Stairs (Floor 5)", {
+      floor: "Floor 5",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 5 west staircase connector.",
+    });
+    g.addLocation("East Stairs (Floor 5)", {
+      floor: "Floor 5",
+      type: "stairs",
+      icon: "🪜",
+      description: "Floor 5 east staircase connector.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 5)", {
+      floor: "Floor 5",
+      type: "elevator",
+      icon: "🛗",
+      description: "Floor 5 elevator lobby.",
+    });
+
+    g.addEdge("Central Stairs (Floor 5)", "Language Lab (Floor 5)");
+    g.addEdge("Central Stairs (Floor 5)", "Presentation Room 508");
+    g.addEdge("Central Stairs (Floor 5)", "East Stairs (Floor 5)");
+    g.addEdge("Central Stairs (Floor 5)", "West Stairs (Floor 5)");
+    g.addEdge("East Stairs (Floor 5)", "Lifts N1/N2 (Floor 5)");
+
+    // ==========================================
+    // Floor 9: Auditorium (Samvad Hall)
+    // ==========================================
+    g.addLocation("Auditorium (Samvad Hall)", {
+      floor: "Floor 9",
+      type: "hall",
+      icon: "🎭",
+      description: "Samvad Central College Auditorium for festivals, convocations & cultural summits.",
+    });
+    g.addLocation("Activity Room", {
+      floor: "Floor 9",
+      type: "facility",
+      icon: "🎨",
+      description: "Student cultural & technical club activity hub.",
+    });
+    g.addLocation("Central Stairs (Floor 9)", {
+      floor: "Floor 9",
+      type: "stairs",
+      icon: "🪜",
+      description: "Top floor central staircase access.",
+    });
+    g.addLocation("West Stairs (Floor 9)", {
+      floor: "Floor 9",
+      type: "stairs",
+      icon: "🪜",
+      description: "Top floor west staircase connector.",
+    });
+    g.addLocation("Lifts N1/N2 (Floor 9)", {
+      floor: "Floor 9",
+      type: "elevator",
+      icon: "🛗",
+      description: "Top floor elevator landing directly serving Samvad Auditorium.",
+    });
+
+    g.addEdge("Auditorium (Samvad Hall)", "Central Stairs (Floor 9)");
+    g.addEdge("Auditorium (Samvad Hall)", "West Stairs (Floor 9)");
+    g.addEdge("Central Stairs (Floor 9)", "Activity Room");
+    g.addEdge("Central Stairs (Floor 9)", "Lifts N1/N2 (Floor 9)");
+
+    // ==========================================
+    // Vertical Inter-Floor Interconnections (Stairs & Lifts)
+    // ==========================================
+    // Central Stairs Chain
+    g.addEdge("Central Stairs (Floor 1)", "Central Stairs (Floor 2)");
+    g.addEdge("Central Stairs (Floor 2)", "Central Stairs (Floor 3)");
+    g.addEdge("Central Stairs (Floor 3)", "Central Stairs (Floor 4)");
+    g.addEdge("Central Stairs (Floor 4)", "Central Stairs (Floor 5)");
+    g.addEdge("Central Stairs (Floor 5)", "Central Stairs (Floor 9)");
+
+    // West Stairs Chain
+    g.addEdge("West Stairs (Floor 1)", "West Stairs (Floor 2)");
+    g.addEdge("West Stairs (Floor 2)", "West Stairs (Floor 3)");
+    g.addEdge("West Stairs (Floor 3)", "West Stairs (Floor 4)");
+    g.addEdge("West Stairs (Floor 4)", "West Stairs (Floor 5)");
+    g.addEdge("West Stairs (Floor 5)", "West Stairs (Floor 9)");
+
+    // East Stairs Chain
+    g.addEdge("East Stairs (Floor 1)", "East Stairs (Floor 2)");
+    g.addEdge("East Stairs (Floor 2)", "East Stairs (Floor 3)");
+    g.addEdge("East Stairs (Floor 3)", "East Stairs (Floor 4)");
+    g.addEdge("East Stairs (Floor 4)", "East Stairs (Floor 5)");
+
+    // Lifts N1/N2 Multi-Floor Shaft
+    g.addEdge("Lifts N1/N2 (Floor 1)", "Lifts N1/N2 (Floor 2)");
+    g.addEdge("Lifts N1/N2 (Floor 2)", "Lifts N1/N2 (Floor 3)");
+    g.addEdge("Lifts N1/N2 (Floor 3)", "Lifts N1/N2 (Floor 4)");
+    g.addEdge("Lifts N1/N2 (Floor 4)", "Lifts N1/N2 (Floor 5)");
+    g.addEdge("Lifts N1/N2 (Floor 5)", "Lifts N1/N2 (Floor 9)");
+
+    return g;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.PriorityQueue = PriorityQueue;
+  window.CampusGraph = CampusGraph;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { Node, LinkedList, HashTable, PriorityQueue, CampusGraph };
+}

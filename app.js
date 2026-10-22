@@ -1195,12 +1195,19 @@ function renderReports(items) {
               : ""
           }
 
-          <!-- View Details Button -->
-          <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-            class="depth-btn mt-3 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
-            <span>View Details &amp; Actions</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-          </button>
+          <!-- View Details & Campus Navigation Buttons -->
+          <div class="mt-3 flex gap-2">
+            <button onclick="event.stopPropagation(); showDetail('${r.id}')"
+              class="depth-btn flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
+              <span>View Details</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <button onclick="event.stopPropagation(); navigateToReportLocation('${escapeHtml(r.location)}')"
+              title="Navigate to ${escapeHtml(r.location)} via campus shortest route"
+              class="px-3 py-2.5 rounded-xl bg-forest/10 hover:bg-forest hover:text-white text-forest border border-forest/20 text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-2xs">
+              <span>🧭</span>
+            </button>
+          </div>
         </div>
       </div>`;
     })
@@ -1420,6 +1427,11 @@ function showDetail(id, isProcessingMode = false) {
     `
         : ""
     }
+
+    <button onclick="closeDetailModal(); navigateToReportLocation('${escapeHtml(report.location)}');"
+      class="w-full py-2.5 px-4 mb-3 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white border border-forest/30 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-2xs">
+      <span>🧭 Navigate to Spot: ${escapeHtml(report.location)} (Fewest Edges BFS)</span>
+    </button>
 
     <div class="flex gap-3">
       <button onclick="markRecovered('${report.id}'); closeDetailModal();"
@@ -1773,7 +1785,7 @@ function searchAndFilter() {
 
 // ----- Tab Switching ----------------------------------------
 function switchTab(tabName) {
-  const tabs = ["reports", "matches", "recovery"];
+  const tabs = ["reports", "matches", "recovery", "navigator"];
   tabs.forEach((t) => {
     const btn = document.getElementById(`tab-btn-${t}`);
     const panel = document.getElementById(`tab-panel-${t}`);
@@ -1789,6 +1801,513 @@ function switchTab(tabName) {
       panel.classList.add("hidden");
     }
   });
+
+  if (tabName === "navigator") {
+    renderCampusGraphCanvas();
+  }
+}
+
+// ============================================================
+//  CAMPUS LOCATION NAVIGATOR (PERSON 2: GRAPH, BFS, DFS)
+// ============================================================
+let campusGraph = null;
+let currentNavFilterFloor = "All";
+let activeBFSPath = [];
+let activeDFSOrder = [];
+
+function initCampusNavigator() {
+  if (!campusGraph) {
+    if (typeof CampusGraph !== "undefined") {
+      campusGraph = CampusGraph.createCampusGraph();
+    } else {
+      return;
+    }
+  }
+
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  if (!startSelect || !destSelect) return;
+
+  const allLocations = campusGraph.getAllLocations();
+
+  // Group locations by floor
+  const floors = {};
+  allLocations.forEach((loc) => {
+    const meta = campusGraph.getMetadata(loc);
+    const fl = meta.floor || "Other";
+    floors[fl] = floors[fl] || [];
+    floors[fl].push({ name: loc, ...meta });
+  });
+
+  const generateOptions = (selectedVal) => {
+    return Object.keys(floors)
+      .map((fl) => {
+        const opts = floors[fl]
+          .map(
+            (loc) =>
+              `<option value="${escapeHtml(loc.name)}" ${
+                loc.name === selectedVal ? "selected" : ""
+              }>${loc.icon || "📍"} ${escapeHtml(loc.name)}</option>`
+          )
+          .join("");
+        return `<optgroup label="── ${escapeHtml(fl)} ──">${opts}</optgroup>`;
+      })
+      .join("");
+  };
+
+  startSelect.innerHTML = generateOptions("Parking Lot B");
+  destSelect.innerHTML = generateOptions("Lab 302");
+
+  updateNavFloorLabels();
+
+  startSelect.addEventListener("change", () => {
+    updateNavFloorLabels();
+    runBFSNavigation(false);
+  });
+
+  destSelect.addEventListener("change", () => {
+    updateNavFloorLabels();
+    runBFSNavigation(false);
+  });
+
+  const adjSearch = document.getElementById("nav-adj-search");
+  if (adjSearch) {
+    adjSearch.addEventListener("input", (e) => renderAdjacencyList(e.target.value));
+  }
+
+  renderCampusGraphCanvas();
+  renderAdjacencyList();
+
+  // Run initial demo route
+  runBFSNavigation(false);
+}
+
+function updateNavFloorLabels() {
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  const startFloor = document.getElementById("nav-start-floor");
+  const destFloor = document.getElementById("nav-dest-floor");
+
+  if (startSelect && startFloor && campusGraph) {
+    const meta = campusGraph.getMetadata(startSelect.value);
+    startFloor.textContent = meta.floor || "";
+  }
+  if (destSelect && destFloor && campusGraph) {
+    const meta = campusGraph.getMetadata(destSelect.value);
+    destFloor.textContent = meta.floor || "";
+  }
+}
+
+function setNavLocations(startName, destName) {
+  if (!campusGraph) return;
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  if (startSelect && campusGraph.adjacencyList.has(startName)) startSelect.value = startName;
+  if (destSelect && campusGraph.adjacencyList.has(destName)) destSelect.value = destName;
+  updateNavFloorLabels();
+  runBFSNavigation(true);
+}
+
+function swapNavLocations() {
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  if (!startSelect || !destSelect) return;
+  const temp = startSelect.value;
+  startSelect.value = destSelect.value;
+  destSelect.value = temp;
+  updateNavFloorLabels();
+  runBFSNavigation(true);
+}
+
+function filterCampusFloor(floorName) {
+  currentNavFilterFloor = floorName;
+  document.querySelectorAll(".floor-filter-btn").forEach((btn) => {
+    if (btn.dataset.floor === floorName) {
+      btn.className = "floor-filter-btn px-2.5 py-1 rounded-lg bg-forest text-white font-bold text-[11px] shadow-xs transition-all";
+    } else {
+      btn.className = "floor-filter-btn px-2.5 py-1 rounded-lg bg-sand/40 text-gray-700 hover:text-forest font-bold text-[11px] border border-sand transition-all";
+    }
+  });
+
+  const badge = document.getElementById("canvas-floor-badge");
+  if (badge && campusGraph) {
+    const locs = campusGraph.getLocationsByFloor(floorName);
+    badge.textContent = `Viewing: ${floorName === "All" ? "All Floors" : floorName} (${locs.length} Nodes)`;
+  }
+
+  renderCampusGraphCanvas();
+}
+
+function runBFSNavigation(showNotification = true) {
+  if (!campusGraph) return;
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  if (!startSelect || !destSelect) return;
+
+  const start = startSelect.value;
+  const dest = destSelect.value;
+
+  const result = campusGraph.bfsShortestPath(start, dest);
+  activeBFSPath = result.path;
+  activeDFSOrder = [];
+
+  const dossierCard = document.getElementById("nav-route-card");
+  if (!dossierCard) return;
+
+  dossierCard.classList.remove("hidden", "border-amber-500/30");
+  dossierCard.classList.add("border-emerald-500/30");
+
+  if (!result.found) {
+    dossierCard.innerHTML = `
+      <div class="p-4 bg-red-50 text-red-800 rounded-2xl border border-red-200">
+        <p class="font-bold">No path found between ${escapeHtml(start)} and ${escapeHtml(dest)}.</p>
+      </div>`;
+    renderCampusGraphCanvas();
+    return;
+  }
+
+  dossierCard.innerHTML = `
+    <!-- Route Overview Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-sand gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+            ⚡ BFS Shortest Route
+          </span>
+          <span class="text-xs font-mono font-bold text-gray-500">Fewest Edges in Unweighted Graph</span>
+        </div>
+        <h3 class="text-base font-black text-gray-900">
+          ${escapeHtml(start)} <span class="text-emerald-600 font-black">➔</span> ${escapeHtml(dest)}
+        </h3>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <p class="text-lg font-black text-emerald-700 leading-none">${result.hops} Hops</p>
+          <p class="text-[10px] font-mono text-gray-400 mt-0.5">${result.path.length} Nodes Traversed</p>
+        </div>
+        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg shadow-2xs">
+          🧭
+        </div>
+      </div>
+    </div>
+
+    <!-- Step-by-Step Directions Chain -->
+    <div class="mt-4">
+      <p class="text-xs font-black uppercase tracking-wider text-gray-600 mb-2">Step-by-Step Campus Corridor Instructions:</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        ${result.path
+          .map((locName, idx) => {
+            const meta = campusGraph.getMetadata(locName);
+            const isFirst = idx === 0;
+            const isLast = idx === result.path.length - 1;
+            const stepBg = isFirst
+              ? "bg-blue-50 border-blue-200"
+              : isLast
+              ? "bg-red-50 border-red-200"
+              : "bg-white/80 border-sand";
+            const badgeColor = isFirst
+              ? "bg-blue-600 text-white"
+              : isLast
+              ? "bg-red-600 text-white"
+              : "bg-emerald-600 text-white";
+
+            return `
+            <div class="p-3 rounded-2xl border ${stepBg} shadow-2xs flex items-start gap-2.5">
+              <span class="step-number-badge w-6 h-6 rounded-full ${badgeColor} flex items-center justify-center shrink-0 shadow-2xs">
+                ${idx + 1}
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between">
+                  <p class="text-xs font-black text-gray-900 truncate">${meta.icon || "📍"} ${escapeHtml(locName)}</p>
+                  <span class="text-[9px] font-mono font-bold text-gray-400">${escapeHtml(meta.floor)}</span>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-1">
+                  ${isFirst ? 'Start here at origin point' : isLast ? 'Final destination reached' : escapeHtml(meta.description || 'Walk along corridor')}
+                </p>
+              </div>
+            </div>`;
+          })
+          .join("")}
+      </div>
+    </div>
+
+    <!-- BFS Traversal Sequence Collapsible Drawer -->
+    <div class="mt-4 pt-3 border-t border-sand-d/40">
+      <details class="cursor-pointer group">
+        <summary class="text-xs font-bold text-gray-700 hover:text-forest flex items-center justify-between list-none">
+          <span class="flex items-center gap-1.5">
+            <span>🔬</span>
+            <span>BFS Queue Node Exploration Sequence (${result.visitedOrder.length} nodes visited in queue before finding target)</span>
+          </span>
+          <span class="text-[10px] font-mono text-forest group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="mt-2.5 p-3 rounded-xl bg-ivory border border-sand text-xs font-mono text-gray-600 space-y-1">
+          <p class="text-[11px] text-gray-500 mb-1">Queue First-In First-Out (FIFO) Exploration Order:</p>
+          <div class="flex flex-wrap gap-1">
+            ${result.visitedOrder
+              .map(
+                (node, i) =>
+                  `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    result.path.includes(node)
+                      ? 'bg-emerald-600 text-white font-bold'
+                      : 'bg-white border border-sand text-gray-700'
+                  }">[${i + 1}] ${escapeHtml(node)}</span>`
+              )
+              .join("")}
+          </div>
+        </div>
+      </details>
+    </div>
+  `;
+
+  renderCampusGraphCanvas();
+
+  if (showNotification) {
+    showToast(`⚡ Shortest route calculated: ${result.hops} hops to ${dest}!`, "success");
+  }
+}
+
+function runDFSExploration() {
+  if (!campusGraph) return;
+  const startSelect = document.getElementById("nav-start-select");
+  if (!startSelect) return;
+
+  const start = startSelect.value;
+  const result = campusGraph.dfsExplore(start);
+  activeDFSOrder = result.visitedOrder;
+  activeBFSPath = [];
+
+  const dossierCard = document.getElementById("nav-route-card");
+  if (!dossierCard) return;
+
+  dossierCard.classList.remove("hidden", "border-emerald-500/30");
+  dossierCard.classList.add("border-amber-500/30");
+
+  dossierCard.innerHTML = `
+    <!-- DFS Overview Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-sand gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
+            🔍 DFS Depth-First Exploration
+          </span>
+          <span class="text-xs font-mono font-bold text-gray-500">Connected Component Reachability &amp; Backtracking</span>
+        </div>
+        <h3 class="text-base font-black text-gray-900">
+          Starting from: ${escapeHtml(start)}
+        </h3>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <p class="text-lg font-black text-amber-700 leading-none">${result.reachableCount} / ${campusGraph.getAllLocations().length} Nodes</p>
+          <p class="text-[10px] font-mono text-gray-400 mt-0.5">100% Reachable (Single Component)</p>
+        </div>
+        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg shadow-2xs">
+          🌐
+        </div>
+      </div>
+    </div>
+
+    <!-- DFS Discovery Sequence -->
+    <div class="mt-4">
+      <p class="text-xs font-black uppercase tracking-wider text-gray-600 mb-2">Depth-First Traversal Order (Preorder Branch Sequence):</p>
+      <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-3 bg-white/70 rounded-2xl border border-sand">
+        ${result.visitedOrder
+          .map(
+            (locName, idx) => `
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200">
+            <span class="text-[10px] font-black font-mono text-amber-600">${idx + 1}.</span>
+            <span>${escapeHtml(locName)}</span>
+          </span>`
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+
+  renderCampusGraphCanvas();
+  showToast(`🔍 DFS explored ${result.reachableCount} campus locations from ${start}!`, "info");
+}
+
+function renderCampusGraphCanvas() {
+  const container = document.getElementById("campus-graph-canvas");
+  if (!container || !campusGraph) return;
+
+  const startSelect = document.getElementById("nav-start-select");
+  const destSelect = document.getElementById("nav-dest-select");
+  const currentStart = startSelect ? startSelect.value : "";
+  const currentDest = destSelect ? destSelect.value : "";
+
+  const locations = campusGraph.getLocationsByFloor(currentNavFilterFloor);
+
+  // Group locations into visual floor clusters
+  const floorClusters = {};
+  locations.forEach((loc) => {
+    floorClusters[loc.floor] = floorClusters[loc.floor] || [];
+    floorClusters[loc.floor].push(loc);
+  });
+
+  const floorKeys = Object.keys(floorClusters);
+
+  container.innerHTML = `
+    <div class="space-y-6">
+      ${floorKeys
+        .map((floorName) => {
+          const rooms = floorClusters[floorName];
+          return `
+        <div class="bg-white/60 rounded-2xl p-4 border border-sand/70 shadow-2xs">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-sand/50">
+            <div class="flex items-center gap-2">
+              <span class="text-base font-black text-gray-800">${escapeHtml(floorName)}</span>
+              <span class="text-[10px] font-mono text-gray-400 font-bold">(${rooms.length} locations)</span>
+            </div>
+            <span class="text-[10px] font-mono font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+              Connected via Corridors, Stairs &amp; Lifts
+            </span>
+          </div>
+
+          <!-- Room Cards Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            ${rooms
+              .map((loc) => {
+                const isStart = loc.name === currentStart;
+                const isDest = loc.name === currentDest;
+                const inBFS = activeBFSPath.includes(loc.name);
+                const stepIdx = inBFS ? activeBFSPath.indexOf(loc.name) + 1 : 0;
+                const inDFS = activeDFSOrder.includes(loc.name);
+                const dfsIdx = inDFS ? activeDFSOrder.indexOf(loc.name) + 1 : 0;
+
+                let stateClass = "bg-white border-sand";
+                let badge = "";
+
+                if (isStart) {
+                  stateClass = "graph-node-start";
+                  badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-blue-600 text-white">🚩 Start</span>`;
+                } else if (isDest) {
+                  stateClass = "graph-node-dest";
+                  badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-red-600 text-white">🎯 Dest</span>`;
+                } else if (inBFS) {
+                  stateClass = "graph-node-path";
+                  badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-emerald-600 text-white">Step ${stepIdx}</span>`;
+                } else if (inDFS) {
+                  stateClass = "graph-node-dfs";
+                  badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-amber-500 text-white">#${dfsIdx}</span>`;
+                }
+
+                const neighbors = campusGraph.getNeighbors(loc.name);
+
+                return `
+                <div onclick="selectGraphNode('${escapeHtml(loc.name)}')"
+                  class="graph-node-card p-3 rounded-xl border ${stateClass} shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between mb-1 gap-1">
+                      <span class="text-base">${loc.icon || "📍"}</span>
+                      ${badge}
+                    </div>
+                    <h4 class="text-xs font-bold text-gray-900 leading-tight mb-1">${escapeHtml(loc.name)}</h4>
+                    <p class="text-[10px] text-gray-500 line-clamp-1 leading-snug">${escapeHtml(loc.description || loc.type)}</p>
+                  </div>
+                  <div class="mt-2 pt-1.5 border-t border-sand/40 flex items-center justify-between text-[10px] text-gray-400">
+                    <span>${neighbors.length} connected</span>
+                    <span class="font-bold text-forest hover:underline">Select ➔</span>
+                  </div>
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function selectGraphNode(nodeName) {
+  const destSelect = document.getElementById("nav-dest-select");
+  if (destSelect) {
+    destSelect.value = nodeName;
+    updateNavFloorLabels();
+    runBFSNavigation(true);
+  }
+}
+
+function toggleAdjacencyInspector() {
+  const panel = document.getElementById("nav-adjacency-panel");
+  if (panel) {
+    panel.classList.toggle("hidden");
+    if (!panel.classList.contains("hidden")) {
+      panel.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+}
+
+function renderAdjacencyList(filterQuery = "") {
+  const container = document.getElementById("nav-adjacency-list");
+  if (!container || !campusGraph) return;
+
+  const adj = campusGraph.debugAdjacencyList();
+  const q = (filterQuery || "").toLowerCase();
+
+  const entries = Object.entries(adj).filter(([node, data]) => {
+    if (!q) return true;
+    return (
+      node.toLowerCase().includes(q) ||
+      (data.meta.floor || "").toLowerCase().includes(q) ||
+      data.neighbors.some((n) => n.toLowerCase().includes(q))
+    );
+  });
+
+  if (entries.length === 0) {
+    container.innerHTML = `<p class="text-gray-400 italic py-4">No matching graph nodes found for "${escapeHtml(filterQuery)}".</p>`;
+    return;
+  }
+
+  container.innerHTML = entries
+    .map(([node, data]) => {
+      return `
+      <div class="p-2.5 rounded-xl bg-white border border-sand hover:border-forest/40 transition-colors">
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-bold text-gray-900">${data.meta.icon || "📍"} ${escapeHtml(node)}</span>
+          <span class="text-[10px] text-gray-400 bg-sand/30 px-2 py-0.5 rounded">
+            ${escapeHtml(data.meta.floor || "Floor")} · Degree: ${data.degree}
+          </span>
+        </div>
+        <div class="text-[11px] text-gray-600 flex flex-wrap gap-1 mt-1">
+          <span class="text-gray-400">Adjacent to:</span>
+          ${data.neighbors
+            .map(
+              (nbr) =>
+                `<span class="px-1.5 py-0.5 rounded bg-sand/40 border border-sand text-forest font-semibold">${escapeHtml(
+                  nbr
+                )}</span>`
+            )
+            .join("")}
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+function navigateToReportLocation(locationName) {
+  switchTab("navigator");
+  if (!campusGraph) {
+    campusGraph = CampusGraph.createCampusGraph();
+  }
+
+  const resolved = campusGraph.resolveLocation(locationName);
+  const destSelect = document.getElementById("nav-dest-select");
+  const startSelect = document.getElementById("nav-start-select");
+
+  if (destSelect && resolved) {
+    destSelect.value = resolved;
+  }
+
+  if (startSelect && startSelect.value === resolved) {
+    startSelect.value = resolved === "Open Canteen" ? "Gate 1 / Main Entrance" : "Open Canteen";
+  }
+
+  updateNavFloorLabels();
+  runBFSNavigation(true);
 }
 
 // ----- Toast Notifications ----------------------------------
@@ -2075,6 +2594,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const tabRecovery = document.getElementById("tab-btn-recovery");
   if (tabRecovery) tabRecovery.addEventListener("click", () => switchTab("recovery"));
+
+  const tabNavigator = document.getElementById("tab-btn-navigator");
+  if (tabNavigator) tabNavigator.addEventListener("click", () => switchTab("navigator"));
+
+  // Initialize Campus Location Navigator (Graph, BFS, DFS)
+  initCampusNavigator();
 
   // Modal Controls
   const btnOpenModal = document.getElementById("btn-open-modal");
