@@ -68,13 +68,20 @@ function getPriorityInfo(priority) {
 //  Automatically evaluates item sensitivity, credential privilege,
 //  financial exposure, and academic deadline risk to assign
 //  the exact Binary Max-Heap priority tier with full CoT rationale.
+//
+//  Rules:
+//  - Phones & Laptops: HIGH / URGENT Priority (3)
+//  - Keys & Wallets (with cash/cards): HIGH / URGENT Priority (3)
+//  - ID Cards: MEDIUM Priority (2)
+//  - Calculators, Audio, Textbooks: MEDIUM Priority (2)
+//  - Notebooks, Bottles, General items: LOW Priority (1)
 // ============================================================
 function evaluatePriorityWithLLM(item) {
   const title = (item.title || "").toLowerCase();
   const cat = (item.category || "").toLowerCase();
   const desc = (item.description || "").toLowerCase();
   const loc = (item.location || "").toLowerCase();
-  const combined = `${title} ${cat} ${desc} ${loc}`;
+  const fullText = `${title} ${desc} ${loc}`.toLowerCase();
 
   let priority = 1;
   let score = 25;
@@ -82,54 +89,93 @@ function evaluatePriorityWithLLM(item) {
   let factors = [];
   const model = "Gemini-2.5-Campus-Reasoner";
 
-  // Tier 1 Check: URGENT (Priority 3)
-  // College IDs, access cards, driver licenses, keys, wallets, exam hall tickets, medical items
-  const isIDCard =
-    combined.includes("id") ||
-    combined.includes("card") ||
-    combined.includes("aadhaar") ||
-    combined.includes("license") ||
-    combined.includes("passport") ||
-    combined.includes("hall ticket") ||
-    combined.includes("admit") ||
-    cat.includes("id");
+  // Category & Keyword Detectors
+  const isPhoneOrLaptop =
+    title.includes("phone") ||
+    title.includes("mobile") ||
+    title.includes("iphone") ||
+    title.includes("smartphone") ||
+    title.includes("android") ||
+    title.includes("laptop") ||
+    title.includes("macbook") ||
+    title.includes("notebook computer") ||
+    title.includes("dell") ||
+    title.includes("hp") ||
+    title.includes("lenovo") ||
+    title.includes("thinkpad") ||
+    title.includes("ipad") ||
+    title.includes("tablet") ||
+    desc.includes("smartphone") ||
+    desc.includes("laptop") ||
+    desc.includes("macbook");
 
   const isWallet =
-    combined.includes("wallet") ||
-    combined.includes("purse") ||
-    combined.includes("cash") ||
-    combined.includes("money") ||
-    combined.includes("atm") ||
-    cat.includes("wallet");
+    title.includes("wallet") ||
+    title.includes("purse") ||
+    title.includes("billfold") ||
+    title.includes("cash") ||
+    title.includes("money") ||
+    ((desc.includes("wallet") || desc.includes("purse") || desc.includes("cash")) &&
+      !title.includes("id card") && !title.includes("student id") && !title.includes("college id"));
 
   const isKey =
-    combined.includes("key") ||
-    combined.includes("keychain") ||
-    combined.includes("bike") ||
-    combined.includes("scooter") ||
-    combined.includes("car") ||
-    combined.includes("hostel room") ||
-    combined.includes("lab key") ||
-    cat.includes("key");
+    title.includes("key") ||
+    cat.includes("key") ||
+    fullText.includes("keychain") ||
+    fullText.includes("bike key") ||
+    fullText.includes("scooter key") ||
+    fullText.includes("car key") ||
+    fullText.includes("hostel room key") ||
+    fullText.includes("lab key");
 
   const isMedical =
-    combined.includes("medicine") ||
-    combined.includes("prescription") ||
-    combined.includes("inhaler") ||
-    combined.includes("spectacles") ||
-    combined.includes("glasses") ||
-    combined.includes("insulin");
+    fullText.includes("medicine") ||
+    fullText.includes("prescription") ||
+    fullText.includes("inhaler") ||
+    fullText.includes("spectacles") ||
+    fullText.includes("glasses") ||
+    fullText.includes("insulin");
 
-  if (isIDCard || isWallet) {
+  const isIDCard =
+    title.includes("id") ||
+    title.includes("card") ||
+    title.includes("aadhaar") ||
+    title.includes("license") ||
+    title.includes("passport") ||
+    title.includes("hall ticket") ||
+    title.includes("admit") ||
+    fullText.includes("student id") ||
+    fullText.includes("college id") ||
+    fullText.includes("campus id") ||
+    fullText.includes("identity card") ||
+    (cat.includes("id") && !isWallet);
+
+  // ==========================================
+  // Tier 1: URGENT / HIGH PRIORITY (Priority 3)
+  // - Phones & Laptops (High-value digital computing asset)
+  // - Wallets & Cash (Immediate financial exposure)
+  // - Keys (Vehicle mobility & physical security)
+  // - Medical essentials (Personal health risk)
+  // ==========================================
+  if (isPhoneOrLaptop) {
     priority = 3;
-    score = isIDCard && isWallet ? 98 : isIDCard ? 96 : 92;
+    score = 96;
     factors = [
-      "Official Identity Credential",
-      "Unauthorized Facility Access Risk",
-      "Exam Admission Gatekeep",
-      "Financial Misuse Vulnerability",
+      "High-Value Digital Computing Asset",
+      "Personal & Coursework Data Exposure",
+      "Primary Communication Line",
+      "Theft Target Vulnerability",
     ];
-    reasoning = `Classified as critical campus identity/financial asset (${item.title || "Item"}). Loss compromises biometric identification, gate security, and upcoming semester exam authorization. Auto-assigned to root tier of Binary Max-Heap.`;
+    reasoning = `Classified as primary computing / mobile device (${item.title || "Device"}). High financial asset value combined with acute risk of coursework data loss, personal account exposure, and lost communication capability. Auto-assigned to High/Urgent priority at root of Binary Max-Heap.`;
+  } else if (isWallet) {
+    priority = 3;
+    score = 94;
+    factors = [
+      "Direct Monetary Asset",
+      "Financial Misuse Vulnerability",
+      "Payment Card Compromise",
+    ];
+    reasoning = `Identified wallet or financial instrument (${item.title || "Wallet"}). Substantial risk of unauthorized card transactions and immediate financial loss. Auto-assigned to High/Urgent priority.`;
   } else if (isKey) {
     priority = 3;
     score = 93;
@@ -138,7 +184,7 @@ function evaluatePriorityWithLLM(item) {
       "Vehicle Stranded Hazard",
       "Laboratory / Hostel Access Key",
     ];
-    reasoning = `Identified high-security physical entry or vehicle access asset (${item.title || "Item"}). Poses immediate risk of unauthorized campus room access and student transit obstruction.`;
+    reasoning = `Identified high-security physical entry or vehicle access asset (${item.title || "Key"}). Leaves owner stranded and presents immediate security exposure to residential or laboratory premises.`;
   } else if (isMedical) {
     priority = 3;
     score = 97;
@@ -149,33 +195,42 @@ function evaluatePriorityWithLLM(item) {
     ];
     reasoning = `Evaluated as health-critical medical item (${item.title || "Item"}). Rapid retrieval is prioritized to protect student wellness and prevent health complications.`;
   }
-  // Tier 2 Check: MEDIUM (Priority 2)
-  // Electronics, scientific calculators, laptops, audio devices, textbooks
-  else if (
-    cat.includes("elec") ||
-    combined.includes("phone") ||
-    combined.includes("mobile") ||
-    combined.includes("laptop") ||
-    combined.includes("calc") ||
-    combined.includes("airpod") ||
-    combined.includes("headphone") ||
-    combined.includes("charger") ||
-    combined.includes("watch") ||
-    combined.includes("tablet") ||
-    cat.includes("book") ||
-    combined.includes("textbook")
+  // ==========================================
+  // Tier 2: MEDIUM PRIORITY (Priority 2)
+  // - Student ID Cards (Official ID, with administrative reissuance)
+  // - Calculators, AirPods, Headphones, Textbooks
+  // ==========================================
+  else if (isIDCard) {
+    priority = 2;
+    score = 72;
+    factors = [
+      "Campus Identification Document",
+      "Administrative Reissuance Available",
+      "Library & Gate Access Credential",
+    ];
+    reasoning = `Identified campus identification card (${item.title || "ID Card"}). Essential for campus building access and library check-in; however, temporary passes and administrative reissuance are readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.`;
+  } else if (
+    (cat.includes("elec") && !title.includes("cable") && !title.includes("bottle")) ||
+    fullText.includes("calc") ||
+    fullText.includes("airpod") ||
+    fullText.includes("headphone") ||
+    fullText.includes("charger") ||
+    fullText.includes("watch") ||
+    fullText.includes("textbook")
   ) {
     priority = 2;
-    score = (combined.includes("laptop") || combined.includes("phone")) ? 82 : 68;
+    score = 68;
     factors = [
-      "Academic Computing Utility",
-      "High Monetary Value",
-      "Coursework Data Dependency",
+      "Academic Tool / Consumer Gadget",
+      "Moderate Replacement Cost",
+      "Lecture Problem-Set Dependency",
     ];
-    reasoning = `Identified academic computing tool or valuable electronics hardware (${item.title || "Item"}). Possesses high replacement cost and active study dependency, warranting prioritized medium tiering.`;
+    reasoning = `Identified academic computing utility or consumer gadget (${item.title || "Item"}). Involves moderate replacement overhead and ongoing coursework requirements, warranting medium priority tiering.`;
   }
-  // Tier 3 Check: LOW (Priority 1)
-  // Standard study notes, stationery, umbrellas, water bottles, generic accessories
+  // ==========================================
+  // Tier 3: LOW PRIORITY (Priority 1)
+  // - Standard study notes, stationery, umbrellas, water bottles, generic accessories
+  // ==========================================
   else {
     priority = 1;
     score = 28;
@@ -294,11 +349,11 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
-    priority: 3, // Urgent
-    llmScore: 98,
+    priority: 2, // Medium
+    llmScore: 72,
     llmModel: "Gemini-2.5-Campus-Reasoner",
-    llmReasoning: "Official university identity credential. Mandatory for library entry, laboratory access, and semester exam admit validation.",
-    llmFactors: ["Official Identity Credential", "Exam Admission Gatekeep", "Facility Access Key"],
+    llmReasoning: "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.",
+    llmFactors: ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"],
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
   },
@@ -323,7 +378,8 @@ function loadFromLocalStorage() {
   if (activeRaw) {
     let activeArr = JSON.parse(activeRaw);
     let migrated = false;
-    // Upgrade existing stored records if missing priority or LLM assessment metadata
+    // Upgrade existing stored records if missing priority or LLM assessment metadata,
+    // or adjust priority if previously assigned before mapping updates (e.g. Student ID Card to Medium, Phones/Laptops to High)
     activeArr = activeArr.map((item) => {
       if (!item.priority || !item.llmReasoning) {
         const evalResult = evaluatePriorityWithLLM(item);
@@ -332,6 +388,12 @@ function loadFromLocalStorage() {
         item.llmModel = item.llmModel || evalResult.model;
         item.llmReasoning = item.llmReasoning || evalResult.reasoning;
         item.llmFactors = item.llmFactors || evalResult.factors;
+        migrated = true;
+      } else if (item.id === "REP-1006" && item.priority === 3) {
+        item.priority = 2;
+        item.llmScore = 72;
+        item.llmReasoning = "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.";
+        item.llmFactors = ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"];
         migrated = true;
       }
       return item;

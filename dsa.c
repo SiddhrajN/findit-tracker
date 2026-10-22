@@ -633,24 +633,52 @@ void printMenu(void) {
 
 int autoAssignPriorityLLM(const char *title, const char *category, const char *desc) {
     char combined[MAX_STR * 3];
+    char titleLower[MAX_STR];
     snprintf(combined, sizeof(combined), "%s %s %s", title, category, desc);
     for (int i = 0; combined[i]; i++) {
         if (combined[i] >= 'A' && combined[i] <= 'Z') combined[i] += 32;
     }
+    strncpy(titleLower, title, sizeof(titleLower) - 1);
+    titleLower[sizeof(titleLower) - 1] = '\0';
+    for (int i = 0; titleLower[i]; i++) {
+        if (titleLower[i] >= 'A' && titleLower[i] <= 'Z') titleLower[i] += 32;
+    }
 
-    if (strstr(combined, "id") || strstr(combined, "card") ||
-        strstr(combined, "wallet") || strstr(combined, "key") ||
+    /* 1. High / Urgent (Priority 3): Phones & Laptops */
+    if (strstr(titleLower, "phone") || strstr(titleLower, "mobile") ||
+        strstr(titleLower, "iphone") || strstr(titleLower, "android") ||
+        strstr(titleLower, "laptop") || strstr(titleLower, "macbook") ||
+        strstr(titleLower, "dell") || strstr(titleLower, "thinkpad") ||
+        strstr(titleLower, "ipad") || strstr(titleLower, "tablet") ||
+        strstr(combined, "smartphone") || strstr(combined, "macbook")) {
+        return 3;
+    }
+
+    /* 2. High / Urgent (Priority 3): Wallets, Cash, Keys, Medical */
+    if (strstr(titleLower, "wallet") || strstr(titleLower, "purse") ||
+        strstr(titleLower, "cash") || strstr(titleLower, "money") ||
+        strstr(combined, "key") || strstr(combined, "medicine") ||
+        strstr(combined, "prescription") || strstr(combined, "inhaler")) {
+        return 3;
+    }
+
+    /* 3. Medium (Priority 2): ID Cards (Student ID, College ID, Aadhaar, License) */
+    if (strstr(titleLower, "id") || strstr(titleLower, "card") ||
+        strstr(combined, "student id") || strstr(combined, "college id") ||
         strstr(combined, "license") || strstr(combined, "passport") ||
-        strstr(combined, "medicine") || strstr(combined, "admit")) {
-        return 3; /* Urgent */
+        strstr(combined, "hall ticket") || strstr(combined, "admit")) {
+        return 2;
     }
-    if (strstr(combined, "calc") || strstr(combined, "phone") ||
-        strstr(combined, "laptop") || strstr(combined, "airpod") ||
-        strstr(combined, "headphone") || strstr(combined, "book") ||
+
+    /* 4. Medium (Priority 2): Calculators, Audio, Textbooks, Chargers */
+    if (strstr(combined, "calc") || strstr(combined, "airpod") ||
+        strstr(combined, "headphone") || strstr(combined, "textbook") ||
         strstr(combined, "watch") || strstr(combined, "charger")) {
-        return 2; /* Medium */
+        return 2;
     }
-    return 1; /* Low */
+
+    /* 5. Low (Priority 1): Standard utility items */
+    return 1;
 }
 
 void addReportInteractive(LinkedList *activeList, PriorityQueue *pq, HashTable *ht, const char *type) {
@@ -679,9 +707,9 @@ void addReportInteractive(LinkedList *activeList, PriorityQueue *pq, HashTable *
     printf("\n  [AI-LLM System] Evaluated Urgency -> Auto-Assigned Priority: %s (Tier %d)\n",
            priorityLabel(priority), priority);
     if (priority == 3) {
-        printf("  [AI-LLM Rationale] Critical personal credential / security access asset. Enqueued to root tier.\n");
+        printf("  [AI-LLM Rationale] Critical personal device, financial asset, or security credential. Enqueued to root tier.\n");
     } else if (priority == 2) {
-        printf("  [AI-LLM Rationale] Academic hardware tool or valuable electronic asset.\n");
+        printf("  [AI-LLM Rationale] Academic hardware, campus ID credential, or valuable equipment.\n");
     } else {
         printf("  [AI-LLM Rationale] Standard utility belonging with minimal immediate campus disruption.\n");
     }
@@ -833,7 +861,7 @@ int main(void) {
                      "White AirPods Pro, black case, initials VS engraved.", 2),
         createReport("Found", "Student ID Card",
                      "ID-Wallet", "Canteen",
-                     "ID for Priya M., Dept of CSE, found near counter 3.", 3),
+                     "ID for Priya M., Dept of CSE, found near counter 3.", 2),
     };
 
     int seedCount = sizeof(seed) / sizeof(seed[0]);
