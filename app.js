@@ -1236,17 +1236,12 @@ function renderReports(items) {
               : ""
           }
 
-          <!-- View Details & Campus Navigation Buttons -->
-          <div class="mt-3 flex gap-2">
+          <!-- View Details Button -->
+          <div class="mt-3">
             <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-              class="depth-btn flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
+              class="depth-btn w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
               <span>View Details</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </button>
-            <button onclick="event.stopPropagation(); navigateToReportLocation('${escapeHtml(r.location)}')"
-              title="Navigate to ${escapeHtml(r.location)} via campus shortest route"
-              class="px-3 py-2.5 rounded-xl bg-forest/10 hover:bg-forest hover:text-white text-forest border border-forest/20 text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-2xs">
-              <span>🧭</span>
             </button>
           </div>
         </div>
@@ -1480,11 +1475,6 @@ function showDetail(id, isProcessingMode = false) {
         <span>${report.type === 'Found' ? '🙋‍♂️ Submit Claim' : '🤝 I Found This'}</span>
       </button>
     </div>
-
-    <button onclick="closeDetailModal(); navigateToReportLocation('${escapeHtml(report.location)}');"
-      class="w-full py-2.5 px-4 mb-3 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white border border-forest/30 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-2xs">
-      <span>🧭 Navigate to Spot: ${escapeHtml(report.location)} (Fewest Edges BFS)</span>
-    </button>
 
     <div class="flex gap-3">
       <button onclick="markRecovered('${report.id}'); closeDetailModal();"
@@ -2177,13 +2167,6 @@ function renderNearbyItemsView() {
           </p>
         </div>
       </div>
-
-      <div class="flex items-center gap-2 shrink-0">
-        <button onclick="navigateToReportLocation('${escapeHtml(targetLocation)}')"
-          class="px-3.5 py-2 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5">
-          <span>🚶 Get Directions to Here</span>
-        </button>
-      </div>
     `;
   }
 
@@ -2276,16 +2259,11 @@ function renderNearbyItemsView() {
           </div>
         </div>
 
-        <!-- Action Buttons: Claim and Route Navigation -->
-        <div class="pt-2 border-t border-sand/60 flex items-center gap-2">
+        <!-- Action Button: Claim / Details -->
+        <div class="pt-2 border-t border-sand/60">
           <button onclick="showDetail('${r.id}')"
-            class="flex-1 visionos-btn text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
+            class="w-full visionos-btn text-white font-bold text-xs py-2.5 px-3 rounded-xl shadow-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
             <span>🙋‍♂️ View Item &amp; Claim</span>
-          </button>
-          <button onclick="navigateToReportLocation('${escapeHtml(r.location)}')"
-            class="px-3.5 py-2.5 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1"
-            title="Get walking directions to this item">
-            <span>🚶 Show Route</span>
           </button>
         </div>
       </div>`;
@@ -2734,40 +2712,6 @@ function renderAdjacencyList(filterQuery = "") {
       </div>`;
     })
     .join("");
-}
-
-/**
- * Navigate to a report's location (Function C)
- * Automatically switches to Navigator, selects Mode 2, sets destination, and calculates BFS route
- */
-function navigateToReportLocation(locationName) {
-  switchTab("navigator");
-  if (!campusGraph) {
-    campusGraph = CampusGraph.createCampusGraph();
-  }
-
-  const resolved = campusGraph.resolveLocation(locationName);
-  setNavigatorMode("route");
-
-  const destSelect = document.getElementById("nav-dest-select");
-  const startSelect = document.getElementById("nav-start-select");
-
-  if (destSelect && resolved) {
-    destSelect.value = resolved;
-  }
-
-  if (startSelect && startSelect.value === resolved) {
-    startSelect.value = resolved === "Open Canteen" ? "Gate 1 / Main Entrance" : "Open Canteen";
-  }
-
-  updateNavFloorLabels();
-  runBFSNavigation(true);
-
-  // Scroll route dossier into view
-  const dossier = document.getElementById("nav-route-card");
-  if (dossier) {
-    dossier.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 }
 
 /**
