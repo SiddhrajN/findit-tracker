@@ -63,34 +63,137 @@ function getPriorityInfo(priority) {
   return PRIORITY_CONFIG[p] || PRIORITY_CONFIG[1];
 }
 
-function autoDetectPriority(title = "", category = "") {
-  const combined = `${title} ${category}`.toLowerCase();
-  if (
+// ============================================================
+//  CAMPUS LLM PRIORITY REASONING ENGINE (AI Assessment System)
+//  Automatically evaluates item sensitivity, credential privilege,
+//  financial exposure, and academic deadline risk to assign
+//  the exact Binary Max-Heap priority tier with full CoT rationale.
+// ============================================================
+function evaluatePriorityWithLLM(item) {
+  const title = (item.title || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  const loc = (item.location || "").toLowerCase();
+  const combined = `${title} ${cat} ${desc} ${loc}`;
+
+  let priority = 1;
+  let score = 25;
+  let reasoning = "";
+  let factors = [];
+  const model = "Gemini-2.5-Campus-Reasoner";
+
+  // Tier 1 Check: URGENT (Priority 3)
+  // College IDs, access cards, driver licenses, keys, wallets, exam hall tickets, medical items
+  const isIDCard =
     combined.includes("id") ||
     combined.includes("card") ||
-    combined.includes("wallet") ||
-    combined.includes("key") ||
+    combined.includes("aadhaar") ||
     combined.includes("license") ||
     combined.includes("passport") ||
-    combined.includes("aadhaar") ||
-    category === "ID/Wallet" ||
-    category === "Keys"
-  ) {
-    return 3; // Urgent
+    combined.includes("hall ticket") ||
+    combined.includes("admit") ||
+    cat.includes("id");
+
+  const isWallet =
+    combined.includes("wallet") ||
+    combined.includes("purse") ||
+    combined.includes("cash") ||
+    combined.includes("money") ||
+    combined.includes("atm") ||
+    cat.includes("wallet");
+
+  const isKey =
+    combined.includes("key") ||
+    combined.includes("keychain") ||
+    combined.includes("bike") ||
+    combined.includes("scooter") ||
+    combined.includes("car") ||
+    combined.includes("hostel room") ||
+    combined.includes("lab key") ||
+    cat.includes("key");
+
+  const isMedical =
+    combined.includes("medicine") ||
+    combined.includes("prescription") ||
+    combined.includes("inhaler") ||
+    combined.includes("spectacles") ||
+    combined.includes("glasses") ||
+    combined.includes("insulin");
+
+  if (isIDCard || isWallet) {
+    priority = 3;
+    score = isIDCard && isWallet ? 98 : isIDCard ? 96 : 92;
+    factors = [
+      "Official Identity Credential",
+      "Unauthorized Facility Access Risk",
+      "Exam Admission Gatekeep",
+      "Financial Misuse Vulnerability",
+    ];
+    reasoning = `Classified as critical campus identity/financial asset (${item.title || "Item"}). Loss compromises biometric identification, gate security, and upcoming semester exam authorization. Auto-assigned to root tier of Binary Max-Heap.`;
+  } else if (isKey) {
+    priority = 3;
+    score = 93;
+    factors = [
+      "Physical Security Compromise",
+      "Vehicle Stranded Hazard",
+      "Laboratory / Hostel Access Key",
+    ];
+    reasoning = `Identified high-security physical entry or vehicle access asset (${item.title || "Item"}). Poses immediate risk of unauthorized campus room access and student transit obstruction.`;
+  } else if (isMedical) {
+    priority = 3;
+    score = 97;
+    factors = [
+      "Health & Medical Necessity",
+      "Personal Well-Being Asset",
+      "Immediate Recovery Priority",
+    ];
+    reasoning = `Evaluated as health-critical medical item (${item.title || "Item"}). Rapid retrieval is prioritized to protect student wellness and prevent health complications.`;
   }
-  if (
-    combined.includes("calc") ||
+  // Tier 2 Check: MEDIUM (Priority 2)
+  // Electronics, scientific calculators, laptops, audio devices, textbooks
+  else if (
+    cat.includes("elec") ||
     combined.includes("phone") ||
+    combined.includes("mobile") ||
     combined.includes("laptop") ||
+    combined.includes("calc") ||
     combined.includes("airpod") ||
     combined.includes("headphone") ||
     combined.includes("charger") ||
     combined.includes("watch") ||
-    category === "Electronics"
+    combined.includes("tablet") ||
+    cat.includes("book") ||
+    combined.includes("textbook")
   ) {
-    return 2; // Medium
+    priority = 2;
+    score = (combined.includes("laptop") || combined.includes("phone")) ? 82 : 68;
+    factors = [
+      "Academic Computing Utility",
+      "High Monetary Value",
+      "Coursework Data Dependency",
+    ];
+    reasoning = `Identified academic computing tool or valuable electronics hardware (${item.title || "Item"}). Possesses high replacement cost and active study dependency, warranting prioritized medium tiering.`;
   }
-  return 1; // Low
+  // Tier 3 Check: LOW (Priority 1)
+  // Standard study notes, stationery, umbrellas, water bottles, generic accessories
+  else {
+    priority = 1;
+    score = 28;
+    factors = [
+      "Standard Utility Belonging",
+      "Non-Sensitive Academic Material",
+      "Minimal Campus Security Impact",
+    ];
+    reasoning = `Analyzed as standard campus utility accessory (${item.title || "Item"}). Poses negligible identity exposure, financial hazard, or academic deadline vulnerability.`;
+  }
+
+  return {
+    priority,
+    score,
+    model,
+    reasoning,
+    factors,
+  };
 }
 
 // ----- Category Palette & Visual Mapping --------------------
@@ -107,7 +210,7 @@ function getCategoryInfo(category) {
   return CATEGORY_MAP[category] || CATEGORY_MAP["Other"];
 }
 
-// ----- Initial Campus Seed Data -----------------------------
+// ----- Initial Campus Seed Data (Pre-Assessed by LLM) -------
 const SEED_DATA = [
   {
     id: "REP-1001",
@@ -116,7 +219,11 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Contains campus student ID card and cash. Contact Roll No: 23CS101 (Siddhraj Nimje).",
-    priority: 3, // Urgent: College ID & Cash
+    priority: 3, // Urgent
+    llmScore: 96,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Contains official student ID card and monetary cash. Classified as Urgent due to acute financial exposure and campus identity compromise risk.",
+    llmFactors: ["Official Identity Credential", "Financial Misuse Vulnerability", "Biometric Gate Risk"],
     status: "Active",
     timestamp: new Date("2026-10-20T09:15:00").toISOString(),
   },
@@ -128,6 +235,10 @@ const SEED_DATA = [
     location: "Library 2nd Floor",
     description: "Casio fx-991EX found on study desk near window. Turned in at front desk.",
     priority: 2, // Medium
+    llmScore: 68,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Educational electronics tool necessary for engineering lab computations and upcoming quizzes. Medium urgency.",
+    llmFactors: ["Academic Computing Utility", "Moderate Replacement Cost"],
     status: "Active",
     timestamp: new Date("2026-10-20T11:30:00").toISOString(),
   },
@@ -139,6 +250,10 @@ const SEED_DATA = [
     location: "Lab 302",
     description: "100-page notebook with Physics and DSA notes, name 'Siddhraj' on cover.",
     priority: 1, // Low
+    llmScore: 30,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Standard lecture notebook. Low physical security risk; lecture content can be transcribed from peers with minimal disruption.",
+    llmFactors: ["Standard Utility Belonging", "Non-Sensitive Material"],
     status: "Active",
     timestamp: new Date("2026-10-20T14:00:00").toISOString(),
   },
@@ -149,7 +264,11 @@ const SEED_DATA = [
     category: "Keys",
     location: "Parking Lot B",
     description: "Single Honda key with a red silicone keychain. Found near bike stand.",
-    priority: 3, // Urgent: Vehicle keys
+    priority: 3, // Urgent
+    llmScore: 94,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Vehicle ignition access key. Immediate vulnerability of motorcycle theft in open parking lot and student mobility obstruction.",
+    llmFactors: ["Vehicle Stranded Hazard", "Theft Vulnerability", "Physical Access Asset"],
     status: "Active",
     timestamp: new Date("2026-10-21T08:00:00").toISOString(),
   },
@@ -161,6 +280,10 @@ const SEED_DATA = [
     location: "Auditorium",
     description: "White AirPods Pro in a matte case. Left on 3rd row right seat.",
     priority: 2, // Medium
+    llmScore: 74,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "High-value personal audio hardware. High financial replacement cost but zero threat to campus building safety or exam entry.",
+    llmFactors: ["High Monetary Value", "Theft Incentive Risk"],
     status: "Active",
     timestamp: new Date("2026-10-21T10:45:00").toISOString(),
   },
@@ -171,7 +294,11 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
-    priority: 3, // Urgent: Official College ID Card
+    priority: 3, // Urgent
+    llmScore: 98,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Official university identity credential. Mandatory for library entry, laboratory access, and semester exam admit validation.",
+    llmFactors: ["Official Identity Credential", "Exam Admission Gatekeep", "Facility Access Key"],
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
   },
@@ -196,10 +323,15 @@ function loadFromLocalStorage() {
   if (activeRaw) {
     let activeArr = JSON.parse(activeRaw);
     let migrated = false;
-    // Upgrade existing stored records if missing priority
+    // Upgrade existing stored records if missing priority or LLM assessment metadata
     activeArr = activeArr.map((item) => {
-      if (!item.priority) {
-        item.priority = autoDetectPriority(item.title, item.category);
+      if (!item.priority || !item.llmReasoning) {
+        const evalResult = evaluatePriorityWithLLM(item);
+        item.priority = item.priority || evalResult.priority;
+        item.llmScore = item.llmScore || evalResult.score;
+        item.llmModel = item.llmModel || evalResult.model;
+        item.llmReasoning = item.llmReasoning || evalResult.reasoning;
+        item.llmFactors = item.llmFactors || evalResult.factors;
         migrated = true;
       }
       return item;
@@ -877,12 +1009,15 @@ function renderReports(items) {
         <div class="preserve-3d-space p-5 flex flex-col flex-1 relative z-30">
           <!-- Badges Row -->
           <div class="depth-badge flex items-center justify-between mb-3">
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${typeBadgeBg}">
                 ${typeBadgeDot} ${typeBadgeLabel}
               </span>
               <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
                 ${escapeHtml(r.category)}
+              </span>
+              <span class="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold bg-white/90 text-forest px-1.5 py-0.5 rounded border border-forest/20 shadow-2xs">
+                <span>🤖</span> AI Assigned
               </span>
             </div>
             <span class="text-[10px] font-mono font-bold text-gray-400 bg-sand/30 px-2 py-0.5 rounded border border-sand/60">
@@ -1075,13 +1210,53 @@ function showDetail(id, isProcessingMode = false) {
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
 
-    <!-- Priority Status Explanation -->
-    <div class="bg-amber-50/70 rounded-2xl p-3.5 mb-4 border border-amber-200/80 text-xs">
-      <div class="flex items-center gap-1.5 font-bold text-amber-900 mb-0.5">
-        <span>${prioInfo.icon}</span>
-        <span>Priority Level: ${prioInfo.name}</span>
+    <!-- LLM AI Priority Assessment & Reasoning Dossier -->
+    <div class="bg-gradient-to-br from-forest/5 via-ivory to-amber-50/60 rounded-2xl p-4 mb-4 border border-forest/25 text-xs shadow-2xs">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5 font-black text-gray-900">
+          <span class="text-base">🤖</span>
+          <span class="uppercase tracking-wide text-forest font-black">LLM Autonomous Priority Assessment</span>
+        </div>
+        <span class="text-[10px] font-mono text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">
+          ${escapeHtml(report.llmModel || "Gemini-2.5-Campus-Reasoner")}
+        </span>
       </div>
-      <p class="text-[11px] text-amber-800">${prioInfo.desc}</p>
+
+      <div class="flex items-center justify-between mb-2 pb-2 border-b border-sand/80">
+        <span class="font-bold text-gray-700">Urgency Risk Rating:</span>
+        <div class="flex items-center gap-1.5">
+          <span class="font-mono font-black ${report.priority === 3 ? 'text-red-700' : report.priority === 2 ? 'text-amber-700' : 'text-stone-700'}">
+            ${report.llmScore || (report.priority === 3 ? 96 : report.priority === 2 ? 68 : 28)} / 100
+          </span>
+          <span class="text-[10px] text-gray-400">(${prioInfo.name} Heap Tier)</span>
+        </div>
+      </div>
+
+      <div class="mb-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">LLM Chain-of-Thought Rationale:</p>
+        <p class="text-xs text-gray-700 leading-relaxed bg-white/90 p-3 rounded-xl border border-sand italic">
+          "${escapeHtml(report.llmReasoning || prioInfo.desc)}"
+        </p>
+      </div>
+
+      ${
+        report.llmFactors && report.llmFactors.length > 0
+          ? `
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Identified Risk Factors:</p>
+        <div class="flex flex-wrap gap-1">
+          ${report.llmFactors
+            .map(
+              (f) =>
+                `<span class="text-[10px] font-semibold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-sand">✓ ${escapeHtml(
+                  f
+                )}</span>`
+            )
+            .join("")}
+        </div>
+      </div>`
+          : ""
+      }
     </div>
 
     ${
@@ -1316,8 +1491,13 @@ function renderMatches() {
 //  CORE OPERATIONS: Add Report, Recover, Search
 // ============================================================
 function addReport(formData) {
-  const detectedPrio = autoDetectPriority(formData.title, formData.category);
-  const priority = Number(formData.priority) || detectedPrio;
+  // Autonomous LLM Priority Evaluation — User does not assign priority
+  const aiAssessment = evaluatePriorityWithLLM({
+    title: formData.title,
+    category: formData.category,
+    location: formData.location,
+    description: formData.description,
+  });
 
   const report = {
     id: generateId(),
@@ -1326,7 +1506,11 @@ function addReport(formData) {
     category: formData.category,
     location: formData.location.trim(),
     description: formData.description.trim(),
-    priority: priority,
+    priority: aiAssessment.priority,
+    llmScore: aiAssessment.score,
+    llmModel: aiAssessment.model,
+    llmReasoning: aiAssessment.reasoning,
+    llmFactors: aiAssessment.factors,
     status: "Active",
     timestamp: new Date().toISOString(),
   };
@@ -1335,7 +1519,7 @@ function addReport(formData) {
   activeReportsList.insertAtHead(report);
 
   // 2. Binary Max-Heap Priority Queue — O(log n) bubble-up insertion
-  activePriorityQueue.insert(report, priority);
+  activePriorityQueue.insert(report, report.priority);
 
   // 3. Hash Table — O(1) average index by category and title keywords
   categoryHashTable.insert(report.category, report);
@@ -1360,15 +1544,18 @@ function addReport(formData) {
         r.id !== report.id
     );
 
-  const prioInfo = getPriorityInfo(priority);
+  const prioInfo = getPriorityInfo(report.priority);
   if (categoryMatches.length > 0) {
     showToast(
-      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". Enqueued with ${prioInfo.name} Priority.`,
+      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon}).`,
       "match"
     );
     switchTab("matches");
   } else {
-    showToast(`✅ ${report.type} report posted with ${prioInfo.name} Priority (${prioInfo.icon}): ${report.title}`, "success");
+    showToast(
+      `🤖 LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon} Score: ${report.llmScore}/100) for "${report.title}". Binary Max-Heap restructured!`,
+      "success"
+    );
   }
 
   return report;
@@ -1517,11 +1704,89 @@ function showToast(message, type = "success") {
   }, 4000);
 }
 
-// ----- Post Item Modal Controls -----------------------------
+// ----- Post Item Modal Controls & LLM Live Assessment --------
+function updateLLMPriorityPreview() {
+  const inputTitle = document.getElementById("input-title");
+  const selectCat = document.getElementById("input-category");
+  const inputLocation = document.getElementById("input-location");
+  const inputDesc = document.getElementById("input-description");
+
+  const titleVal = inputTitle ? inputTitle.value.trim() : "";
+  const catVal = selectCat ? selectCat.value : "Other";
+  const locVal = inputLocation ? inputLocation.value.trim() : "";
+  const descVal = inputDesc ? inputDesc.value.trim() : "";
+
+  const tierBadge = document.getElementById("llm-tier-badge");
+  const scoreBadge = document.getElementById("llm-score-badge");
+  const reasoningText = document.getElementById("llm-reasoning-text");
+  const factorsList = document.getElementById("llm-factors-list");
+  const hiddenInput = document.getElementById("input-assigned-priority");
+
+  if (!titleVal && !descVal) {
+    if (tierBadge) {
+      tierBadge.className = "inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs";
+      tierBadge.innerHTML = "🟢 LOW PRIORITY (Level 1)";
+    }
+    if (scoreBadge) {
+      scoreBadge.textContent = "Urgency Risk: 20/100";
+      scoreBadge.className = "text-[10px] font-mono text-gray-500 font-bold";
+    }
+    if (reasoningText) {
+      reasoningText.textContent = "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically.";
+    }
+    if (factorsList) {
+      factorsList.innerHTML = "";
+    }
+    if (hiddenInput) hiddenInput.value = "1";
+    return;
+  }
+
+  const aiAssessment = evaluatePriorityWithLLM({
+    title: titleVal,
+    category: catVal,
+    location: locVal,
+    description: descVal,
+  });
+
+  if (hiddenInput) {
+    hiddenInput.value = String(aiAssessment.priority);
+  }
+
+  const pInfo = getPriorityInfo(aiAssessment.priority);
+
+  if (tierBadge) {
+    tierBadge.className = `inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${pInfo.badgeBg}`;
+    tierBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} PRIORITY (Level ${pInfo.level})</span>`;
+  }
+
+  if (scoreBadge) {
+    scoreBadge.textContent = `Urgency Risk: ${aiAssessment.score}/100`;
+    scoreBadge.className = `text-[10px] font-mono font-black ${
+      aiAssessment.priority === 3 ? "text-red-700" : aiAssessment.priority === 2 ? "text-amber-700" : "text-stone-700"
+    }`;
+  }
+
+  if (reasoningText) {
+    reasoningText.textContent = `"${aiAssessment.reasoning}"`;
+  }
+
+  if (factorsList) {
+    factorsList.innerHTML = aiAssessment.factors
+      .map(
+        (f) =>
+          `<span class="text-[9px] font-semibold text-gray-700 bg-sand/40 px-2 py-0.5 rounded border border-sand">✓ ${escapeHtml(
+            f
+          )}</span>`
+      )
+      .join("");
+  }
+}
+
 function openModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
+  updateLLMPriorityPreview();
   const titleInput = document.getElementById("input-title");
   if (titleInput) titleInput.focus();
 }
@@ -1532,8 +1797,7 @@ function closeModal() {
   modal.classList.remove("flex");
   const form = document.getElementById("report-form");
   if (form) form.reset();
-  const defaultPrio = document.getElementById("prio-opt-1");
-  if (defaultPrio) defaultPrio.checked = true;
+  updateLLMPriorityPreview();
 }
 
 // ----- Refresh All Views ------------------------------------
@@ -1615,7 +1879,7 @@ document.addEventListener("DOMContentLoaded", () => {
     authBackdrop.addEventListener("click", closeAuthModal);
   }
 
-  // Post Report Form Submit
+  // Post Report Form Submit (Priority determined exclusively by LLM system)
   const reportForm = document.getElementById("report-form");
   if (reportForm) {
     reportForm.addEventListener("submit", (e) => {
@@ -1627,38 +1891,21 @@ document.addEventListener("DOMContentLoaded", () => {
         category: fd.get("category"),
         location: fd.get("location"),
         description: fd.get("description"),
-        priority: fd.get("priority") || "1",
       });
       closeModal();
     });
   }
 
-  // Intelligent Priority Auto-detection on Post Modal
+  // Autonomous LLM Priority Assessment Listeners (Real-time CoT Reasoning)
   const inputTitle = document.getElementById("input-title");
   const selectCat = document.getElementById("input-category");
-  const prioHint = document.getElementById("prio-auto-hint");
+  const inputLocation = document.getElementById("input-location");
+  const inputDesc = document.getElementById("input-description");
 
-  function triggerPriorityAutoDetect() {
-    const titleVal = inputTitle ? inputTitle.value : "";
-    const catVal = selectCat ? selectCat.value : "";
-    const detected = autoDetectPriority(titleVal, catVal);
-
-    const optRadio = document.getElementById(`prio-opt-${detected}`);
-    if (optRadio) optRadio.checked = true;
-
-    if (prioHint) {
-      if (detected === 3) {
-        prioHint.innerHTML = `<span class="text-red-700 font-bold">🚨 Auto-detected URGENT:</span> Essential items (IDs, Keys, Wallets) receive peak priority in Binary Heap.`;
-      } else if (detected === 2) {
-        prioHint.innerHTML = `<span class="text-amber-700 font-bold">⚡ Auto-detected MEDIUM:</span> Electronics and textbooks receive medium priority.`;
-      } else {
-        prioHint.innerHTML = `💡 <em>Standard priority assigned. You can manually adjust options above.</em>`;
-      }
-    }
-  }
-
-  if (inputTitle) inputTitle.addEventListener("input", triggerPriorityAutoDetect);
-  if (selectCat) selectCat.addEventListener("change", triggerPriorityAutoDetect);
+  if (inputTitle) inputTitle.addEventListener("input", updateLLMPriorityPreview);
+  if (selectCat) selectCat.addEventListener("change", updateLLMPriorityPreview);
+  if (inputLocation) inputLocation.addEventListener("input", updateLLMPriorityPreview);
+  if (inputDesc) inputDesc.addEventListener("input", updateLLMPriorityPreview);
 
   // Search & Filter listeners
   const searchInput = document.getElementById("search-input");

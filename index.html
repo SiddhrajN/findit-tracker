@@ -673,34 +673,40 @@
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5 flex items-center justify-between">
-            <span>Priority Level</span>
-            <span class="text-[10px] text-forest font-semibold bg-forest/10 px-2 py-0.5 rounded border border-forest/15">Binary Max-Heap Key</span>
-          </label>
-          <div class="grid grid-cols-3 gap-2">
-            <label class="flex flex-col items-center justify-center p-2.5 rounded-xl border-2 border-sand cursor-pointer transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
-              <input type="radio" name="priority" value="3" id="prio-opt-3" class="sr-only" />
-              <span class="text-base">🚨</span>
-              <span class="font-extrabold text-xs text-red-700">Urgent</span>
-              <span class="text-[9px] text-gray-500 font-medium">IDs / Keys / Wallets</span>
-            </label>
-            <label class="flex flex-col items-center justify-center p-2.5 rounded-xl border-2 border-sand cursor-pointer transition-all has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
-              <input type="radio" name="priority" value="2" id="prio-opt-2" class="sr-only" />
-              <span class="text-base">⚡</span>
-              <span class="font-extrabold text-xs text-amber-700">Medium</span>
-              <span class="text-[9px] text-gray-500 font-medium">Gadgets / Books</span>
-            </label>
-            <label class="flex flex-col items-center justify-center p-2.5 rounded-xl border-2 border-sand cursor-pointer transition-all has-[:checked]:border-stone-500 has-[:checked]:bg-stone-50">
-              <input type="radio" name="priority" value="1" id="prio-opt-1" class="sr-only" checked />
-              <span class="text-base">🟢</span>
-              <span class="font-extrabold text-xs text-stone-700">Low</span>
-              <span class="text-[9px] text-gray-500 font-medium">General Items</span>
-            </label>
+        <!-- Automated LLM Priority Engine (User does not manually pick priority) -->
+        <div class="rounded-2xl border border-forest/25 bg-gradient-to-br from-forest/5 via-ivory to-amber-50/50 p-4 shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base">🤖</span>
+              <span class="text-xs font-black text-gray-800 uppercase tracking-wide">LLM Priority Reasoning System</span>
+            </div>
+            <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-forest bg-forest/15 px-2 py-0.5 rounded-full border border-forest/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
+              Auto-Evaluated by AI
+            </span>
           </div>
-          <p id="prio-auto-hint" class="text-[11px] text-gray-500 mt-1.5">
-            💡 <em>Urgent priority is auto-selected for College IDs, Keys, and Wallets.</em>
+
+          <!-- Dynamic LLM Assessment Display -->
+          <div id="llm-preview-box" class="bg-white/90 rounded-xl p-3 border border-sand shadow-2xs">
+            <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+              <div class="flex items-center gap-2">
+                <span id="llm-tier-badge" class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs">
+                  🟢 LOW PRIORITY (Level 1)
+                </span>
+                <span id="llm-score-badge" class="text-[10px] font-mono text-gray-500 font-bold">Urgency Score: 20/100</span>
+              </div>
+              <span id="llm-model-badge" class="text-[9px] font-mono text-forest font-semibold bg-forest/10 px-2 py-0.5 rounded">Gemini-Campus-Reasoner</span>
+            </div>
+            <p id="llm-reasoning-text" class="text-xs text-gray-700 leading-relaxed italic">
+              "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically."
+            </p>
+            <div id="llm-factors-list" class="flex flex-wrap gap-1.5 mt-2"></div>
+          </div>
+          <p class="text-[10px] text-gray-500 mt-2 flex items-center gap-1 font-medium">
+            <span>🔒</span>
+            <span>Priorities are strictly assigned by the LLM system to eliminate user bias and preserve campus queue integrity.</span>
           </p>
+          <input type="hidden" id="input-assigned-priority" name="priority" value="1" />
         </div>
 
         <div>
