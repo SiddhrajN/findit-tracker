@@ -595,6 +595,81 @@ void addCampusEdge(CampusGraph *g, const char *srcName, const char *destName) {
     g->vertices[v].head = n2;
 }
 
+/* Depth-Limited BFS: Discover nearby locations within maxHops edges (Person 2) */
+void bfsNearbyLocations(CampusGraph *g, const char *startName, int maxHops) {
+    int start = findVertexIndex(g, startName);
+    if (start == -1) {
+        printf("\n  [!] Starting location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+
+    int queue[MAX_CAMPUS_LOCATIONS];
+    int depth[MAX_CAMPUS_LOCATIONS];
+    int parent[MAX_CAMPUS_LOCATIONS];
+    int front = 0, rear = 0;
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) {
+        depth[i] = -1;
+        parent[i] = -1;
+    }
+
+    queue[rear] = start;
+    depth[rear] = 0;
+    visited[start] = 1;
+    rear++;
+
+    int discovered[MAX_CAMPUS_LOCATIONS];
+    int discHops[MAX_CAMPUS_LOCATIONS];
+    int discCount = 0;
+
+    while (front < rear) {
+        int u = queue[front];
+        int d = depth[front];
+        front++;
+
+        discovered[discCount] = u;
+        discHops[discCount] = d;
+        discCount++;
+
+        if (d < maxHops) {
+            AdjNode *curr = g->vertices[u].head;
+            while (curr) {
+                int v = curr->destIndex;
+                if (!visited[v]) {
+                    visited[v] = 1;
+                    parent[v] = u;
+                    queue[rear] = v;
+                    depth[rear] = d + 1;
+                    rear++;
+                }
+                curr = curr->next;
+            }
+        }
+    }
+
+    printf("\n  ==============================================================\n");
+    printf("    DEPTH-LIMITED BFS: NEARBY CAMPUS DISCOVERY (Person 2)\n");
+    printf("  ==============================================================\n");
+    printf("    Selected Spot:     %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Depth Limit:       %d graph edge(s)\n", maxHops);
+    printf("    Locations Reached: %d rooms & corridors within radius\n", discCount);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Discovered Connected Campus Nodes:\n");
+
+    for (int i = 0; i < discCount; i++) {
+        int u = discovered[i];
+        int h = discHops[i];
+        const char *distLabel = (h == 0) ? "Same Room (0 edges)" :
+                                (h == 1) ? "1 Edge Away (Direct connector)" :
+                                           "2 Edges Away (Adjacent wing)";
+
+        printf("    [%d hops] %-30s (%-12s) - %s\n",
+               h, g->vertices[u].name, g->vertices[u].floor, distLabel);
+    }
+    printf("  ==============================================================\n");
+}
+
 /* Breadth-First Search: Shortest path with fewest edges in unweighted graph */
 void bfsShortestRoute(CampusGraph *g, const char *startName, const char *destName) {
     int start = findVertexIndex(g, startName);
@@ -1022,12 +1097,33 @@ void printMenu(void) {
     printf("  9. View Recovery History\n");
     printf("  10. Find Potential Matches\n");
     printf("  11. DSA Debug View (Heap Array + Tree + Buckets + List)\n");
-    printf("  12. Campus Navigator: Find Shortest Route (BFS — Fewest Edges)\n");
-    printf("  13. Campus Navigator: Explore Reachable Locations (DFS)\n");
-    printf("  14. Campus Navigator: Display Graph Adjacency List\n");
-    printf("  15. Exit\n");
+    printf("  12. Campus Explorer: Find Items/Rooms Near Location (Depth-Limited BFS)\n");
+    printf("  13. Campus Navigator: Find Shortest Route (BFS — Fewest Edges)\n");
+    printf("  14. Campus Navigator: Explore Reachable Locations (DFS)\n");
+    printf("  15. Campus Navigator: Display Graph Adjacency List\n");
+    printf("  16. Exit\n");
     printSeparator();
     printf("  Enter choice: ");
+}
+
+void navigatorNearbyInteractive(CampusGraph *g) {
+    char start[64];
+    int maxHops = 2;
+    printf("\n  --- Campus Explorer: Depth-Limited BFS Proximity Search ---\n");
+    printf("  Enter Selected Location (e.g. Library 2nd Floor, Lab 302, Open Canteen): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    printf("  Enter Search Depth [0 = Room only, 1 = Immediate neighbors, 2 = Expanded wing] (default 2): ");
+    char hopStr[16];
+    if (fgets(hopStr, sizeof(hopStr), stdin) && hopStr[0] != '\n') {
+        maxHops = atoi(hopStr);
+        if (maxHops < 0) maxHops = 0;
+        if (maxHops > 5) maxHops = 5;
+    }
+
+    bfsNearbyLocations(g, start, maxHops);
 }
 
 void navigatorBfsInteractive(CampusGraph *g) {
@@ -1403,21 +1499,24 @@ int main(void) {
                 displayHashTable(ht);
                 break;
             case 12:
-                navigatorBfsInteractive(campusGraph);
+                navigatorNearbyInteractive(campusGraph);
                 break;
             case 13:
-                navigatorDfsInteractive(campusGraph);
+                navigatorBfsInteractive(campusGraph);
                 break;
             case 14:
-                displayAdjacencyList(campusGraph);
+                navigatorDfsInteractive(campusGraph);
                 break;
             case 15:
+                displayAdjacencyList(campusGraph);
+                break;
+            case 16:
                 printf("\n  Goodbye!\n\n");
                 break;
             default:
                 printf("  Invalid choice. Try again.\n");
         }
-    } while (choice != 15);
+    } while (choice != 16);
 
     /* Cleanup */
     freeLinkedList(activeList);

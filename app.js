@@ -324,7 +324,7 @@ const SEED_DATA = [
     type: "Lost",
     title: "Black Leather Wallet",
     category: "ID/Wallet",
-    location: "Canteen",
+    location: "Open Canteen",
     description: "Contains campus student ID card and cash. Contact Roll No: 23CS101 (Siddhraj Nimje).",
     priority: 3, // Urgent
     llmScore: 96,
@@ -384,7 +384,7 @@ const SEED_DATA = [
     type: "Lost",
     title: "Apple AirPods Pro",
     category: "Electronics",
-    location: "Auditorium",
+    location: "Auditorium (Samvad Hall)",
     description: "White AirPods Pro in a matte case. Left on 3rd row right seat.",
     priority: 2, // Medium
     llmScore: 74,
@@ -399,7 +399,7 @@ const SEED_DATA = [
     type: "Found",
     title: "Student ID Card",
     category: "ID/Wallet",
-    location: "Canteen",
+    location: "Open Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
     priority: 2, // Medium
     llmScore: 72,
@@ -408,6 +408,36 @@ const SEED_DATA = [
     llmFactors: ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"],
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
+  },
+  {
+    id: "REP-1007",
+    type: "Found",
+    title: "HP Laptop Charger (65W USB-C)",
+    category: "Electronics",
+    location: "Central Stairs (Floor 2)",
+    description: "Black HP Type-C fast charger left on the 2nd-floor central stair landing bench near the library entrance.",
+    priority: 3, // Urgent
+    llmScore: 88,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Essential power accessory for engineering laptop computers. Critical for student coding lab evaluations and imminent submissions.",
+    llmFactors: ["Academic Computing Essential", "High Replacement Urgency", "Immediate Academic Risk"],
+    status: "Active",
+    timestamp: new Date("2026-10-21T15:10:00").toISOString(),
+  },
+  {
+    id: "REP-1008",
+    type: "Lost",
+    title: "Black Steel Water Bottle",
+    category: "Accessories",
+    location: "Lab 301",
+    description: "Milton insulated 750ml steel flask with scratch on the cap. Left on lab workbench 4.",
+    priority: 1, // Low
+    llmScore: 22,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Everyday hydration accessory. Standard utility belonging with zero security or identity compromise risk. Low priority.",
+    llmFactors: ["Everyday Utility Belonging", "Non-Sensitive Material", "Zero Identity Risk"],
+    status: "Active",
+    timestamp: new Date("2026-10-21T16:30:00").toISOString(),
   },
 ];
 
@@ -427,12 +457,23 @@ function loadFromLocalStorage() {
   const recoveredRaw = localStorage.getItem(STORAGE_KEY_RECOVERED);
   const counterRaw = localStorage.getItem(STORAGE_KEY_COUNTER);
 
+  if (!campusGraph && typeof CampusGraph !== "undefined") {
+    campusGraph = CampusGraph.createCampusGraph();
+  }
+
   if (activeRaw) {
     let activeArr = JSON.parse(activeRaw);
     let migrated = false;
-    // Upgrade existing stored records if missing priority or LLM assessment metadata,
-    // or adjust priority if previously assigned before mapping updates (e.g. Student ID Card to Medium, Phones/Laptops to High)
+    // Upgrade existing stored records if missing priority, LLM assessment metadata,
+    // or normalize location strings to canonical campus graph vertices from floormaps.vercel.app
     activeArr = activeArr.map((item) => {
+      if (campusGraph) {
+        const resolved = campusGraph.resolveLocation(item.location);
+        if (resolved && item.location !== resolved) {
+          item.location = resolved;
+          migrated = true;
+        }
+      }
       if (!item.priority || !item.llmReasoning) {
         const evalResult = evaluatePriorityWithLLM(item);
         item.priority = item.priority || evalResult.priority;
@@ -472,7 +513,7 @@ function loadFromLocalStorage() {
           if (w.length > 1) categoryHashTable.insert(w, item);
         });
     });
-    reportCounter = 1006;
+    reportCounter = 1008;
     saveToLocalStorage();
   }
 
@@ -1428,6 +1469,18 @@ function showDetail(id, isProcessingMode = false) {
         : ""
     }
 
+    <!-- Student Claim / Contact Recovery Action -->
+    <div class="mb-3 p-3.5 bg-gradient-to-r from-forest/10 via-sand/20 to-ivory rounded-2xl border border-forest/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      <div>
+        <p class="text-xs font-bold text-gray-900">${report.type === 'Found' ? '🙋‍♂️ Are you the owner of this found item?' : '🤝 Have you found this lost belonging?'}</p>
+        <p class="text-[11px] text-gray-500">${report.type === 'Found' ? 'Submit an ownership verification claim with identifying details.' : 'Notify the student reporter or campus recovery desk.'}</p>
+      </div>
+      <button onclick="submitClaim('${report.id}')"
+        class="shrink-0 px-3.5 py-2 rounded-xl bg-forest hover:bg-forest/90 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 hover:scale-105">
+        <span>${report.type === 'Found' ? '🙋‍♂️ Submit Claim' : '🤝 I Found This'}</span>
+      </button>
+    </div>
+
     <button onclick="closeDetailModal(); navigateToReportLocation('${escapeHtml(report.location)}');"
       class="w-full py-2.5 px-4 mb-3 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white border border-forest/30 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-2xs">
       <span>🧭 Navigate to Spot: ${escapeHtml(report.location)} (Fewest Edges BFS)</span>
@@ -1803,6 +1856,9 @@ function switchTab(tabName) {
   });
 
   if (tabName === "navigator") {
+    if (activeNavigatorMode === "find" && typeof renderNearbyItemsView === "function") {
+      renderNearbyItemsView();
+    }
     renderCampusGraphCanvas();
   }
 }
@@ -1811,9 +1867,59 @@ function switchTab(tabName) {
 //  CAMPUS LOCATION NAVIGATOR (PERSON 2: GRAPH, BFS, DFS)
 // ============================================================
 let campusGraph = null;
+let activeNavigatorMode = "find"; // 'find' (Default: Depth-Limited BFS Item Discovery) or 'route' (Shortest BFS Route)
+let currentNearbyLocation = "Library 2nd Floor";
+let currentNearbyMaxHops = 2; // 0 = same room, 1 = immediate neighbors, 2 = expanded wing
 let currentNavFilterFloor = "All";
 let activeBFSPath = [];
 let activeDFSOrder = [];
+
+/**
+ * Populate Post Item Modal Campus Spot dropdown
+ * Directly sourced from floormaps.vercel.app official campus floors
+ */
+function populatePostItemLocationSelect() {
+  const locSelect = document.getElementById("input-location");
+  if (!locSelect || !campusGraph) return;
+
+  const allLocations = campusGraph.getAllLocations();
+  const floors = {};
+  allLocations.forEach((loc) => {
+    const meta = campusGraph.getMetadata(loc);
+    const fl = meta.floor || "Other";
+    floors[fl] = floors[fl] || [];
+    floors[fl].push({ name: loc, ...meta });
+  });
+
+  const currentVal = locSelect.value;
+  locSelect.innerHTML = Object.keys(floors)
+    .map((fl) => {
+      const opts = floors[fl]
+        .map(
+          (loc) =>
+            `<option value="${escapeHtml(loc.name)}" ${loc.name === currentVal ? "selected" : ""}>${loc.icon || "📍"} ${escapeHtml(
+              loc.name
+            )}</option>`
+        )
+        .join("");
+      return `<optgroup label="── ${escapeHtml(fl)} ──">${opts}</optgroup>`;
+    })
+    .join("");
+
+  const updateFloorBadge = () => {
+    const badge = document.getElementById("input-location-floor-badge");
+    if (badge && locSelect.value) {
+      const meta = campusGraph.getMetadata(locSelect.value);
+      badge.textContent = meta.floor || "FRCRCE Floor Map";
+    }
+  };
+
+  locSelect.onchange = () => {
+    updateFloorBadge();
+    updateLLMPriorityPreview();
+  };
+  updateFloorBadge();
+}
 
 function initCampusNavigator() {
   if (!campusGraph) {
@@ -1824,13 +1930,14 @@ function initCampusNavigator() {
     }
   }
 
+  // Populate Post Item modal location dropdown
+  populatePostItemLocationSelect();
+
+  const nearbySelect = document.getElementById("nearby-location-select");
   const startSelect = document.getElementById("nav-start-select");
   const destSelect = document.getElementById("nav-dest-select");
-  if (!startSelect || !destSelect) return;
 
   const allLocations = campusGraph.getAllLocations();
-
-  // Group locations by floor
   const floors = {};
   allLocations.forEach((loc) => {
     const meta = campusGraph.getMetadata(loc);
@@ -1855,31 +1962,356 @@ function initCampusNavigator() {
       .join("");
   };
 
-  startSelect.innerHTML = generateOptions("Parking Lot B");
-  destSelect.innerHTML = generateOptions("Lab 302");
+  // Populate Mode 1: Nearby Location Picker
+  if (nearbySelect) {
+    nearbySelect.innerHTML = generateOptions("Library 2nd Floor");
+    currentNearbyLocation = "Library 2nd Floor";
 
-  updateNavFloorLabels();
+    const updateNearbyFloorBadge = () => {
+      const badge = document.getElementById("nearby-location-floor-badge");
+      if (badge && nearbySelect.value) {
+        const meta = campusGraph.getMetadata(nearbySelect.value);
+        badge.textContent = meta.floor || "";
+      }
+    };
+    updateNearbyFloorBadge();
 
-  startSelect.addEventListener("change", () => {
+    nearbySelect.addEventListener("change", () => {
+      currentNearbyLocation = nearbySelect.value;
+      updateNearbyFloorBadge();
+      renderNearbyItemsView();
+      renderCampusGraphCanvas();
+    });
+  }
+
+  const categoryFilter = document.getElementById("nearby-category-filter");
+  if (categoryFilter) {
+    categoryFilter.addEventListener("change", () => renderNearbyItemsView());
+  }
+
+  const typeFilter = document.getElementById("nearby-type-filter");
+  if (typeFilter) {
+    typeFilter.addEventListener("change", () => renderNearbyItemsView());
+  }
+
+  // Populate Mode 2: Route Origin and Destination selects
+  if (startSelect && destSelect) {
+    startSelect.innerHTML = generateOptions("Parking Lot B");
+    destSelect.innerHTML = generateOptions("Lab 302");
     updateNavFloorLabels();
-    runBFSNavigation(false);
-  });
 
-  destSelect.addEventListener("change", () => {
-    updateNavFloorLabels();
-    runBFSNavigation(false);
-  });
+    startSelect.addEventListener("change", () => {
+      updateNavFloorLabels();
+      runBFSNavigation(false);
+    });
+
+    destSelect.addEventListener("change", () => {
+      updateNavFloorLabels();
+      runBFSNavigation(false);
+    });
+  }
 
   const adjSearch = document.getElementById("nav-adj-search");
   if (adjSearch) {
     adjSearch.addEventListener("input", (e) => renderAdjacencyList(e.target.value));
   }
 
+  // Set initial default mode: Mode 1 (Find items around location)
+  setNavigatorMode("find");
+  renderNearbyItemsView();
   renderCampusGraphCanvas();
   renderAdjacencyList();
-
-  // Run initial demo route
   runBFSNavigation(false);
+}
+
+/**
+ * Toggle between Mode 1 (Find Items Around a Location) and Mode 2 (Navigate Route)
+ */
+function setNavigatorMode(mode) {
+  activeNavigatorMode = mode;
+  const panelFind = document.getElementById("navigator-mode-find");
+  const panelRoute = document.getElementById("navigator-mode-route");
+  const btnFind = document.getElementById("nav-mode-btn-find");
+  const btnRoute = document.getElementById("nav-mode-btn-route");
+
+  if (mode === "find") {
+    if (panelFind) panelFind.classList.remove("hidden");
+    if (panelRoute) panelRoute.classList.add("hidden");
+
+    if (btnFind) {
+      btnFind.className =
+        "nav-mode-tab-btn px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-all bg-forest text-white shadow-xs";
+    }
+    if (btnRoute) {
+      btnRoute.className =
+        "nav-mode-tab-btn px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-all text-gray-700 hover:text-forest";
+    }
+
+    renderNearbyItemsView();
+  } else {
+    if (panelFind) panelFind.classList.add("hidden");
+    if (panelRoute) panelRoute.classList.remove("hidden");
+
+    if (btnRoute) {
+      btnRoute.className =
+        "nav-mode-tab-btn px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-all bg-forest text-white shadow-xs";
+    }
+    if (btnFind) {
+      btnFind.className =
+        "nav-mode-tab-btn px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-all text-gray-700 hover:text-forest";
+    }
+
+    runBFSNavigation(false);
+  }
+
+  renderCampusGraphCanvas();
+}
+
+/**
+ * Set BFS depth limit radius (0 hops, 1 hop, 2 hops)
+ */
+function setNearbyMaxHops(hops) {
+  currentNearbyMaxHops = Number(hops);
+  document.querySelectorAll(".nearby-hops-btn").forEach((btn) => {
+    if (Number(btn.dataset.hops) === currentNearbyMaxHops) {
+      btn.className = "nearby-hops-btn py-1.5 text-xs font-bold rounded-lg transition-all bg-forest text-white shadow-xs";
+    } else {
+      btn.className = "nearby-hops-btn py-1.5 text-xs font-bold rounded-lg transition-all text-gray-600 hover:text-forest";
+    }
+  });
+
+  const label = document.getElementById("nearby-radius-label");
+  if (label) {
+    label.textContent =
+      hops === 0
+        ? "0 Hops (This Room Only)"
+        : hops === 1
+        ? "1 Edge (Immediate Neighbors)"
+        : "2 Edges (Expanded Campus Wing)";
+  }
+
+  renderNearbyItemsView();
+}
+
+/**
+ * Select a location in Mode 1 and refresh nearby reports
+ */
+function selectNearbySearchLocation(locName) {
+  if (!campusGraph) return;
+  const resolved = campusGraph.resolveLocation(locName);
+  if (!resolved) return;
+
+  currentNearbyLocation = resolved;
+  const nearbySelect = document.getElementById("nearby-location-select");
+  if (nearbySelect) {
+    nearbySelect.value = resolved;
+    const badge = document.getElementById("nearby-location-floor-badge");
+    if (badge) {
+      const meta = campusGraph.getMetadata(resolved);
+      badge.textContent = meta.floor || "";
+    }
+  }
+
+  if (activeNavigatorMode !== "find") {
+    setNavigatorMode("find");
+  } else {
+    renderNearbyItemsView();
+    renderCampusGraphCanvas();
+  }
+
+  // Scroll discovery summary into view
+  const summary = document.getElementById("nearby-discovery-summary");
+  if (summary) {
+    summary.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+/**
+ * Render matched reports near the selected location (Mode 1)
+ * Uses CampusGraph.findNearbyReports (Depth-Limited BFS) + HashTable lookups
+ */
+function renderNearbyItemsView() {
+  const container = document.getElementById("nearby-reports-container");
+  const summaryBox = document.getElementById("nearby-discovery-summary");
+  const countBadge = document.getElementById("nearby-results-count");
+  if (!container || !campusGraph) return;
+
+  const nearbySelect = document.getElementById("nearby-location-select");
+  const targetLocation = nearbySelect ? nearbySelect.value : currentNearbyLocation;
+  const startMeta = campusGraph.getMetadata(targetLocation);
+
+  const categoryFilter = document.getElementById("nearby-category-filter");
+  const typeFilter = document.getElementById("nearby-type-filter");
+  const selectedCat = categoryFilter ? categoryFilter.value : "All";
+  const selectedType = typeFilter ? typeFilter.value : "All";
+
+  // Perform Depth-Limited BFS to retrieve nearby reports ranked by proximity & priority
+  const allReports = activeReportsList.toArray();
+  let matches = campusGraph.findNearbyReports(targetLocation, allReports, currentNearbyMaxHops);
+
+  // Apply Category Filter
+  if (selectedCat !== "All") {
+    matches = matches.filter((m) => m.report.category === selectedCat);
+  }
+  // Apply Type Filter
+  if (selectedType !== "All") {
+    matches = matches.filter((m) => m.report.type === selectedType);
+  }
+
+  if (countBadge) {
+    countBadge.textContent = `${matches.length} Report${matches.length === 1 ? "" : "s"}`;
+  }
+
+  // Count distribution by graph hops
+  const count0 = matches.filter((m) => m.hops === 0).length;
+  const count1 = matches.filter((m) => m.hops === 1).length;
+  const count2 = matches.filter((m) => m.hops === 2).length;
+
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-forest/15 text-forest border border-forest/30 flex items-center justify-center text-xl shrink-0">
+          ${startMeta.icon || "📍"}
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h4 class="text-sm font-black text-gray-900">${escapeHtml(targetLocation)}</h4>
+            <span class="text-[10px] font-mono font-bold text-gray-500 bg-white/80 px-2 py-0.5 rounded border border-sand">
+              ${escapeHtml(startMeta.floor)}
+            </span>
+            <span class="text-[10px] font-mono font-bold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
+              BFS Radius: ${currentNearbyMaxHops} Edge${currentNearbyMaxHops === 1 ? "" : "s"}
+            </span>
+          </div>
+          <p class="text-[11px] text-gray-600 mt-0.5">
+            ${
+              matches.length > 0
+                ? `Discovered <strong class="text-forest font-black">${matches.length} candidate belongings</strong>: ${count0} in this room · ${count1} one edge away · ${count2} two edges away.`
+                : `No active reports within ${currentNearbyMaxHops} graph edge(s) of this room.`
+            }
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="navigateToReportLocation('${escapeHtml(targetLocation)}')"
+          class="px-3 py-1.5 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5">
+          <span>🧭 Open In Route Navigator</span>
+        </button>
+      </div>
+    `;
+  }
+
+  if (matches.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full visionos-panel rounded-3xl p-8 border border-sand text-center space-y-3">
+        <div class="w-14 h-14 mx-auto rounded-full bg-sand/30 flex items-center justify-center text-2xl text-gray-400">
+          🔍
+        </div>
+        <h4 class="text-sm font-bold text-gray-800">No matching reports found within ${currentNearbyMaxHops} edge(s) of ${escapeHtml(
+      targetLocation
+    )}</h4>
+        <p class="text-xs text-gray-500 max-w-md mx-auto">
+          BFS explored connected staircases and corridors but found no unresolved belongings matching your filters.
+        </p>
+        <div class="flex items-center justify-center gap-2 pt-2">
+          ${
+            currentNearbyMaxHops < 2
+              ? `<button onclick="setNearbyMaxHops(2)" class="visionos-btn text-white text-xs font-bold py-2 px-4 rounded-xl shadow-xs">
+                  Expand Search Radius to 2 Edges ➔
+                </button>`
+              : ""
+          }
+          <button onclick="switchTab('feed')" class="px-4 py-2 border border-sand rounded-xl bg-white text-gray-700 text-xs font-bold hover:bg-sand/20">
+            Browse All Campus Reports
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = matches
+    .map((item) => {
+      const r = item.report;
+      const prio = getPriorityInfo(r.priority);
+      const isLost = r.type === "Lost";
+      const catInfo = getCategoryInfo(r.category);
+
+      let hopBadge = "";
+      if (item.hops === 0) {
+        hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
+          🎯 Same Room (0 edges away)
+        </span>`;
+      } else if (item.hops === 1) {
+        hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+          🚶 1 Edge Away · Immediate Connector
+        </span>`;
+      } else {
+        hopBadge = `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-600 text-white shadow-xs">
+          🚶 2 Edges Away · Adjacent Wing
+        </span>`;
+      }
+
+      const corridorBreadcrumb = item.path.join(" ➔ ");
+
+      return `
+      <div class="visionos-card rounded-2xl p-4 border border-sand hover:border-forest/40 transition-all shadow-xs flex flex-col justify-between space-y-3">
+        <div>
+          <!-- Top Row: Proximity Hop Badge & Priority Badge -->
+          <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+            ${hopBadge}
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs ${prio.badgeBg}">
+              <span>${prio.icon}</span> ${prio.label}
+            </span>
+          </div>
+
+          <!-- Title and Category -->
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <h4 class="text-sm font-black text-gray-900 leading-snug">${escapeHtml(r.title)}</h4>
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-sand text-gray-700 shrink-0">
+              <span>${catInfo.emoji}</span> ${escapeHtml(r.category)}
+            </span>
+          </div>
+
+          <!-- Type and Location -->
+          <div class="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <span class="font-bold ${isLost ? "text-terracotta" : "text-forest"}">${r.type}</span>
+            <span>·</span>
+            <span class="font-medium flex items-center gap-1 text-gray-700">
+              <span>📍</span> ${escapeHtml(r.location)}
+            </span>
+            <span>·</span>
+            <span class="text-[10px] font-mono text-gray-400">${timeAgo(r.timestamp)}</span>
+          </div>
+
+          <!-- Item Description -->
+          <p class="text-xs text-gray-600 line-clamp-2 leading-relaxed mb-2.5">
+            ${escapeHtml(r.description)}
+          </p>
+
+          <!-- Graph Corridor Path -->
+          <div class="p-2 rounded-xl bg-ivory border border-sand text-[11px] font-mono text-gray-600">
+            <span class="text-gray-400 font-bold block text-[10px] uppercase mb-0.5">Physical Campus Path:</span>
+            <span class="text-forest font-semibold">${escapeHtml(corridorBreadcrumb)}</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons: Claim and Route Navigation -->
+        <div class="pt-2 border-t border-sand/60 flex items-center gap-2">
+          <button onclick="showDetail('${r.id}')"
+            class="flex-1 visionos-btn text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
+            <span>🔍 Inspect &amp; Submit Claim</span>
+          </button>
+          <button onclick="navigateToReportLocation('${escapeHtml(r.location)}')"
+            class="px-3 py-2 bg-white hover:bg-forest/10 border border-sand hover:border-forest text-forest font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1"
+            title="Calculate BFS route to this item">
+            <span>🧭 Navigate</span>
+          </button>
+        </div>
+      </div>`;
+    })
+    .join("");
 }
 
 function updateNavFloorLabels() {
@@ -1932,12 +2364,16 @@ function filterCampusFloor(floorName) {
   const badge = document.getElementById("canvas-floor-badge");
   if (badge && campusGraph) {
     const locs = campusGraph.getLocationsByFloor(floorName);
-    badge.textContent = `Viewing: ${floorName === "All" ? "All Floors" : floorName} (${locs.length} Nodes)`;
+    badge.textContent = `Viewing: ${floorName === "All" ? "All Floors" : floorName} (${locs.length} Rooms)`;
   }
 
   renderCampusGraphCanvas();
 }
 
+/**
+ * BFS Shortest Route Navigation (Mode 2)
+ * Guarantees fewest edges in unweighted graph with parent map reconstruction
+ */
 function runBFSNavigation(showNotification = true) {
   if (!campusGraph) return;
   const startSelect = document.getElementById("nav-start-select");
@@ -2022,7 +2458,7 @@ function runBFSNavigation(showNotification = true) {
                   <span class="text-[9px] font-mono font-bold text-gray-400">${escapeHtml(meta.floor)}</span>
                 </div>
                 <p class="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-1">
-                  ${isFirst ? 'Start here at origin point' : isLast ? 'Final destination reached' : escapeHtml(meta.description || 'Walk along corridor')}
+                  ${isFirst ? "Start here at origin point" : isLast ? "Final destination reached" : escapeHtml(meta.description || "Walk along corridor")}
                 </p>
               </div>
             </div>`;
@@ -2049,8 +2485,8 @@ function runBFSNavigation(showNotification = true) {
                 (node, i) =>
                   `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${
                     result.path.includes(node)
-                      ? 'bg-emerald-600 text-white font-bold'
-                      : 'bg-white border border-sand text-gray-700'
+                      ? "bg-emerald-600 text-white font-bold"
+                      : "bg-white border border-sand text-gray-700"
                   }">[${i + 1}] ${escapeHtml(node)}</span>`
               )
               .join("")}
@@ -2067,68 +2503,62 @@ function runBFSNavigation(showNotification = true) {
   }
 }
 
+/**
+ * Run DFS Area Exploration for Viva Technical Inspector
+ */
 function runDFSExploration() {
   if (!campusGraph) return;
   const startSelect = document.getElementById("nav-start-select");
-  if (!startSelect) return;
+  const start = startSelect ? startSelect.value : currentNearbyLocation;
 
-  const start = startSelect.value;
   const result = campusGraph.dfsExplore(start);
   activeDFSOrder = result.visitedOrder;
   activeBFSPath = [];
 
-  const dossierCard = document.getElementById("nav-route-card");
-  if (!dossierCard) return;
+  const resultBox = document.getElementById("nav-dfs-result-box");
+  const panel = document.getElementById("nav-adjacency-panel");
+  if (panel && panel.classList.contains("hidden")) {
+    panel.classList.remove("hidden");
+  }
 
-  dossierCard.classList.remove("hidden", "border-emerald-500/30");
-  dossierCard.classList.add("border-amber-500/30");
-
-  dossierCard.innerHTML = `
-    <!-- DFS Overview Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-sand gap-3">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <span class="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
-            🔍 DFS Depth-First Exploration
+  if (resultBox) {
+    resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `
+      <div class="p-4 bg-amber-50 rounded-2xl border border-amber-300 space-y-2 mb-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🔍</span>
+            <span class="text-xs font-black uppercase text-amber-900 tracking-wide">DFS Traversal Preorder Tree</span>
+          </div>
+          <span class="text-[10px] font-mono font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+            Reachable: ${result.reachableCount} / ${campusGraph.getAllLocations().length} (100% Connected)
           </span>
-          <span class="text-xs font-mono font-bold text-gray-500">Connected Component Reachability &amp; Backtracking</span>
         </div>
-        <h3 class="text-base font-black text-gray-900">
-          Starting from: ${escapeHtml(start)}
-        </h3>
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="text-right">
-          <p class="text-lg font-black text-amber-700 leading-none">${result.reachableCount} / ${campusGraph.getAllLocations().length} Nodes</p>
-          <p class="text-[10px] font-mono text-gray-400 mt-0.5">100% Reachable (Single Component)</p>
+        <p class="text-xs text-amber-800">
+          Explored campus from <strong>${escapeHtml(start)}</strong> via recursive depth-first backtracking across ${result.discoveryEdges.length} discovery edges.
+        </p>
+        <div class="flex flex-wrap gap-1 pt-1 max-h-36 overflow-y-auto">
+          ${result.visitedOrder
+            .map(
+              (loc, idx) =>
+                `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white border border-amber-300 text-amber-900">[${
+                  idx + 1
+                }] ${escapeHtml(loc)}</span>`
+            )
+            .join("")}
         </div>
-        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg shadow-2xs">
-          🌐
-        </div>
       </div>
-    </div>
-
-    <!-- DFS Discovery Sequence -->
-    <div class="mt-4">
-      <p class="text-xs font-black uppercase tracking-wider text-gray-600 mb-2">Depth-First Traversal Order (Preorder Branch Sequence):</p>
-      <div class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-3 bg-white/70 rounded-2xl border border-sand">
-        ${result.visitedOrder
-          .map(
-            (locName, idx) => `
-          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200">
-            <span class="text-[10px] font-black font-mono text-amber-600">${idx + 1}.</span>
-            <span>${escapeHtml(locName)}</span>
-          </span>`
-          )
-          .join("")}
-      </div>
-    </div>
-  `;
+    `;
+  }
 
   renderCampusGraphCanvas();
-  showToast(`🔍 DFS explored ${result.reachableCount} campus locations from ${start}!`, "info");
+  showToast(`🔍 DFS explored ${result.reachableCount} connected campus locations from ${start}!`, "info");
 }
 
+/**
+ * Campus Location Explorer Canvas (Function A)
+ * Displays rooms grouped by floor with unresolved report counts and found item highlights
+ */
 function renderCampusGraphCanvas() {
   const container = document.getElementById("campus-graph-canvas");
   if (!container || !campusGraph) return;
@@ -2137,6 +2567,10 @@ function renderCampusGraphCanvas() {
   const destSelect = document.getElementById("nav-dest-select");
   const currentStart = startSelect ? startSelect.value : "";
   const currentDest = destSelect ? destSelect.value : "";
+
+  // Get unresolved report counts and locations with recent found items
+  const allReports = activeReportsList ? activeReportsList.toArray() : [];
+  const { counts, foundLocations } = campusGraph.getUnresolvedReportCounts(allReports);
 
   const locations = campusGraph.getLocationsByFloor(currentNavFilterFloor);
 
@@ -2162,7 +2596,7 @@ function renderCampusGraphCanvas() {
               <span class="text-[10px] font-mono text-gray-400 font-bold">(${rooms.length} locations)</span>
             </div>
             <span class="text-[10px] font-mono font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full">
-              Connected via Corridors, Stairs &amp; Lifts
+              Physical Adjacency Graph · Corridors, Stairs &amp; Lifts
             </span>
           </div>
 
@@ -2170,17 +2604,24 @@ function renderCampusGraphCanvas() {
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
             ${rooms
               .map((loc) => {
-                const isStart = loc.name === currentStart;
-                const isDest = loc.name === currentDest;
+                const isSelectedNearby = activeNavigatorMode === "find" && loc.name === currentNearbyLocation;
+                const isStart = activeNavigatorMode === "route" && loc.name === currentStart;
+                const isDest = activeNavigatorMode === "route" && loc.name === currentDest;
                 const inBFS = activeBFSPath.includes(loc.name);
                 const stepIdx = inBFS ? activeBFSPath.indexOf(loc.name) + 1 : 0;
                 const inDFS = activeDFSOrder.includes(loc.name);
                 const dfsIdx = inDFS ? activeDFSOrder.indexOf(loc.name) + 1 : 0;
 
-                let stateClass = "bg-white border-sand";
+                const hasFoundItem = foundLocations.has(loc.name);
+                const reportCount = counts.get(loc.name) || 0;
+
+                let stateClass = "bg-white border-sand hover:border-forest/50";
                 let badge = "";
 
-                if (isStart) {
+                if (isSelectedNearby) {
+                  stateClass = "ring-2 ring-forest bg-forest/5 border-forest shadow-sm";
+                  badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-forest text-white">📍 Selected</span>`;
+                } else if (isStart) {
                   stateClass = "graph-node-start";
                   badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-blue-600 text-white">🚩 Start</span>`;
                 } else if (isDest) {
@@ -2194,11 +2635,15 @@ function renderCampusGraphCanvas() {
                   badge = `<span class="step-number-badge text-[9px] px-2 py-0.5 rounded-full bg-amber-500 text-white">#${dfsIdx}</span>`;
                 }
 
+                if (hasFoundItem && !isSelectedNearby && !isStart && !isDest) {
+                  stateClass += " ring-2 ring-emerald-500 bg-emerald-50/70 border-emerald-300";
+                }
+
                 const neighbors = campusGraph.getNeighbors(loc.name);
 
                 return `
-                <div onclick="selectGraphNode('${escapeHtml(loc.name)}')"
-                  class="graph-node-card p-3 rounded-xl border ${stateClass} shadow-2xs flex flex-col justify-between">
+                <div onclick="onCampusRoomCardClick('${escapeHtml(loc.name)}')"
+                  class="graph-node-card p-3 rounded-xl border ${stateClass} shadow-2xs flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.02]">
                   <div>
                     <div class="flex items-center justify-between mb-1 gap-1">
                       <span class="text-base">${loc.icon || "📍"}</span>
@@ -2206,10 +2651,23 @@ function renderCampusGraphCanvas() {
                     </div>
                     <h4 class="text-xs font-bold text-gray-900 leading-tight mb-1">${escapeHtml(loc.name)}</h4>
                     <p class="text-[10px] text-gray-500 line-clamp-1 leading-snug">${escapeHtml(loc.description || loc.type)}</p>
+                    
+                    ${
+                      hasFoundItem
+                        ? `<div class="mt-1.5 flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-md border border-emerald-300 animate-pulse">
+                            <span>🎉</span> Found Item Reported Here!
+                          </div>`
+                        : ""
+                    }
                   </div>
-                  <div class="mt-2 pt-1.5 border-t border-sand/40 flex items-center justify-between text-[10px] text-gray-400">
-                    <span>${neighbors.length} connected</span>
-                    <span class="font-bold text-forest hover:underline">Select ➔</span>
+
+                  <div class="mt-2.5 pt-1.5 border-t border-sand/40 flex items-center justify-between text-[10px]">
+                    <span class="font-bold ${reportCount > 0 ? "text-forest bg-forest/10 px-2 py-0.5 rounded-full" : "text-gray-400"}">
+                      ${reportCount > 0 ? `${reportCount} report${reportCount > 1 ? "s" : ""}` : "0 reports"}
+                    </span>
+                    <span class="font-bold text-forest hover:underline">
+                      ${activeNavigatorMode === "find" ? "Inspect ➔" : "Route to ➔"}
+                    </span>
                   </div>
                 </div>`;
               })
@@ -2220,6 +2678,17 @@ function renderCampusGraphCanvas() {
         .join("")}
     </div>
   `;
+}
+
+/**
+ * Handle room card click based on active mode
+ */
+function onCampusRoomCardClick(roomName) {
+  if (activeNavigatorMode === "find") {
+    selectNearbySearchLocation(roomName);
+  } else {
+    selectGraphNode(roomName);
+  }
 }
 
 function selectGraphNode(nodeName) {
@@ -2288,6 +2757,10 @@ function renderAdjacencyList(filterQuery = "") {
     .join("");
 }
 
+/**
+ * Navigate to a report's location (Function C)
+ * Automatically switches to Navigator, selects Mode 2, sets destination, and calculates BFS route
+ */
 function navigateToReportLocation(locationName) {
   switchTab("navigator");
   if (!campusGraph) {
@@ -2295,6 +2768,8 @@ function navigateToReportLocation(locationName) {
   }
 
   const resolved = campusGraph.resolveLocation(locationName);
+  setNavigatorMode("route");
+
   const destSelect = document.getElementById("nav-dest-select");
   const startSelect = document.getElementById("nav-start-select");
 
@@ -2308,6 +2783,25 @@ function navigateToReportLocation(locationName) {
 
   updateNavFloorLabels();
   runBFSNavigation(true);
+
+  // Scroll route dossier into view
+  const dossier = document.getElementById("nav-route-card");
+  if (dossier) {
+    dossier.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+/**
+ * Submit Ownership Claim on an item (Function B)
+ */
+function submitClaim(reportId) {
+  const report = activeReportsList ? activeReportsList.findById(reportId) : null;
+  if (!report) return;
+
+  showToast(
+    `✅ Claim submitted for "${report.title}"! Campus recovery desk notified for ownership verification.`,
+    "success"
+  );
 }
 
 // ----- Toast Notifications ----------------------------------
@@ -2439,6 +2933,7 @@ function openModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
+  populatePostItemLocationSelect();
   const selectCat = document.getElementById("input-category");
   if (selectCat) delete selectCat.dataset.userModified;
   updateLLMPriorityPreview();
@@ -2463,6 +2958,12 @@ function refreshAll() {
   searchAndFilter();
   renderMatches();
   renderRecoveryHistory();
+  if (typeof renderNearbyItemsView === "function") {
+    renderNearbyItemsView();
+  }
+  if (typeof renderCampusGraphCanvas === "function") {
+    renderCampusGraphCanvas();
+  }
 }
 
 // ============================================================

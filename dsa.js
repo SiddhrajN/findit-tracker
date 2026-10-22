@@ -429,19 +429,34 @@ class CampusGraph {
   constructor() {
     // Map of locationName -> Array of neighbor names
     this.adjacencyList = new Map();
-    // Map of locationName -> metadata { floor, type, description, icon }
+    // Map of locationName -> metadata { id, name, floor, type, description, icon }
     this.nodeMetadata = new Map();
+    // Bi-directional lookup: vertexId <-> locationName
+    this.idToName = new Map();
+    this.nameToId = new Map();
+  }
+
+  static toVertexId(name) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
   }
 
   addLocation(name, metadata = {}) {
+    const id = metadata.id || CampusGraph.toVertexId(name);
     if (!this.adjacencyList.has(name)) {
       this.adjacencyList.set(name, []);
       this.nodeMetadata.set(name, {
+        id,
+        name,
         floor: metadata.floor || "Floor 1",
         type: metadata.type || "room",
         description: metadata.description || "",
         icon: metadata.icon || "📍",
       });
+      this.idToName.set(id, name);
+      this.nameToId.set(name, id);
     }
   }
 
@@ -462,7 +477,24 @@ class CampusGraph {
   }
 
   getMetadata(name) {
-    return this.nodeMetadata.get(name) || { floor: "Unknown", type: "room", icon: "📍", description: "" };
+    return this.nodeMetadata.get(name) || {
+      id: CampusGraph.toVertexId(name || "unknown"),
+      name: name || "Unknown",
+      floor: "Unknown",
+      type: "room",
+      icon: "📍",
+      description: "",
+    };
+  }
+
+  getVertexId(name) {
+    const resolved = this.resolveLocation(name);
+    return resolved ? this.nameToId.get(resolved) : null;
+  }
+
+  getLocationById(id) {
+    if (!id) return null;
+    return this.idToName.get(id) || this.resolveLocation(id);
   }
 
   getAllLocations() {
@@ -480,23 +512,30 @@ class CampusGraph {
   }
 
   /**
-   * Fuzzy resolve location name from user inputs or report strings
-   * E.g. "canteen" -> "Open Canteen", "library" -> "Library 2nd Floor", "lab 302" -> "Lab 302"
+   * Resolve location from vertex ID, name, or search query
+   * E.g. "library_floor_2" -> "Library 2nd Floor", "canteen" -> "Open Canteen", "lab 302" -> "Lab 302"
    */
   resolveLocation(query) {
     if (!query) return null;
-    const q = query.trim().toLowerCase();
+    const q = String(query).trim().toLowerCase();
+
+    // 1. Direct ID lookup
+    if (this.idToName.has(q)) return this.idToName.get(q);
+
+    // 2. Exact name match (case-insensitive)
+    for (const [name, meta] of this.nodeMetadata.entries()) {
+      if (name.toLowerCase() === q || meta.id.toLowerCase() === q) {
+        return name;
+      }
+    }
+
     const all = this.getAllLocations();
 
-    // 1. Exact match
-    const exact = all.find((loc) => loc.toLowerCase() === q);
-    if (exact) return exact;
-
-    // 2. Contains match
+    // 3. Substring contains match
     const contains = all.find((loc) => loc.toLowerCase().includes(q) || q.includes(loc.toLowerCase()));
     if (contains) return contains;
 
-    // 3. Known campus keywords
+    // 4. Known campus keywords from floormaps.vercel.app
     if (q.includes("canteen") || q.includes("food") || q.includes("cafeteria")) return "Open Canteen";
     if (q.includes("library") || q.includes("book") || q.includes("reading")) return "Library 2nd Floor";
     if (q.includes("302")) return "Lab 302";
@@ -509,9 +548,140 @@ class CampusGraph {
     if (q.includes("physics")) return "Physics Lab";
     if (q.includes("chem")) return "Chemistry Lab";
     if (q.includes("stuco") || q.includes("council")) return "STUCO Room";
+    if (q.includes("incubation")) return "Incubation Cell";
     if (q.includes("exam")) return "Exam Cell";
+    if (q.includes("cad")) return "CAD Lab (Floor 4)";
+    if (q.includes("presentation") || q.includes("508")) return "Presentation Room 508";
+    if (q.includes("language")) return "Language Lab (Floor 5)";
 
     return all[0] || null;
+  }
+
+  /**
+   * Depth-Limited Breadth-First Search (BFS)
+   * Explores campus graph layer by layer up to maxHops (e.g. 0 = room only, 1 = neighbor corridors, 2 = adjacent wings).
+   * Returns: Array of { node, id, hops, path, metadata } sorted by hops ascending.
+   */
+  bfsNearbyLocations(startLocation, maxHops = 2) {
+    const resolvedStart = this.resolveLocation(startLocation);
+    if (!resolvedStart || !this.adjacencyList.has(resolvedStart)) {
+      return [];
+    }
+
+    const queue = [{ node: resolvedStart, depth: 0, path: [resolvedStart] }];
+    const visited = new Map();
+    visited.set(resolvedStart, 0);
+
+    const results = [];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const meta = this.getMetadata(current.node);
+
+      results.push({
+        node: current.node,
+        id: meta.id || CampusGraph.toVertexId(current.node),
+        hops: current.depth,
+        path: current.path,
+        metadata: meta,
+      });
+
+      if (current.depth < maxHops) {
+        const neighbors = this.adjacencyList.get(current.node) || [];
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            visited.set(neighbor, current.depth + 1);
+            queue.push({
+              node: neighbor,
+              depth: current.depth + 1,
+              path: [...current.path, neighbor],
+            });
+          }
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Find Lost & Found reports near a selected location using Depth-Limited BFS
+   * Ranks candidate reports by:
+   *  1. Graph proximity (hops ascending: 0 edges -> 1 edge -> 2 edges)
+   *  2. Report Priority (Max-Heap order: Urgent (3) -> Medium (2) -> Low (1))
+   *  3. Recency (Newest timestamp first)
+   */
+  findNearbyReports(startLocation, allReports = [], maxHops = 2) {
+    const nearbyNodes = this.bfsNearbyLocations(startLocation, maxHops);
+    if (!nearbyNodes || nearbyNodes.length === 0) return [];
+
+    const nodeInfoMap = new Map();
+    nearbyNodes.forEach((item) => {
+      nodeInfoMap.set(item.node, item);
+    });
+
+    const matchedReports = [];
+    allReports.forEach((report) => {
+      if (report.status && report.status.toLowerCase() !== "active") return;
+
+      const reportNode = this.resolveLocation(report.location);
+      if (reportNode && nodeInfoMap.has(reportNode)) {
+        const nodeInfo = nodeInfoMap.get(reportNode);
+        matchedReports.push({
+          report,
+          node: reportNode,
+          vertexId: nodeInfo.id,
+          hops: nodeInfo.hops,
+          path: nodeInfo.path,
+          distanceLabel:
+            nodeInfo.hops === 0
+              ? "Same Room (0 edges away)"
+              : nodeInfo.hops === 1
+              ? `1 edge away (Immediate connector)`
+              : `2 edges away (Nearby corridor/wing)`,
+        });
+      }
+    });
+
+    matchedReports.sort((a, b) => {
+      if (a.hops !== b.hops) return a.hops - b.hops;
+      const prioA = a.report.priority || 1;
+      const prioB = b.report.priority || 1;
+      if (prioB !== prioA) return prioB - prioA;
+      return new Date(b.report.timestamp) - new Date(a.report.timestamp);
+    });
+
+    return matchedReports;
+  }
+
+  /**
+   * Count unresolved reports per location and detect locations with recent Found items
+   * Powers the Campus Location Explorer map highlights
+   */
+  getUnresolvedReportCounts(allReports = []) {
+    const counts = new Map();
+    const foundLocations = new Set();
+    const reportsByLocation = new Map();
+
+    allReports.forEach((report) => {
+      if (report.status && report.status.toLowerCase() !== "active") return;
+
+      const resolved = this.resolveLocation(report.location);
+      if (resolved) {
+        counts.set(resolved, (counts.get(resolved) || 0) + 1);
+
+        if (!reportsByLocation.has(resolved)) {
+          reportsByLocation.set(resolved, []);
+        }
+        reportsByLocation.get(resolved).push(report);
+
+        if (report.type && report.type.toLowerCase() === "found") {
+          foundLocations.add(resolved);
+        }
+      }
+    });
+
+    return { counts, foundLocations, reportsByLocation };
   }
 
   /**
