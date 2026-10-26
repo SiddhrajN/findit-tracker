@@ -724,7 +724,7 @@ function initBentoHashDemo() {
         return `
           <div class="px-2.5 py-1 rounded-lg border text-center transition-all ${
             isTarget
-              ? "bg-forest text-white border-forest font-bold shadow-xs scale-105 ring-1 ring-forest/30"
+              ? "bg-forest text-white border-forest font-bold shadow-sm scale-105 ring-2 ring-forest/40 bucket-active"
               : "bg-white/90 border-sand text-slate-500 font-medium"
           }">
             <span class="text-[9px] block opacity-75">Bucket</span>
@@ -1010,8 +1010,8 @@ function toggleAdminMode() {
   refreshAll();
   showToast(
     adminMode
-      ? "🛡️ Admin mode active: priority adjustment and high-priority processing enabled."
-      : "👤 Switched to standard student view (read-only priority tags).",
+      ? "Admin mode active: priority adjustment and high-priority processing enabled."
+      : "Switched to standard student view (read-only priority tags).",
     "success"
   );
 }
@@ -1032,7 +1032,7 @@ function setReportPriority(id, newPriority) {
 
   const pInfo = getPriorityInfo(pVal);
   showToast(
-    `⭐ ${rep ? rep.title : id} priority set to ${pInfo.name} (${pInfo.icon}) — Binary Heap reorganized in O(log n)`,
+    `${rep ? rep.title : id} priority updated to ${pInfo.name} (P${pInfo.level}) — Heap rebalanced in O(log n)`,
     "success"
   );
 }
@@ -1046,7 +1046,7 @@ function processHighestPriorityReport() {
   showDetail(top.id, /* isProcessingMode = */ true);
   const pInfo = getPriorityInfo(top.priority);
   showToast(
-    `⚡ Processing highest-priority item from Binary Heap: [${top.id}] ${top.title} (${pInfo.name})`,
+    `Processing highest-priority item from Binary Heap: [${top.id}] ${top.title} (${pInfo.name} · P${pInfo.level})`,
     "match"
   );
 }
@@ -1095,7 +1095,7 @@ function renderHeapInspector() {
         <div class="${nodeClass} rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
           <span class="heap-pill-badge">[${node.index}]</span>
           <span class="text-xs font-black truncate max-w-[130px]">${escapeHtml(node.title)}</span>
-          <span class="text-[10px] font-black bg-white/20 px-1 rounded">${pInfo.icon} P${node.priority}</span>
+          <span class="text-[10px] font-black bg-white/20 px-1 rounded">P${node.priority} · ${pInfo.name}</span>
         </div>
         <span class="text-[9px] text-gray-400 font-mono mt-0.5">${node.id}</span>
       </div>`;
@@ -1130,7 +1130,7 @@ function renderHeapInspector() {
                 <div class="p-3 rounded-2xl bg-white border ${isRoot ? 'border-red-400 ring-2 ring-red-400/40 shadow-md' : 'border-sand'} flex flex-col items-center text-center min-w-[140px] shadow-xs">
                   <div class="flex items-center gap-1 mb-1">
                     <span class="text-[10px] font-mono font-bold text-gray-400">[${node.index}]</span>
-                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full ${pInfo.badgeBg}">${pInfo.icon} ${pInfo.label}</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${pInfo.pillBg} flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full ${pInfo.dotClass}"></span>${pInfo.label}</span>
                   </div>
                   <p class="text-xs font-bold text-gray-800 line-clamp-1">${escapeHtml(node.title)}</p>
                   <p class="text-[10px] font-mono text-terracotta font-semibold">${node.id}</p>
@@ -1400,16 +1400,21 @@ function renderReports(items) {
 
         <!-- Card Body -->
         <div class="p-4 sm:p-5 flex flex-col flex-1">
-          <!-- ID & Owner Indicator -->
-          <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
-            <span class="font-bold text-slate-500">${escapeHtml(r.id)}</span>
-            ${isOwner ? '<span class="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Your Report</span>' : ''}
+          <!-- Category Avatar + ID + Title Row -->
+          <div class="flex items-start gap-3 mb-2.5">
+            <div class="cat-avatar ${catInfo.icon === 'key' ? 'cat-avatar-keys' : catInfo.icon === 'card' ? 'cat-avatar-wallet' : catInfo.icon === 'electronics' ? 'cat-avatar-electronics' : catInfo.icon === 'book' ? 'cat-avatar-books' : catInfo.icon === 'accessory' ? 'cat-avatar-accessories' : 'cat-avatar-other'} shrink-0 mt-0.5">
+              ${ICONS[catInfo.icon] ? ICONS[catInfo.icon]("w-5 h-5 " + (catInfo.icon === 'key' ? 'text-amber-700' : catInfo.icon === 'card' ? 'text-emerald-700' : catInfo.icon === 'electronics' ? 'text-sky-700' : catInfo.icon === 'book' ? 'text-yellow-700' : catInfo.icon === 'accessory' ? 'text-rose-700' : 'text-slate-600')) : ''}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-0.5">
+                <span class="font-bold text-slate-500">${escapeHtml(r.id)}</span>
+                ${isOwner ? '<span class="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Your Report</span>' : ''}
+              </div>
+              <h3 class="text-base font-bold text-gray-900 group-hover:text-forest transition-colors tracking-tight line-clamp-1">
+                ${escapeHtml(r.title)}
+              </h3>
+            </div>
           </div>
-
-          <!-- Title -->
-          <h3 class="text-base font-bold text-gray-900 group-hover:text-forest transition-colors tracking-tight line-clamp-1 mb-1.5">
-            ${escapeHtml(r.title)}
-          </h3>
 
           <!-- Description -->
           <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
@@ -1430,21 +1435,25 @@ function renderReports(items) {
             </div>
           </div>
 
-          <!-- Action Buttons (No SET PRIORITY strip - that is in Details modal) -->
+          <!-- Action Buttons (Flipped Visual Weight: Claim Primary on Found, Details Ghost) -->
           <div class="mt-3.5 pt-3 border-t border-black/[0.05] flex gap-2">
-            <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-              class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-              <span>${isOwner ? "Manage" : "View Details"}</span>
-              ${ICONS.arrowRight("w-3.5 h-3.5")}
-            </button>
             ${
               !isLost && !isOwner
                 ? `<button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
-                    class="py-2 px-3.5 text-xs font-semibold rounded-xl bg-terracotta text-white hover:bg-terracotta-d transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+                    class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                     ${ICONS.shield("w-3.5 h-3.5")}
-                    <span>Claim</span>
+                    <span>Claim Item</span>
+                    ${ICONS.arrowRight("w-3.5 h-3.5")}
+                  </button>
+                  <button onclick="event.stopPropagation(); showDetail('${r.id}')"
+                    class="py-2 px-3.5 text-xs font-semibold rounded-xl bg-sand-l text-gray-700 hover:bg-sand border border-sand hover:border-sand-d transition-all flex items-center justify-center gap-1 cursor-pointer">
+                    <span>Details</span>
                   </button>`
-                : ""
+                : `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
+                    class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                    <span>${isOwner ? "Manage" : "View Details"}</span>
+                    ${ICONS.arrowRight("w-3.5 h-3.5")}
+                  </button>`
             }
           </div>
         </div>
@@ -1950,7 +1959,12 @@ function renderMatches() {
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-forest text-white text-xs font-bold shadow-xs">${i + 1}</span>
         <h4 class="font-bold text-gray-900 text-base">Potential Match Detected: Category + Spot Overlap</h4>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
+        <!-- Match Bridge Badge (Desktop Overlap Connector) -->
+        <div class="match-bridge-badge hidden sm:flex items-center gap-1.5 pointer-events-none">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>94% Match · Category &amp; Spot Correlated</span>
+        </div>
         <div class="bg-white/95 rounded-2xl p-4 border border-rose-200 shadow-xs">
           <div class="flex items-center gap-2 mb-2">
             ${lostSvg}
@@ -2055,13 +2069,13 @@ function addReport(formData) {
   const prioInfo = getPriorityInfo(report.priority);
   if (categoryMatches.length > 0) {
     showToast(
-      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon}).`,
+      `Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". LLM auto-assigned ${prioInfo.name} Priority (Score: ${report.llmScore}/100).`,
       "match"
     );
     switchTab("matches");
   } else {
     showToast(
-      `🤖 LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon} Score: ${report.llmScore}/100) for "${report.title}". Binary Max-Heap restructured!`,
+      `LLM auto-assigned ${prioInfo.name} Priority (Score: ${report.llmScore}/100) for "${report.title}". Binary Max-Heap restructured!`,
       "success"
     );
   }
@@ -2146,7 +2160,7 @@ function markRecovered(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`🎉 "${report.title}" marked as recovered and removed from Priority Queue!`, "success");
+  showToast(`"${report.title}" marked as recovered and removed from Priority Queue!`, "success");
 }
 
 // State variables for report modal confirmations
@@ -2239,7 +2253,7 @@ function markLostItemFound(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`🎉 "${report.title}" marked as found! Moved to resolved history.`, "success");
+  showToast(`"${report.title}" marked as found! Moved to resolved history.`, "success");
 }
 
 function triggerRemoveReportConfirm(id) {
@@ -2320,7 +2334,7 @@ function removeReport(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`🗑️ Report "${report.title}" removed successfully.`, "info");
+  showToast(`Report "${report.title}" removed successfully.`, "info");
 }
 
 function searchAndFilter() {
@@ -2495,7 +2509,7 @@ function submitClaim(reportId) {
   if (!report) return;
 
   showToast(
-    `✅ Claim submitted for "${report.title}"! Campus recovery desk notified for ownership verification.`,
+    `Claim submitted for "${report.title}"! Campus recovery desk notified for ownership verification.`,
     "success"
   );
 }
