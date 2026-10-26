@@ -26,6 +26,18 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+// ----- Clean Monochrome Vector SVG Helpers (16px / 14px) -----
+const CLAIM_SVGS = {
+  shield: (cls = "w-4 h-4") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`,
+  lock: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`,
+  mapPin: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+  tag: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>`,
+  check: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+  cross: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`,
+  handover: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>`,
+  user: (cls = "w-4 h-4") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
+};
+
 // ----- Role Authorization Helpers ---------------------------
 function isReviewer(user) {
   if (!user) return false;
@@ -69,7 +81,8 @@ function toggleDemoRole() {
   }
 
   refreshAll();
-  showToast(`Switched active role to: ${newRole === "reviewer" ? "🛡️ Reviewer" : "🎒 Student"}`, "success");
+  if (typeof updateNavRoleUI === "function") updateNavRoleUI();
+  showToast(`Switched active role to: ${newRole === "reviewer" ? "Reviewer" : "Student"}`, "success");
 }
 
 function quickReviewerLogin() {
@@ -102,11 +115,15 @@ function quickReviewerLogin() {
 
 function updateRoleUI() {
   const user = getCurrentUser();
+  if (!user) return;
+
+  if (typeof updateNavRoleUI === "function") {
+    updateNavRoleUI();
+  }
+
   const badge = document.getElementById("user-role-badge");
   const toggleBtn = document.getElementById("btn-toggle-role");
   const tabClaimRequests = document.getElementById("tab-btn-claim-requests");
-
-  if (!user) return;
 
   const reviewerMode = isReviewer(user);
   if (badge) {
@@ -388,7 +405,7 @@ function handleClaimSubmit(e) {
   refreshAll();
 
   const pos = pendingClaimQueue.size();
-  showToast(`🎉 Claim submitted! Your request is #${pos} in the FIFO review queue.`, "success");
+  showToast(`Claim submitted! Your request is #${pos} in the FIFO review queue.`, "success");
 }
 
 // ----- Claim Reviewer Operations (FIFO Queue & Review Modal) --
@@ -596,7 +613,7 @@ function confirmApproveClaim() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`✅ Claim ${claim.id} APPROVED! Ready for physical handover confirmation.`, "success");
+  showToast(`Claim ${claim.id} approved. Ready for physical handover confirmation.`, "success");
 }
 
 function confirmRejectClaim() {
@@ -650,7 +667,7 @@ function confirmRejectClaim() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`❌ Claim ${claim.id} has been rejected. Reason logged for claimant.`, "success");
+  showToast(`Claim ${claim.id} has been rejected. Reason logged for claimant.`, "info");
 }
 
 // ----- Handover & Recovery Integration (Feature D) -----------
@@ -802,7 +819,7 @@ function executeHandover() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`🎉 Handover confirmed! "${report.title}" is officially recorded as Recovered.`, "success");
+  showToast(`Handover confirmed: "${report.title}" is officially recorded as Recovered.`, "success");
 }
 
 // ----- FIFO Queue Inspector Action ---------------------------
@@ -864,7 +881,9 @@ function renderClaimRequests() {
     if (queueFrontText) queueFrontText.textContent = "—";
     container.innerHTML = `
       <div class="visionos-panel rounded-3xl p-12 text-center text-gray-500">
-        <div class="w-16 h-16 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center text-3xl mx-auto mb-4 border border-terracotta/20">🔒</div>
+        <div class="w-16 h-16 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center mx-auto mb-4 border border-terracotta/20">
+          ${CLAIM_SVGS.lock("w-8 h-8 text-terracotta")}
+        </div>
         <h3 class="text-lg font-extrabold text-gray-900 mb-1">Access Restricted: Reviewer Authority Required</h3>
         <p class="text-xs text-gray-500 max-w-md mx-auto">This desk contains confidential student ownership evidence and is restricted to authorized campus reviewers and administrative staff.</p>
       </div>`;
@@ -909,7 +928,9 @@ function renderClaimRequests() {
   if (filtered.length === 0) {
     container.innerHTML = `
       <div class="visionos-panel rounded-3xl p-10 flex flex-col items-center justify-center text-center">
-        <div class="w-16 h-16 rounded-2xl bg-forest/10 flex items-center justify-center text-3xl mb-4 text-forest">🛡️</div>
+        <div class="w-16 h-16 rounded-2xl bg-forest/10 text-forest flex items-center justify-center mx-auto mb-4 border border-forest/20">
+          ${CLAIM_SVGS.shield("w-8 h-8 text-forest")}
+        </div>
         <h4 class="text-base font-bold text-gray-800">No claims match filter: ${currentClaimFilter}</h4>
         <p class="text-xs text-gray-500 max-w-sm mt-1">Claims submitted by students for found campus items will appear here for review.</p>
       </div>`;
@@ -930,8 +951,9 @@ function renderClaimRequests() {
           // Find queue position if pending
           const qIndex = isPending ? queueArray.findIndex((c) => c.id === claim.id) : -1;
           const posBadge = qIndex !== -1
-            ? `<span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">
-                ⚡ FIFO #${qIndex + 1}
+            ? `<span class="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>FIFO #${qIndex + 1}</span>
               </span>`
             : "";
 
@@ -953,13 +975,11 @@ function renderClaimRequests() {
               <!-- Item Information -->
               <div class="mb-3">
                 <h4 class="text-base font-extrabold text-gray-900 leading-snug">${escapeHtml(claim.itemTitle)}</h4>
-                <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-                  <span>📍 ${escapeHtml(claim.itemLocation)}</span>
-                  <span>•</span>
-                  <span>🏷️ ${escapeHtml(claim.itemCategory)}</span>
-                  <span>•</span>
-                  <span class="font-mono font-bold">${escapeHtml(claim.itemId)}</span>
-                </p>
+                <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                  <span class="flex items-center gap-1">${CLAIM_SVGS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(claim.itemLocation)}</span>
+                  <span class="flex items-center gap-1">${CLAIM_SVGS.tag("w-3.5 h-3.5 text-slate-500")} ${escapeHtml(claim.itemCategory)}</span>
+                  <span class="font-mono font-bold text-[11px] bg-sand-l/60 px-1.5 py-0.5 rounded border border-sand">${escapeHtml(claim.itemId)}</span>
+                </div>
               </div>
 
               <!-- Claimant Information -->
@@ -978,8 +998,9 @@ function renderClaimRequests() {
               <div class="bg-ivory/60 rounded-xl p-3 border border-sand text-xs mb-4">
                 <p class="font-bold text-gray-700 uppercase text-[10px] tracking-wide mb-1">Ownership Reason:</p>
                 <p class="text-gray-600 line-clamp-2">${escapeHtml(claim.ownershipExplanation)}</p>
-                <p class="text-[10px] text-forest font-semibold mt-1.5 flex items-center gap-1">
-                  🔒 Private details hidden (click to inspect evidence)
+                <p class="text-[10px] text-forest font-semibold mt-1.5 flex items-center gap-1.5">
+                  ${CLAIM_SVGS.lock("w-3.5 h-3.5 text-forest")}
+                  <span>Private ownership evidence hidden · Click below to review</span>
                 </p>
               </div>
             </div>
@@ -996,7 +1017,8 @@ function renderClaimRequests() {
                 reviewerMode && isApproved && !isHandedOver
                   ? `<button onclick="triggerHandoverConfirmation('${claim.id}')"
                       class="visionos-btn-terracotta text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all hover:brightness-110 flex items-center gap-1">
-                      <span>🤝 Handover</span>
+                      ${CLAIM_SVGS.handover("w-3.5 h-3.5")}
+                      <span>Confirm Handover</span>
                     </button>`
                   : ""
               }
@@ -1044,7 +1066,9 @@ function renderMyClaims() {
   if (myClaims.length === 0) {
     container.innerHTML = `
       <div class="visionos-panel rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-        <div class="w-16 h-16 rounded-2xl bg-sand flex items-center justify-center text-3xl mb-4 text-terracotta">🙋</div>
+        <div class="w-16 h-16 rounded-2xl bg-sand flex items-center justify-center mx-auto mb-4 border border-sand-d">
+          ${CLAIM_SVGS.user("w-8 h-8 text-terracotta")}
+        </div>
         <h4 class="text-base font-bold text-gray-800">You haven't claimed any items yet</h4>
         <p class="text-xs text-gray-500 max-w-sm mt-1.5 leading-relaxed">
           If you see an item in the <strong>All Items</strong> tab marked as <strong>Found</strong> that belongs to you, click <strong>"Claim This Item"</strong> to submit private proof.
@@ -1084,7 +1108,8 @@ function renderMyClaims() {
             statusDetailHTML = `
               <div class="mt-3 bg-emerald-50 border border-emerald-300 rounded-xl p-3 text-xs text-emerald-900">
                 <p class="font-bold flex items-center gap-1.5 text-forest">
-                  <span>🎉</span> Claim Approved by ${escapeHtml(claim.reviewedBy || "Reviewer")}!
+                  ${CLAIM_SVGS.check("w-4 h-4 text-emerald-600")}
+                  <span>Claim Approved by ${escapeHtml(claim.reviewedBy || "Reviewer")}</span>
                 </p>
                 <p class="text-emerald-700 mt-1">
                   Please visit the Campus Security / Lost &amp; Found desk with your Student ID to collect your item.
@@ -1095,7 +1120,8 @@ function renderMyClaims() {
             statusDetailHTML = `
               <div class="mt-3 bg-forest/10 border border-forest/30 rounded-xl p-3 text-xs text-forest">
                 <p class="font-bold flex items-center gap-1.5">
-                  <span>✅</span> Handover Completed on ${formatDateLong(claim.handedOverAt)}
+                  ${CLAIM_SVGS.check("w-4 h-4 text-forest")}
+                  <span>Handover Completed on ${formatDateLong(claim.handedOverAt)}</span>
                 </p>
                 <p class="text-forest-d mt-0.5">
                   Verified &amp; released by ${escapeHtml(claim.handedOverBy || "Authorized Staff")}.
@@ -1103,9 +1129,10 @@ function renderMyClaims() {
               </div>`;
           } else if (isRejected) {
             statusDetailHTML = `
-              <div class="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700">
+              <div class="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">
                 <p class="font-bold flex items-center gap-1.5">
-                  <span>❌</span> Claim Rejected
+                  ${CLAIM_SVGS.cross("w-4 h-4 text-rose-600")}
+                  <span>Claim Rejected</span>
                 </p>
                 <p class="mt-1 text-red-600">
                   <strong>Reviewer feedback:</strong> ${escapeHtml(claim.rejectionReason || "Details did not match the found item.")}
@@ -1207,26 +1234,31 @@ function closeMyClaimDetailModal() {
 // ----- Helper: Render Status Badge HTML ----------------------
 function renderStatusBadgeHTML(status, isHandedOver = false) {
   if (isHandedOver) {
-    return `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-forest text-white shadow-xs">
-      ✅ HANDED OVER
+    return `<span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+      Handed Over
     </span>`;
   }
 
   switch (status) {
     case "Pending":
-      return `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
-        ⏳ PENDING REVIEW
+      return `<span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+        Pending Review
       </span>`;
     case "Approved":
-      return `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
-        ✓ APPROVED
+      return `<span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-forest/10 text-forest border border-forest/20">
+        <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
+        Approved
       </span>`;
     case "Rejected":
-      return `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-red-600 text-white shadow-xs">
-        ✕ REJECTED
+      return `<span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+        Rejected
       </span>`;
     default:
-      return `<span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-gray-500 text-white">
+      return `<span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
         ${escapeHtml(status)}
       </span>`;
   }
@@ -1663,7 +1695,7 @@ function renderUndoHistoryList() {
             <span class="font-mono font-bold text-[10px] px-2 py-0.5 rounded ${
               isTop ? "bg-terracotta text-white" : "bg-sand text-gray-700"
             }">
-              ${isTop ? "⚡ TOP OF STACK (Next Undo)" : `Stack Index #${actions.length - idx}`}
+              ${isTop ? "TOP OF STACK · Next Undo" : `Stack Index #${actions.length - idx}`}
             </span>
             <span class="font-mono text-[10px] text-gray-500 font-bold">${escapeHtml(act.type)}</span>
           </div>

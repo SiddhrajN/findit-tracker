@@ -18,6 +18,25 @@ let reportCounter = 1000;
 let adminMode = true; // Admin privileges enabled for Campus Lost & Found administrators
 let heapInspectorOpen = false;
 
+// ----- Modern Monochrome SVG Icons (16px / 14px, stroke-width 1.75) -----
+const ICONS = {
+  mapPin: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+  calendar: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+  tag: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>`,
+  check: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+  shield: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`,
+  trash: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
+  sparkles: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.286L13 21l-2.286-6.857L5 12l5.714-2.286L13 3z"/></svg>`,
+  box: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`,
+  electronics: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`,
+  card: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>`,
+  book: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>`,
+  key: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>`,
+  accessory: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
+  arrowRight: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`,
+  link: (cls = "w-3.5 h-3.5") => `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`,
+};
+
 // ----- Priority Levels Configuration & Visual Mapping ------
 const PRIORITY_CONFIG = {
   3: {
@@ -25,11 +44,11 @@ const PRIORITY_CONFIG = {
     key: "urgent",
     name: "Urgent",
     label: "URGENT",
-    icon: "🚨",
-    badgeBg: "bg-red-600 text-white shadow-xs shadow-red-500/30 ring-1 ring-red-400/40",
-    pillBg: "bg-red-50 text-red-700 border border-red-200",
-    borderHighlight: "border-red-400/80 shadow-md shadow-red-500/10",
-    glowDot: "bg-red-500",
+    dotClass: "bg-rose-500",
+    badgeBg: "bg-rose-600 text-white shadow-xs ring-1 ring-rose-400/40",
+    pillBg: "bg-rose-50 text-rose-700 border border-rose-200",
+    borderHighlight: "border-rose-300",
+    glowDot: "bg-rose-500",
     desc: "Critical items: College IDs, Wallets, Keys, Essential Official Belongings",
   },
   2: {
@@ -37,8 +56,8 @@ const PRIORITY_CONFIG = {
     key: "medium",
     name: "Medium",
     label: "MEDIUM",
-    icon: "⚡",
-    badgeBg: "bg-amber-500 text-white shadow-xs shadow-amber-500/20",
+    dotClass: "bg-amber-500",
+    badgeBg: "bg-amber-500 text-white shadow-xs",
     pillBg: "bg-amber-50 text-amber-800 border border-amber-200",
     borderHighlight: "border-amber-300",
     glowDot: "bg-amber-400",
@@ -49,11 +68,11 @@ const PRIORITY_CONFIG = {
     key: "low",
     name: "Low",
     label: "LOW",
-    icon: "🟢",
-    badgeBg: "bg-stone-500 text-white shadow-xs",
-    pillBg: "bg-stone-100 text-stone-700 border border-stone-200",
-    borderHighlight: "border-sand-d",
-    glowDot: "bg-stone-400",
+    dotClass: "bg-slate-400",
+    badgeBg: "bg-slate-600 text-white shadow-xs",
+    pillBg: "bg-slate-100 text-slate-700 border border-slate-200",
+    borderHighlight: "border-slate-300",
+    glowDot: "bg-slate-400",
     desc: "Standard items: Stationery, Umbrellas, Water bottles, Accessories",
   },
 };
@@ -311,12 +330,12 @@ if (typeof window !== "undefined") {
 
 // ----- Category Palette & Visual Mapping --------------------
 const CATEGORY_MAP = {
-  Electronics: { emoji: "📱", gradient: "from-amber-50 to-stone-100", accent: "forest" },
-  "ID/Wallet": { emoji: "💳", gradient: "from-stone-100 to-amber-50", accent: "terracotta" },
-  Books: { emoji: "📚", gradient: "from-emerald-50 to-stone-100", accent: "forest" },
-  Keys: { emoji: "🔑", gradient: "from-orange-50 to-amber-50", accent: "terracotta" },
-  Accessories: { emoji: "🎒", gradient: "from-stone-100 to-orange-50", accent: "terracotta" },
-  Other: { emoji: "📦", gradient: "from-stone-50 to-stone-100", accent: "forest" },
+  Electronics: { icon: "electronics", label: "Electronics", gradient: "from-amber-50/60 to-stone-100/40", accent: "forest" },
+  "ID/Wallet": { icon: "card", label: "ID/Wallet", gradient: "from-stone-100/60 to-amber-50/40", accent: "terracotta" },
+  Books: { icon: "book", label: "Books", gradient: "from-emerald-50/60 to-stone-100/40", accent: "forest" },
+  Keys: { icon: "key", label: "Keys", gradient: "from-orange-50/60 to-amber-50/40", accent: "terracotta" },
+  Accessories: { icon: "accessory", label: "Accessories", gradient: "from-stone-100/60 to-orange-50/40", accent: "terracotta" },
+  Other: { icon: "box", label: "Other", gradient: "from-stone-50/60 to-stone-100/40", accent: "forest" },
 };
 
 function getCategoryInfo(category) {
@@ -677,6 +696,139 @@ function quickDemoLogin() {
 }
 
 // ----- SPA Navigation: View Switching -----------------------
+
+// ----- Bento Live Polynomial Hash Interactive Simulator -----
+function initBentoHashDemo() {
+  const input = document.getElementById("bento-hash-input");
+  const pill = document.getElementById("bento-hash-pill");
+  const strip = document.getElementById("bento-bucket-strip");
+  if (!input || !pill || !strip) return;
+
+  function update() {
+    const rawVal = input.value.trim();
+    const val = rawVal || "Wallet";
+    const bucket = categoryHashTable.hash(val);
+    pill.innerHTML = `<span>hash("${escapeHtml(val)}") → Bucket #${bucket}</span>`;
+
+    // Render 7 surrounding bucket slots
+    const visibleBuckets = [];
+    for (let offset = -3; offset <= 3; offset++) {
+      let b = (bucket + offset) % 53;
+      if (b < 0) b += 53;
+      visibleBuckets.push(b);
+    }
+
+    strip.innerHTML = visibleBuckets
+      .map((b) => {
+        const isTarget = b === bucket;
+        return `
+          <div class="px-2.5 py-1 rounded-lg border text-center transition-all ${
+            isTarget
+              ? "bg-forest text-white border-forest font-bold shadow-xs scale-105 ring-1 ring-forest/30"
+              : "bg-white/90 border-sand text-slate-500 font-medium"
+          }">
+            <span class="text-[9px] block opacity-75">Bucket</span>
+            <span class="text-xs font-mono font-bold">#${b}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+  input.addEventListener("input", update);
+  update();
+}
+
+// ----- Top Navigation Profile Pill & Role Switcher -----------
+function toggleProfileDropdown() {
+  const dd = document.getElementById("profile-dropdown");
+  if (dd) {
+    dd.classList.toggle("hidden");
+  }
+}
+
+function closeProfileDropdown() {
+  const dd = document.getElementById("profile-dropdown");
+  if (dd && !dd.classList.contains("hidden")) {
+    dd.classList.add("hidden");
+  }
+}
+
+function setDemoRole(role) {
+  const user = getCurrentUser();
+  if (!user) {
+    showToast("Please log in first.", "error");
+    return;
+  }
+  user.role = role === "reviewer" ? "reviewer" : "student";
+
+  const users = getUsers();
+  const idx = users.findIndex(
+    (u) => u.id === user.id || u.rollNo.toUpperCase() === user.rollNo.toUpperCase()
+  );
+  if (idx !== -1) {
+    users[idx].role = user.role;
+    saveUsers(users);
+  }
+  setCurrentUser(user);
+
+  updateNavRoleUI();
+
+  // If switched to student while on reviewer desk, return to reports
+  if (user.role === "student") {
+    const tabClaimRequests = document.getElementById("tab-panel-claim-requests");
+    if (tabClaimRequests && !tabClaimRequests.classList.contains("hidden")) {
+      if (typeof switchTab === "function") switchTab("reports");
+    }
+  }
+
+  refreshAll();
+  showToast(`Switched active role to: ${user.role === "reviewer" ? "Reviewer" : "Student"}`, "success");
+}
+
+function updateNavRoleUI() {
+  const user = getCurrentUser();
+  if (!user) return;
+  const isRev = isReviewer(user);
+
+  // 1. Segmented switcher toggle state
+  const btnStudent = document.getElementById("nav-role-student");
+  const btnReviewer = document.getElementById("nav-role-reviewer");
+  if (btnStudent && btnReviewer) {
+    if (isRev) {
+      btnReviewer.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all text-gray-900 bg-white shadow-xs cursor-pointer";
+      btnStudent.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-gray-900 cursor-pointer";
+    } else {
+      btnStudent.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all text-gray-900 bg-white shadow-xs cursor-pointer";
+      btnReviewer.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-gray-900 cursor-pointer";
+    }
+  }
+
+  // 2. Profile dropdown badge
+  const roleBadge = document.getElementById("user-role-badge");
+  if (roleBadge) {
+    roleBadge.textContent = isRev ? "Reviewer" : "Student";
+    roleBadge.className = isRev
+      ? "text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800"
+      : "text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-forest/10 text-forest";
+  }
+
+  // 3. Dropdown roll number
+  const dropdownRoll = document.getElementById("dropdown-user-roll");
+  if (dropdownRoll) {
+    dropdownRoll.textContent = user.rollNo || "23CS101";
+  }
+
+  // 4. Tab visibility for Reviewer Desk
+  const tabClaimRequests = document.getElementById("tab-btn-claim-requests");
+  if (tabClaimRequests) {
+    if (isRev) {
+      tabClaimRequests.classList.remove("hidden");
+    } else {
+      tabClaimRequests.classList.add("hidden");
+    }
+  }
+}
+
 function renderAppView() {
   const user = getCurrentUser();
   const exploreView = document.getElementById("view-explore");
@@ -692,6 +844,7 @@ function renderAppView() {
     document.getElementById("user-avatar").textContent = getUserInitials(user.name || "Siddhraj Nimje");
 
     if (typeof updateRoleUI === "function") updateRoleUI();
+    if (typeof updateNavRoleUI === "function") updateNavRoleUI();
 
     refreshAll();
   } else {
@@ -825,8 +978,8 @@ function updateStats() {
     const pInfo = getPriorityInfo(topReport.priority);
     if (pqTopTitle) pqTopTitle.textContent = `[${topReport.id}] ${topReport.title} — ${topReport.location}`;
     if (pqTopBadge) {
-      pqTopBadge.className = `inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full ${pInfo.badgeBg}`;
-      pqTopBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} (Level ${pInfo.level})</span>`;
+      pqTopBadge.className = `inline-flex items-center gap-1.5 font-mono text-[10px] font-bold px-2 py-0.5 rounded ${pInfo.pillBg}`;
+      pqTopBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${pInfo.dotClass}"></span><span>P-Score: ${pInfo.level}/3 · ${pInfo.name}</span>`;
       pqTopBadge.classList.remove("hidden");
     }
   } else {
@@ -1211,140 +1364,89 @@ function renderReports(items) {
       const catInfo = getCategoryInfo(r.category);
       const isOwner = isReportOwner(user, r);
       const prioInfo = getPriorityInfo(r.priority);
-      const isUrgent = prioInfo.level === 3;
-      const typeBadgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
-      const typeBadgeDot = isLost ? "🔴" : "🟢";
-      const typeBadgeLabel = isLost ? "LOST" : "FOUND";
+      const catSvg = ICONS[catInfo.icon] ? ICONS[catInfo.icon]("w-3.5 h-3.5 text-forest") : "";
 
       return `
-      <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col ${isUrgent ? 'ring-2 ring-red-500/40 shadow-lg shadow-red-500/10' : ''}"
+      <div class="card-3d rounded-2xl border border-black/[0.08] hover:border-black/20 bg-white shadow-xs hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden cursor-pointer group"
            onclick="showDetail('${r.id}')">
 
-        <!-- Glass Sheen & Specular Glare Highlights -->
+        <!-- Glass Sheen Highlights -->
         <div class="glass-sheen"></div>
         <div class="specular-glare"></div>
 
-        <!-- 3D Item Showcase Stage -->
-        <div class="preserve-3d-space h-48 w-full bg-gradient-to-b ${catInfo.gradient} relative overflow-hidden flex items-center justify-center border-b border-white/40">
+        <!-- Edge-to-edge Item Preview Header with Subtle Radial Spotlight Backdrop -->
+        <div class="preserve-3d-space h-42 w-full spotlight-backdrop bg-gradient-to-b ${catInfo.gradient} relative overflow-hidden flex items-center justify-center border-b border-black/[0.05]">
+          <!-- Single Merged Status Dot Pill (Top-Left) -->
+          <div class="absolute top-3 left-3 z-30">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-gray-800 shadow-2xs">
+              <span class="w-2 h-2 rounded-full ${prioInfo.dotClass}"></span>
+              <span>${isLost ? "Lost" : "Found"} · ${prioInfo.name} Priority</span>
+            </span>
+          </div>
+
+          <!-- Category Pill with Crisp Vector SVG (Top-Right) -->
+          <div class="absolute top-3 right-3 z-30">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-slate-700 shadow-2xs">
+              ${catSvg}
+              <span>${escapeHtml(r.category)}</span>
+            </span>
+          </div>
+
+          <!-- 3D Micro-Model Stage -->
           <div class="depth-item w-full h-full flex items-center justify-center">
             ${create3DItemHTML(r.category, r.title)}
           </div>
-          <!-- Priority Badge floating on Top-Right -->
-          <div class="absolute top-3 right-3 z-30">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-md ${prioInfo.badgeBg}">
-              <span>${prioInfo.icon}</span>
-              <span>${prioInfo.label}</span>
-              ${isUrgent ? '<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping ml-0.5"></span>' : ''}
-            </span>
-          </div>
         </div>
 
-        <!-- Card Content with Z-Depth Stacking -->
-        <div class="preserve-3d-space p-5 flex flex-col flex-1 relative z-30">
-          <!-- Badges Row -->
-          <div class="depth-badge flex items-center justify-between mb-3">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${typeBadgeBg}">
-                ${typeBadgeDot} ${typeBadgeLabel}
-              </span>
-              ${
-                isOwner
-                  ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
-                  : ""
-              }
-              <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
-                ${escapeHtml(r.category)}
-              </span>
-              <span class="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold bg-white/90 text-forest px-1.5 py-0.5 rounded border border-forest/20 shadow-2xs">
-                <span>🤖</span> AI Assigned
-              </span>
-            </div>
-            <span class="text-[10px] font-mono font-bold text-gray-400 bg-sand/30 px-2 py-0.5 rounded border border-sand/60">
-              ${escapeHtml(r.id)}
-            </span>
+        <!-- Card Body -->
+        <div class="p-4 sm:p-5 flex flex-col flex-1">
+          <!-- ID & Owner Indicator -->
+          <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+            <span class="font-bold text-slate-500">${escapeHtml(r.id)}</span>
+            ${isOwner ? '<span class="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Your Report</span>' : ''}
           </div>
 
           <!-- Title -->
-          <h3 class="depth-title text-base font-extrabold text-gray-900 mb-1 group-hover:text-forest transition-colors">
+          <h3 class="text-base font-bold text-gray-900 group-hover:text-forest transition-colors tracking-tight line-clamp-1 mb-1.5">
             ${escapeHtml(r.title)}
           </h3>
 
           <!-- Description -->
-          <p class="depth-desc text-xs text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+          <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
             ${escapeHtml(r.description)}
           </p>
 
-          <!-- Location, Date & Priority Status -->
-          <div class="depth-meta mt-auto space-y-1.5 pt-2 border-t border-sand-d/60">
-            <div class="flex items-center justify-between text-xs text-gray-700 font-medium">
-              <div class="flex items-center gap-1.5">
-                <span class="text-terracotta">📍</span>
-                <span>${escapeHtml(r.location)}</span>
+          <!-- Clean Unboxed Metadata with Crisp SVGs -->
+          <div class="mt-auto space-y-1.5 pt-3 border-t border-black/[0.05] text-xs text-slate-500">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 truncate">
+                ${ICONS.mapPin("w-3.5 h-3.5 text-forest shrink-0")}
+                <span class="truncate">${escapeHtml(r.location)}</span>
               </div>
-              <span class="text-[11px] font-bold ${isUrgent ? 'text-red-700' : 'text-gray-500'}">
-                Priority: <span class="font-extrabold">${prioInfo.level}/3</span>
-              </span>
-            </div>
-            <div class="flex items-center justify-between text-xs text-gray-500">
-              <span class="flex items-center gap-1">
-                <span>📅</span> ${formatDate(r.timestamp)}
-              </span>
-              <span class="text-[10px] text-gray-400 font-mono">Heap Ranked</span>
+              <div class="flex items-center gap-1.5 shrink-0 text-slate-400 font-mono text-[11px]">
+                ${ICONS.calendar("w-3.5 h-3.5 text-slate-400 shrink-0")}
+                <span>${formatDate(r.timestamp)}</span>
+              </div>
             </div>
           </div>
 
-          ${
-            adminMode
-              ? `
-          <!-- Admin Direct Priority Adjuster Strip -->
-          <div class="mt-3 pt-2.5 border-t border-sand-d/40 flex items-center justify-between" onclick="event.stopPropagation()">
-            <span class="text-[10px] font-extrabold uppercase text-forest tracking-wider flex items-center gap-1">
-              <span>🛡️ Set Priority:</span>
-            </span>
-            <div class="inline-flex rounded-lg shadow-2xs border border-sand bg-white/90 p-0.5 text-[10px] font-bold">
-              <button onclick="setReportPriority('${r.id}', 3)" title="Assign Urgent Priority (P3)"
-                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 3 ? 'bg-red-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-red-700 hover:bg-red-50'}">
-                🚨 Urgent
-              </button>
-              <button onclick="setReportPriority('${r.id}', 2)" title="Assign Medium Priority (P2)"
-                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 2 ? 'bg-amber-500 text-white font-black shadow-xs' : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50'}">
-                ⚡ Med
-              </button>
-              <button onclick="setReportPriority('${r.id}', 1)" title="Assign Low Priority (P1)"
-                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 1 ? 'bg-stone-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-stone-800 hover:bg-stone-100'}">
-                🟢 Low
-              </button>
-            </div>
+          <!-- Action Buttons (No SET PRIORITY strip - that is in Details modal) -->
+          <div class="mt-3.5 pt-3 border-t border-black/[0.05] flex gap-2">
+            <button onclick="event.stopPropagation(); showDetail('${r.id}')"
+              class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+              <span>${isOwner ? "Manage" : "View Details"}</span>
+              ${ICONS.arrowRight("w-3.5 h-3.5")}
+            </button>
+            ${
+              !isLost && !isOwner
+                ? `<button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
+                    class="py-2 px-3.5 text-xs font-semibold rounded-xl bg-terracotta text-white hover:bg-terracotta-d transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+                    ${ICONS.shield("w-3.5 h-3.5")}
+                    <span>Claim</span>
+                  </button>`
+                : ""
+            }
           </div>
-          `
-              : ""
-          }
-
-          <!-- Action Buttons -->
-          ${
-            isLost
-              ? `<div class="mt-3">
-                  <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-                    class="depth-btn w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5 cursor-pointer">
-                    <span>${isOwner ? "Manage Your Report" : "View Details"}</span>
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                  </button>
-                </div>`
-              : `<div class="depth-btn mt-3 flex gap-2 w-full">
-                  <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-                    class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 cursor-pointer">
-                    <span>${isOwner ? "Manage Report" : "Details"}</span>
-                  </button>
-                  ${
-                    !isOwner
-                      ? `<button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
-                          class="visionos-btn-terracotta text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 shadow-sm cursor-pointer">
-                          <span>🛡️ Claim</span>
-                        </button>`
-                      : ""
-                  }
-                </div>`
-          }
         </div>
       </div>`;
     })
@@ -1400,8 +1502,6 @@ function showDetail(id, isProcessingMode = false) {
 
   const catInfo = getCategoryInfo(report.category);
   const isLost = report.type === "Lost";
-  const badgeBg = isLost ? "bg-red-600 text-white" : "bg-forest text-white";
-  const badgeDot = isLost ? "🔴" : "🟢";
   const prioInfo = getPriorityInfo(report.priority);
 
   const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
@@ -1418,95 +1518,103 @@ function showDetail(id, isProcessingMode = false) {
     if (isOwner) {
       ownershipBannerHtml = `
         <div class="bg-amber-50 rounded-2xl p-3 mb-4 border border-amber-200 text-xs text-amber-900 flex items-center gap-2.5">
-          <span class="text-base">👑</span>
+          <div class="w-6 h-6 rounded-lg bg-amber-200/60 flex items-center justify-center shrink-0">
+            ${ICONS.tag("w-3.5 h-3.5 text-amber-800")}
+          </div>
           <div class="flex-1">
-            <p class="font-black">Your Report</p>
+            <p class="font-bold">Your Report</p>
             <p class="text-[11px] text-amber-800">You reported this lost item. When found, mark it as found to move it to resolved history, or remove it.</p>
           </div>
         </div>`;
       actionsHtml = `
         <button id="btn-detail-mark-found" onclick="triggerMarkFoundConfirm('${report.id}')"
-          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          class="flex-1 text-xs font-semibold px-4 py-2.5 rounded-xl bg-forest hover:bg-forest-d text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
+          ${ICONS.check("w-4 h-4")}
           <span>Mark as Found</span>
         </button>
         <button id="btn-detail-remove" onclick="triggerRemoveReportConfirm('${report.id}')"
-          class="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
-          <span>🗑️ Remove</span>
+          class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+          ${ICONS.trash("w-3.5 h-3.5")}
+          <span>Remove</span>
         </button>
         <button onclick="closeDetailModal()"
-          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="px-5 py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     } else if (reviewerMode) {
       ownershipBannerHtml = `
         <div class="bg-blue-50 rounded-2xl p-3 mb-4 border border-blue-200 text-xs text-blue-900 flex items-center gap-2.5">
-          <span class="text-base">🛡️</span>
+          <div class="w-6 h-6 rounded-lg bg-blue-200/60 flex items-center justify-center shrink-0">
+            ${ICONS.shield("w-3.5 h-3.5 text-blue-800")}
+          </div>
           <div class="flex-1">
-            <p class="font-black">Reviewer / Admin View</p>
+            <p class="font-bold">Reviewer Administrative View</p>
             <p class="text-[11px] text-blue-800">Reported lost by ${escapeHtml(report.creatorName || report.creatorRoll || 'Student')}. You have administrative oversight.</p>
           </div>
         </div>`;
       actionsHtml = `
         <button onclick="triggerMarkFoundConfirm('${report.id}')"
-          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
-          <span>✨ Mark as Found</span>
+          class="flex-1 text-xs font-semibold px-4 py-2.5 rounded-xl bg-forest hover:bg-forest-d text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
+          ${ICONS.check("w-4 h-4")}
+          <span>Mark as Found</span>
         </button>
         <button onclick="triggerRemoveReportConfirm('${report.id}')"
-          class="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
-          <span>🗑️ Remove</span>
+          class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+          ${ICONS.trash("w-3.5 h-3.5")}
+          <span>Remove</span>
         </button>
         <button onclick="closeDetailModal()"
-          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="px-5 py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     } else {
-      // Regular student who is NOT the owner
       ownershipBannerHtml = `
-        <div class="bg-sand/30 rounded-2xl p-3.5 mb-4 border border-sand text-xs text-gray-600 flex items-center gap-2.5">
-          <span class="text-lg">ℹ️</span>
+        <div class="bg-sand-l/60 rounded-2xl p-3 mb-4 border border-sand text-xs text-slate-600 flex items-center gap-2.5">
+          ${ICONS.mapPin("w-4 h-4 text-slate-500 shrink-0")}
           <div>
             <p class="font-bold text-gray-800">Reported Lost by ${escapeHtml(report.creatorName || report.creatorRoll || 'a Student')}</p>
-            <p class="text-[11px] text-gray-500">Only the original creator may mark this item as found or remove the report.</p>
+            <p class="text-[11px] text-slate-500">Only the original creator or campus reviewers may mark this item as found or modify it.</p>
           </div>
         </div>`;
       actionsHtml = `
         <button onclick="closeDetailModal()"
-          class="w-full py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="w-full py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     }
   } else {
-    // Found item
+    // Found Item
     if (reviewerMode) {
       actionsHtml = `
         <button onclick="closeDetailModal(); switchTab('claim-requests');"
-          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
-          <span>📋 Review Claims</span>
+          class="flex-1 text-xs font-semibold px-4 py-2.5 rounded-xl bg-forest hover:bg-forest-d text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
+          ${ICONS.shield("w-4 h-4")}
+          <span>Review Claim Requests</span>
         </button>
         <button onclick="closeDetailModal()"
-          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="px-5 py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     } else if (isOwner) {
       ownershipBannerHtml = `
         <div class="bg-forest/10 rounded-2xl p-3 mb-4 border border-forest/20 text-xs text-forest flex items-center gap-2">
-          <span>🟢</span>
+          ${ICONS.check("w-4 h-4 text-forest shrink-0")}
           <span class="font-bold">You reported finding this item. Campus reviewers manage verification and handovers.</span>
         </div>`;
       actionsHtml = `
         <button onclick="closeDetailModal()"
-          class="w-full py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="w-full py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     } else {
       actionsHtml = `
         <button onclick="closeDetailModal(); openClaimModal('${report.id}');"
-          class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
-          <span>🛡️ Claim This Found Item</span>
+          class="flex-1 text-xs font-semibold px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-d text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
+          ${ICONS.shield("w-4 h-4")}
+          <span>Claim This Found Item</span>
         </button>
         <button onclick="closeDetailModal()"
-          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          class="px-5 py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
           Close
         </button>`;
     }
@@ -1516,76 +1624,85 @@ function showDetail(id, isProcessingMode = false) {
     ${
       isProcessingMode
         ? `
-      <div class="mb-4 -mx-6 -mt-6 p-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white rounded-t-3xl shadow-md flex items-center justify-between">
+      <div class="mb-4 -mx-6 -mt-6 p-4 bg-gradient-to-r from-forest to-forest-d text-white rounded-t-3xl shadow-sm flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-          <span class="text-2xl">⚡</span>
+          <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+            ${ICONS.sparkles("w-4 h-4 text-white")}
+          </div>
           <div>
-            <p class="text-xs font-black uppercase tracking-wider">Priority Queue Active Dispatch Desk</p>
-            <p class="text-[11px] text-white/90">This report occupies the ROOT node of the Binary Max-Heap.</p>
+            <p class="text-xs font-bold uppercase tracking-wider">Urgent Action Queue · Active Dispatch</p>
+            <p class="text-[11px] text-white/80">This report occupies the ROOT node of the Binary Max-Heap.</p>
           </div>
         </div>
-        <span class="text-[10px] font-mono font-black bg-white/20 px-2.5 py-1 rounded-full border border-white/30">O(1) Peek</span>
+        <span class="font-mono text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/30">Max-Heap Root · O(1) Peek</span>
       </div>
       `
         : ""
     }
 
-    <div class="h-44 -mx-6 ${isProcessingMode ? '' : '-mt-6 rounded-t-3xl'} bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
+    <div class="h-44 -mx-6 ${isProcessingMode ? '' : '-mt-6 rounded-t-3xl'} spotlight-backdrop bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
       <div class="scale-110">
         ${create3DItemHTML(report.category, report.title)}
       </div>
       <!-- Priority Badge on Header -->
       <div class="absolute top-3 right-3">
-        <span class="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md ${prioInfo.badgeBg}">
-          ${prioInfo.icon} ${prioInfo.label} PRIORITY
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full shadow-xs bg-white/95 border border-black/[0.08] text-gray-800">
+          <span class="w-2 h-2 rounded-full ${prioInfo.dotClass}"></span>
+          <span>${prioInfo.name} Priority (Level ${prioInfo.level})</span>
         </span>
       </div>
     </div>
 
     <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 text-xs font-black ${badgeBg} px-3 py-1 rounded-full shadow-xs">
-          ${badgeDot} ${report.type.toUpperCase()} ITEM
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${
+          isLost ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-forest/10 text-forest border-forest/20"
+        }">
+          <span class="w-2 h-2 rounded-full ${isLost ? "bg-rose-500" : "bg-forest"}"></span>
+          ${report.type} Item
         </span>
         ${
           isOwner
-            ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
+            ? `<span class="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">Your Report</span>`
             : ""
         }
-        <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
-          ${prioInfo.icon} Score: ${prioInfo.level}/3
+        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
+          P-Score: ${prioInfo.level}/3
         </span>
       </div>
-      <span class="text-xs text-gray-500 font-mono font-bold bg-ivory px-2.5 py-1 rounded-md border border-sand">
+      <span class="text-xs text-slate-500 font-mono font-bold bg-sand-l/60 px-2.5 py-1 rounded-md border border-sand">
         ${escapeHtml(report.id)}
       </span>
     </div>
 
-    <h2 class="text-xl font-extrabold text-gray-900 mb-2">${escapeHtml(report.title)}</h2>
+    <h2 class="text-xl font-bold text-gray-900 tracking-tight mb-2">${escapeHtml(report.title)}</h2>
 
-    <div class="flex flex-wrap gap-2 mb-4">
-      <span class="inline-flex items-center gap-1 text-xs text-forest bg-forest/10 px-3 py-1 rounded-lg border border-forest/20 font-semibold">
-        🏷️ ${escapeHtml(report.category)}
+    <div class="flex flex-wrap gap-2 mb-4 text-xs font-medium">
+      <span class="inline-flex items-center gap-1.5 text-slate-700 bg-sand-l/80 px-3 py-1 rounded-lg border border-sand">
+        ${ICONS[catInfo.icon] ? ICONS[catInfo.icon]("w-3.5 h-3.5 text-forest") : ""}
+        <span>${escapeHtml(report.category)}</span>
       </span>
-      <span class="inline-flex items-center gap-1 text-xs text-terracotta bg-terracotta/10 px-3 py-1 rounded-lg border border-terracotta/20 font-semibold">
-        📍 ${escapeHtml(report.location)}
+      <span class="inline-flex items-center gap-1.5 text-slate-700 bg-sand-l/80 px-3 py-1 rounded-lg border border-sand">
+        ${ICONS.mapPin("w-3.5 h-3.5 text-forest")}
+        <span>${escapeHtml(report.location)}</span>
       </span>
-      <span class="inline-flex items-center gap-1 text-xs text-gray-600 bg-sand/40 px-3 py-1 rounded-lg border border-sand font-semibold">
-        📅 ${formatDateLong(report.timestamp)}
+      <span class="inline-flex items-center gap-1.5 text-slate-500 bg-sand-l/80 px-3 py-1 rounded-lg border border-sand font-mono text-[11px]">
+        ${ICONS.calendar("w-3.5 h-3.5 text-slate-400")}
+        <span>${formatDateLong(report.timestamp)}</span>
       </span>
     </div>
 
     <div class="bg-ivory rounded-2xl p-4 mb-4 border border-sand">
-      <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Description &amp; Contact Info</h4>
+      <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Description &amp; Details</h4>
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
 
-    <!-- LLM AI Priority Assessment & Reasoning Dossier -->
-    <div class="bg-gradient-to-br from-forest/5 via-ivory to-amber-50/60 rounded-2xl p-4 mb-4 border border-forest/25 text-xs shadow-2xs">
+    <!-- Priority Assessment Panel (Refined Pro HUD) -->
+    <div class="bg-gradient-to-br from-forest/5 via-ivory to-amber-50/40 rounded-2xl p-4 mb-4 border border-forest/20 text-xs shadow-2xs">
       <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-1.5 font-black text-gray-900">
-          <span class="text-base">🤖</span>
-          <span class="uppercase tracking-wide text-forest font-black">LLM Autonomous Priority Assessment</span>
+        <div class="flex items-center gap-1.5 font-bold text-gray-900">
+          ${ICONS.sparkles("w-4 h-4 text-forest")}
+          <span class="uppercase tracking-wide text-forest font-bold text-xs">Priority Assessment</span>
         </div>
         <span class="text-[10px] font-mono text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">
           ${escapeHtml(report.llmModel || "Gemini-2.5-Campus-Reasoner")}
@@ -1593,18 +1710,18 @@ function showDetail(id, isProcessingMode = false) {
       </div>
 
       <div class="flex items-center justify-between mb-2 pb-2 border-b border-sand/80">
-        <span class="font-bold text-gray-700">Urgency Risk Rating:</span>
+        <span class="font-semibold text-gray-700">Urgency Risk Rating:</span>
         <div class="flex items-center gap-1.5">
-          <span class="font-mono font-black ${report.priority === 3 ? 'text-red-700' : report.priority === 2 ? 'text-amber-700' : 'text-stone-700'}">
+          <span class="font-mono font-bold ${report.priority === 3 ? 'text-rose-700' : report.priority === 2 ? 'text-amber-700' : 'text-slate-700'}">
             ${report.llmScore || (report.priority === 3 ? 96 : report.priority === 2 ? 68 : 28)} / 100
           </span>
-          <span class="text-[10px] text-gray-400">(${prioInfo.name} Heap Tier)</span>
+          <span class="text-[10px] text-slate-500 font-mono">(${prioInfo.name} Tier)</span>
         </div>
       </div>
 
       <div class="mb-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">LLM Chain-of-Thought Rationale:</p>
-        <p class="text-xs text-gray-700 leading-relaxed bg-white/90 p-3 rounded-xl border border-sand italic">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Assessment Rationale:</p>
+        <p class="text-xs text-slate-700 leading-relaxed bg-white/90 p-3 rounded-xl border border-sand italic">
           "${escapeHtml(report.llmReasoning || prioInfo.desc)}"
         </p>
       </div>
@@ -1613,14 +1730,15 @@ function showDetail(id, isProcessingMode = false) {
         report.llmFactors && report.llmFactors.length > 0
           ? `
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Identified Risk Factors:</p>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Evaluated Factors:</p>
         <div class="flex flex-wrap gap-1">
           ${report.llmFactors
             .map(
               (f) =>
-                `<span class="text-[10px] font-semibold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-sand">✓ ${escapeHtml(
-                  f
-                )}</span>`
+                `<span class="text-[10px] font-medium text-slate-700 bg-white px-2 py-0.5 rounded-md border border-sand flex items-center gap-1">
+                  ${ICONS.check("w-3 h-3 text-forest")}
+                  <span>${escapeHtml(f)}</span>
+                </span>`
             )
             .join("")}
         </div>
@@ -1633,43 +1751,53 @@ function showDetail(id, isProcessingMode = false) {
       adminMode
         ? `
     <!-- Admin Priority Assignment Panel -->
-    <div class="bg-white rounded-2xl p-4 mb-5 border-2 border-forest/30 shadow-xs">
+    <div class="bg-white rounded-2xl p-4 mb-5 border border-forest/30 shadow-xs">
       <div class="flex items-center justify-between mb-2">
-        <h4 class="text-xs font-black uppercase text-forest tracking-wide flex items-center gap-1.5">
-          <span>🛡️ Admin Controls: Adjust Priority</span>
+        <h4 class="text-xs font-bold uppercase text-forest tracking-wide flex items-center gap-1.5">
+          ${ICONS.shield("w-4 h-4 text-forest")}
+          <span>Admin Controls: Adjust Priority</span>
         </h4>
-        <span class="text-[10px] font-mono text-gray-400">Binary Heap Rebalance</span>
+        <span class="font-mono text-[10px] text-slate-400">Heap Rebalance O(log n)</span>
       </div>
-      <p class="text-[11px] text-gray-600 mb-3">
+      <p class="text-[11px] text-slate-600 mb-3">
         Assign urgency to reposition this report in the Priority Queue (bubble-up/down in O(log n)).
       </p>
       <div class="grid grid-cols-3 gap-2">
         <button onclick="setReportPriority('${report.id}', 3); showDetail('${report.id}', ${isProcessingMode});"
-          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+          class="py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
             report.priority === 3
-              ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-400 shadow-sm'
-              : 'border-sand hover:border-red-400 hover:bg-red-50 text-gray-700'
+              ? 'bg-rose-600 text-white border-rose-700 shadow-xs'
+              : 'border-sand hover:border-rose-400 hover:bg-rose-50 text-slate-700'
           }">
-          <span>🚨 Urgent</span>
-          <span class="text-[9px] opacity-80">P-Score: 3</span>
+          <span class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full ${report.priority === 3 ? 'bg-white' : 'bg-rose-500'}"></span>
+            <span>Urgent</span>
+          </span>
+          <span class="font-mono text-[9px] opacity-80">P-Score: 3</span>
         </button>
         <button onclick="setReportPriority('${report.id}', 2); showDetail('${report.id}', ${isProcessingMode});"
-          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+          class="py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
             report.priority === 2
-              ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 shadow-sm'
-              : 'border-sand hover:border-amber-400 hover:bg-amber-50 text-gray-700'
+              ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+              : 'border-sand hover:border-amber-400 hover:bg-amber-50 text-slate-700'
           }">
-          <span>⚡ Medium</span>
-          <span class="text-[9px] opacity-80">P-Score: 2</span>
+          <span class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full ${report.priority === 2 ? 'bg-white' : 'bg-amber-500'}"></span>
+            <span>Medium</span>
+          </span>
+          <span class="font-mono text-[9px] opacity-80">P-Score: 2</span>
         </button>
         <button onclick="setReportPriority('${report.id}', 1); showDetail('${report.id}', ${isProcessingMode});"
-          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+          class="py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
             report.priority === 1
-              ? 'bg-stone-600 text-white border-stone-700 ring-2 ring-stone-400 shadow-sm'
-              : 'border-sand hover:border-stone-400 hover:bg-stone-100 text-gray-700'
+              ? 'bg-slate-700 text-white border-slate-800 shadow-xs'
+              : 'border-sand hover:border-slate-400 hover:bg-slate-100 text-slate-700'
           }">
-          <span>🟢 Low</span>
-          <span class="text-[9px] opacity-80">P-Score: 1</span>
+          <span class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full ${report.priority === 1 ? 'bg-white' : 'bg-slate-500'}"></span>
+            <span>Low</span>
+          </span>
+          <span class="font-mono text-[9px] opacity-80">P-Score: 1</span>
         </button>
       </div>
     </div>
@@ -1684,12 +1812,7 @@ function showDetail(id, isProcessingMode = false) {
     </div>
     </div>
   `;
-
-  const modal = document.getElementById("detail-modal");
-  modal.classList.remove("hidden");
-  modal.classList.add("flex");
 }
-
 function closeDetailModal() {
   const modal = document.getElementById("detail-modal");
   modal.classList.add("hidden");
@@ -1818,34 +1941,50 @@ function renderMatches() {
     .map((m, i) => {
       const lostCat = getCategoryInfo(m.lost.category);
       const foundCat = getCategoryInfo(m.found.category);
+      const lostSvg = ICONS[lostCat.icon] ? ICONS[lostCat.icon]("w-4 h-4 text-rose-600") : "";
+      const foundSvg = ICONS[foundCat.icon] ? ICONS[foundCat.icon]("w-4 h-4 text-forest") : "";
+
       return `
-    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-sand rounded-3xl p-5 shadow-sm">
+    <div class="bg-gradient-to-r from-sand-l/80 to-amber-50/50 border border-sand rounded-3xl p-5 shadow-xs">
       <div class="flex items-center gap-2.5 mb-4">
-        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-terracotta text-white text-xs font-black shadow-xs">${i + 1}</span>
-        <h4 class="font-extrabold text-terracotta text-base">Match Found: Category + Location Overlap!</h4>
+        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-forest text-white text-xs font-bold shadow-xs">${i + 1}</span>
+        <h4 class="font-bold text-gray-900 text-base">Potential Match Detected: Category + Spot Overlap</h4>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="bg-white/90 rounded-2xl p-4 border border-red-200 shadow-xs">
+        <div class="bg-white/95 rounded-2xl p-4 border border-rose-200 shadow-xs">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl">${lostCat.emoji}</span>
-            <span class="text-[10px] font-black text-white bg-red-600 px-2.5 py-0.5 rounded-full">🔴 LOST</span>
+            ${lostSvg}
+            <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              Lost Item
+            </span>
             <span class="font-mono text-[10px] text-gray-400 ml-auto">${escapeHtml(m.lost.id)}</span>
           </div>
-          <p class="font-extrabold text-gray-900">${escapeHtml(m.lost.title)}</p>
-          <p class="text-xs text-gray-500 mt-1">📍 ${escapeHtml(m.lost.location)} · 📅 ${formatDate(m.lost.timestamp)}</p>
+          <p class="font-bold text-gray-900">${escapeHtml(m.lost.title)}</p>
+          <div class="flex items-center gap-3 text-xs text-slate-500 mt-2">
+            <span class="flex items-center gap-1">${ICONS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(m.lost.location)}</span>
+            <span class="flex items-center gap-1 font-mono text-[11px]">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.lost.timestamp)}</span>
+          </div>
         </div>
-        <div class="bg-white/90 rounded-2xl p-4 border border-forest/30 shadow-xs">
+        <div class="bg-white/95 rounded-2xl p-4 border border-forest/30 shadow-xs">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl">${foundCat.emoji}</span>
-            <span class="text-[10px] font-black text-white bg-forest px-2.5 py-0.5 rounded-full">🟢 FOUND</span>
+            ${foundSvg}
+            <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-forest bg-forest/10 px-2 py-0.5 rounded-full border border-forest/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
+              Found Item
+            </span>
             <span class="font-mono text-[10px] text-gray-400 ml-auto">${escapeHtml(m.found.id)}</span>
           </div>
-          <p class="font-extrabold text-gray-900">${escapeHtml(m.found.title)}</p>
-          <p class="text-xs text-gray-500 mt-1">📍 ${escapeHtml(m.found.location)} · 📅 ${formatDate(m.found.timestamp)}</p>
+          <p class="font-bold text-gray-900">${escapeHtml(m.found.title)}</p>
+          <div class="flex items-center gap-3 text-xs text-slate-500 mt-2">
+            <span class="flex items-center gap-1">${ICONS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(m.found.location)}</span>
+            <span class="flex items-center gap-1 font-mono text-[11px]">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.found.timestamp)}</span>
+          </div>
         </div>
       </div>
-      <p class="text-xs text-forest mt-3 font-bold flex items-center gap-1.5">
-        <span>🔗</span> Both indexed in <strong>${escapeHtml(m.found.category)}</strong> at <strong>${escapeHtml(m.found.location)}</strong>
+      <p class="text-xs text-forest mt-3 font-medium flex items-center gap-1.5">
+        ${ICONS.link("w-3.5 h-3.5 text-forest")}
+        <span>Both indexed in <strong>${escapeHtml(m.found.category)}</strong> at <strong>${escapeHtml(m.found.location)}</strong></span>
       </p>
     </div>`;
     })
@@ -2435,8 +2574,8 @@ function updateLLMPriorityPreview() {
 
   if (!titleVal && !descVal) {
     if (tierBadge) {
-      tierBadge.className = "inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs";
-      tierBadge.innerHTML = "🟢 LOW PRIORITY (Level 1)";
+      tierBadge.className = "inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200";
+      tierBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> <span>Low Priority (Level 1)</span>`;
     }
     if (scoreBadge) {
       scoreBadge.textContent = "Urgency Risk: 20/100";
@@ -2466,8 +2605,8 @@ function updateLLMPriorityPreview() {
   const pInfo = getPriorityInfo(aiAssessment.priority);
 
   if (tierBadge) {
-    tierBadge.className = `inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${pInfo.badgeBg}`;
-    tierBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} PRIORITY (Level ${pInfo.level})</span>`;
+    tierBadge.className = `inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full shadow-xs ${pInfo.badgeBg}`;
+    tierBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${pInfo.dotClass}"></span> <span>${pInfo.label} PRIORITY (Level ${pInfo.level})</span>`;
   }
 
   if (scoreBadge) {
@@ -2687,8 +2826,24 @@ document.addEventListener("DOMContentLoaded", () => {
       closeAuthModal();
       closeMarkFoundConfirmModal();
       closeRemoveReportConfirmModal();
+      closeProfileDropdown();
     }
   });
+
+  // Close profile dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    const menuBtn = document.getElementById("btn-profile-menu");
+    const dropdown = document.getElementById("profile-dropdown");
+    if (menuBtn && dropdown && !menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add("hidden");
+    }
+  });
+
+  // Initialize Bento Live Polynomial Hash Sandbox
+  initBentoHashDemo();
+
+  // Initialize Navbar Role & Profile State
+  updateNavRoleUI();
 });
 
 // Explicit global exports for inline event handlers and console access
@@ -2725,3 +2880,8 @@ window.populatePostItemLocationSelect = populatePostItemLocationSelect;
 window.updateLLMPriorityPreview = updateLLMPriorityPreview;
 window.evaluatePriorityWithLLM = evaluatePriorityWithLLM;
 window.getActivePriorityQueue = () => (typeof activePriorityQueue !== "undefined" ? activePriorityQueue : null);
+window.toggleProfileDropdown = toggleProfileDropdown;
+window.closeProfileDropdown = closeProfileDropdown;
+window.setDemoRole = setDemoRole;
+window.updateNavRoleUI = updateNavRoleUI;
+window.initBentoHashDemo = initBentoHashDemo;

@@ -99,14 +99,9 @@ body {
   z-index: 2;
 }
 
-/* Atmospheric Dust Canvas (All Over Explore Page) */
-#explore-dust-canvas {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 25;
+/* Spotlight Backdrop for 3D Item Showcase Stage */
+.spotlight-backdrop {
+  background: radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.98) 0%, rgba(246, 243, 237, 0.70) 58%, rgba(234, 227, 215, 0.50) 100%);
 }
 
 /* 3D Showcase Models: Interactive Layering & Non-Conflicting Pointer Space */
