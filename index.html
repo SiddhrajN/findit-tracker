@@ -112,13 +112,15 @@
               <span>SYSTEM ONLINE · 15 FR.CRCE CAMPUS NODES INDEXED</span>
             </div>
 
-            <!-- Editorial Mixed-Typography Headline -->
-            <h2 class="text-4xl sm:text-5xl lg:text-[62px] font-black text-gray-900 leading-[1.05] tracking-tight mb-5">
-              Lost Something<br/>
-              <span class="editorial-serif text-4xl sm:text-5xl lg:text-[60px]">on Campus?</span><br/>
-              <span style="color: #1B4332;">Reunited in</span>
-              <span class="editorial-serif" style="color: #8C6239;">O(1)</span>
-              <span style="color: #1B4332;">Time.</span>
+            <!-- Editorial Mixed-Typography Headline (Ample line-height avoids vertical overlap) -->
+            <h2 class="text-4xl sm:text-5xl lg:text-[58px] font-black text-gray-900 leading-[1.18] sm:leading-[1.15] lg:leading-[1.12] tracking-tight mb-5">
+              <span class="block">Lost Something</span>
+              <span class="block editorial-serif text-4xl sm:text-5xl lg:text-[60px] my-0.5">on Campus?</span>
+              <span class="block">
+                <span style="color: #1B4332;">Reunited in</span>
+                <span class="editorial-serif inline-block mx-1" style="color: #8C6239;">O(1)</span>
+                <span style="color: #1B4332;">Time.</span>
+              </span>
             </h2>
             <p class="text-base text-slate-600 leading-relaxed mb-7 max-w-lg">
               An autonomous recovery engine engineered for Fr. CRCE. Powered by browser-native <strong class="text-forest font-semibold">Polynomial Hash Tables</strong>, <strong class="text-terracotta font-semibold">Max-Heap Priority Queues</strong>, and <strong class="font-semibold text-gray-800">BFS Graph Routing</strong> across 9 campus floors.
@@ -161,8 +163,8 @@
             <!-- 3D Student ID Card -->
             <div id="hero-id-container" class="absolute top-0 left-0 sm:left-1 lg:-left-3 w-[270px] sm:w-[310px] lg:w-[335px] h-[450px] sm:h-[480px] lg:h-[510px] z-20 cursor-grab active:cursor-grabbing"></div>
 
-            <!-- Floating Telemetry Tag: ID Card -->
-            <div class="absolute top-4 right-4 z-30 pointer-events-none">
+            <!-- Floating Telemetry Tag: ID Card (Visible sm+) -->
+            <div class="hidden sm:block absolute top-4 right-4 z-30 pointer-events-none">
               <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-black/[0.08] shadow-md">
                 <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
                 <span class="font-mono text-[10px] font-bold text-gray-700 tracking-wide">HASH KEY: "11091" → BUCKET #07</span>
@@ -172,8 +174,8 @@
             <!-- 3D Leather Wallet -->
             <div id="hero-wallet-container" class="absolute top-28 sm:top-32 lg:top-36 right-0 sm:right-1 lg:-right-3 w-[250px] sm:w-[285px] lg:w-[315px] h-[330px] sm:h-[360px] lg:h-[385px] z-20 cursor-grab active:cursor-grabbing"></div>
 
-            <!-- Floating Telemetry Tag: Wallet -->
-            <div class="absolute bottom-20 left-4 z-30 pointer-events-none">
+            <!-- Floating Telemetry Tag: Wallet (Visible sm+) -->
+            <div class="hidden sm:block absolute bottom-20 left-4 z-30 pointer-events-none">
               <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-black/[0.08] shadow-md">
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                 <span class="font-mono text-[10px] font-bold text-gray-700 tracking-wide">MAX-HEAP ROOT · PRIORITY 3/3</span>
@@ -225,12 +227,12 @@
 
             <!-- Live Interactive Hash Simulator Sandbox -->
             <div class="bg-white/95 rounded-2xl p-5 border border-sand shadow-inner mt-6">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5 shrink-0">
                   <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Live Polynomial Hash Sandbox</span>
                 </span>
-                <span class="hash-formula">Σ(char × 31ⁱ) % 53 &nbsp;·&nbsp; Cap: 53 · Prime: 31</span>
+                <span class="hash-formula font-mono text-[11px] text-slate-500 shrink-0">Σ(char × 31ⁱ) % 53 &nbsp;·&nbsp; Cap: 53 · Prime: 31</span>
               </div>
 
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3.5">
@@ -238,7 +240,7 @@
                   <input id="bento-hash-input" type="text" value="Wallet" placeholder="Type an item (e.g. Wallet, Laptop, Casio)..."
                     class="w-full px-4 py-2.5 text-sm font-semibold border border-sand rounded-xl bg-ivory focus:outline-none focus:ring-2 focus:ring-forest text-gray-900" />
                 </div>
-                <div id="bento-hash-pill" class="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl shadow-xs font-mono text-xs font-bold shrink-0 justify-center">
+                <div id="bento-hash-pill" class="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl shadow-xs font-mono text-xs font-bold shrink-0 justify-center whitespace-nowrap">
                   <span>hash("Wallet") → Bucket #14</span>
                 </div>
               </div>
@@ -397,37 +399,37 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-8 relative z-10">
             <!-- Step 1 -->
-            <div class="flex flex-col items-center text-center relative">
+            <div class="flex flex-col items-center text-center relative px-2">
               <span class="step-watermark">01</span>
-              <div class="w-14 h-14 rounded-full bg-forest text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest/20 mb-5 border-2 border-white ring-4 ring-forest/10">
+              <div class="relative z-10 w-14 h-14 rounded-full bg-forest text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest/20 mb-5 border-2 border-white ring-4 ring-forest/10">
                 1
               </div>
-              <h4 class="text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Post &amp; Auto-Triage</h4>
-              <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Post &amp; Auto-Triage</h4>
+              <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
                 Submit item title and campus location. Gemini Reasoner evaluates credential risk and indexes the report into the Binary Max-Heap in <span class="font-mono text-forest font-semibold">O(log n)</span>.
               </p>
             </div>
 
             <!-- Step 2 -->
-            <div class="flex flex-col items-center text-center relative">
+            <div class="flex flex-col items-center text-center relative px-2">
               <span class="step-watermark">02</span>
-              <div class="w-14 h-14 rounded-full bg-terracotta text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-terracotta/20 mb-5 border-2 border-white ring-4 ring-terracotta/10">
+              <div class="relative z-10 w-14 h-14 rounded-full bg-terracotta text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-terracotta/20 mb-5 border-2 border-white ring-4 ring-terracotta/10">
                 2
               </div>
-              <h4 class="text-base font-semibold text-gray-900 mb-1.5 tracking-tight">O(1) Instant Match</h4>
-              <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">O(1) Instant Match</h4>
+              <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
                 Polynomial Hash Table computes bucket addresses across category and location keywords to surface high-confidence matches in <span class="font-mono text-terracotta font-semibold">O(1)</span>.
               </p>
             </div>
 
             <!-- Step 3 -->
-            <div class="flex flex-col items-center text-center relative">
+            <div class="flex flex-col items-center text-center relative px-2">
               <span class="step-watermark">03</span>
-              <div class="w-14 h-14 rounded-full bg-forest-d text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest-d/20 mb-5 border-2 border-white ring-4 ring-forest/10">
+              <div class="relative z-10 w-14 h-14 rounded-full bg-forest-d text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest-d/20 mb-5 border-2 border-white ring-4 ring-forest/10">
                 3
               </div>
-              <h4 class="text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Verified Handover</h4>
-              <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Verified Handover</h4>
+              <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
                 Claimants submit private proof in FIFO order. Reviewers execute handover with full <span class="font-mono text-gray-700 font-semibold">LIFO</span> stack rollback capability.
               </p>
             </div>

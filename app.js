@@ -1376,17 +1376,14 @@ function renderReports(items) {
 
         <!-- Edge-to-edge Item Preview Header with Subtle Radial Spotlight Backdrop -->
         <div class="preserve-3d-space h-42 w-full spotlight-backdrop bg-gradient-to-b ${catInfo.gradient} relative overflow-hidden flex items-center justify-center border-b border-black/[0.05]">
-          <!-- Single Merged Status Dot Pill (Top-Left) -->
-          <div class="absolute top-3 left-3 z-30">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-gray-800 shadow-2xs">
-              <span class="w-2 h-2 rounded-full ${prioInfo.dotClass}"></span>
-              <span>${isLost ? "Lost" : "Found"} · ${prioInfo.name} Priority</span>
+          <!-- Single flex row prevents any overlapping between status pill and category pill -->
+          <div class="absolute top-3 left-3 right-3 z-30 flex items-center justify-between gap-1.5 pointer-events-none">
+            <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-gray-800 shadow-2xs min-w-0 truncate">
+              <span class="w-2 h-2 rounded-full ${prioInfo.dotClass} shrink-0"></span>
+              <span class="truncate">${isLost ? "Lost" : "Found"} · ${prioInfo.name}</span>
             </span>
-          </div>
 
-          <!-- Category Pill with Crisp Vector SVG (Top-Right) -->
-          <div class="absolute top-3 right-3 z-30">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-slate-700 shadow-2xs">
+            <span class="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-black/[0.06] text-slate-700 shadow-2xs shrink-0">
               ${catSvg}
               <span>${escapeHtml(r.category)}</span>
             </span>
@@ -1966,12 +1963,14 @@ function renderMatches() {
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-forest text-white text-xs font-bold shadow-xs">${i + 1}</span>
         <h4 class="font-bold text-gray-900 text-base">Potential Match Detected: Category + Spot Overlap</h4>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
-        <!-- Match Bridge Badge (Desktop Overlap Connector) -->
-        <div class="match-bridge-badge hidden sm:flex items-center gap-1.5 pointer-events-none">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+      <!-- Match Bridge Header Connector (Cleanly positioned above columns, zero text overlap) -->
+      <div class="flex items-center justify-center mb-3">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-amber-300 shadow-xs font-mono text-xs font-bold text-amber-900">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
           <span>94% Match · Category &amp; Spot Correlated</span>
         </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
         <div class="bg-white/95 rounded-2xl p-4 border border-rose-200 shadow-xs">
           <div class="flex items-center gap-2 mb-2">
             ${lostSvg}
