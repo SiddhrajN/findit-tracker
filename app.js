@@ -1447,7 +1447,7 @@ function renderReports(items) {
                   </button>
                   <button onclick="event.stopPropagation(); showDetail('${r.id}')"
                     class="py-2 px-3.5 text-xs font-semibold rounded-xl bg-sand-l text-gray-700 hover:bg-sand border border-sand hover:border-sand-d transition-all flex items-center justify-center gap-1 cursor-pointer">
-                    <span>Details</span>
+                    <span>View Details</span>
                   </button>`
                 : `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
                     class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
@@ -1821,7 +1821,14 @@ function showDetail(id, isProcessingMode = false) {
     </div>
     </div>
   `;
+
+  const modal = document.getElementById("detail-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
 }
+
 function closeDetailModal() {
   const modal = document.getElementById("detail-modal");
   modal.classList.add("hidden");
