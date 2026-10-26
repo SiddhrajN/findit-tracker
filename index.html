@@ -277,6 +277,14 @@
               <span>Post Item</span>
             </button>
 
+            <!-- Admin Mode Toggle Switch -->
+            <button id="btn-admin-toggle" onclick="toggleAdminMode()"
+              class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-all bg-forest/10 border-forest/30 text-forest hover:bg-forest hover:text-white shadow-xs"
+              title="Toggle Administrator Priority Management Mode">
+              <span>🛡️</span>
+              <span id="admin-toggle-label">Admin: Active</span>
+            </button>
+
             <!-- User Badge -->
             <div class="flex items-center gap-2 pl-2 border-l border-sand">
               <div id="user-avatar"
@@ -351,7 +359,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
       <!-- Filters & Stats Row -->
       <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
           <!-- Type Filter -->
           <div class="relative">
             <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm">🎒</span>
@@ -379,12 +387,41 @@
             </select>
             <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
+
+          <!-- Priority Filter -->
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm">🚨</span>
+            <select id="filter-priority"
+              class="pl-9 pr-9 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-full focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-sm hover:shadow transition-all text-gray-700">
+              <option value="All">All Priorities</option>
+              <option value="3">🚨 Urgent Only (P3)</option>
+              <option value="2">⚡ Medium Only (P2)</option>
+              <option value="1">🟢 Low Only (P1)</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+
+          <!-- Sorting Mode -->
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm">⚡</span>
+            <select id="filter-sort"
+              class="pl-9 pr-9 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-full focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-sm hover:shadow transition-all text-gray-700">
+              <option value="priority">Priority Queue (Highest First)</option>
+              <option value="newest">Chronological (Newest First)</option>
+              <option value="oldest">Chronological (Oldest First)</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
         </div>
 
         <!-- Quick Stats -->
-        <div class="flex items-center gap-3 text-xs font-semibold">
+        <div class="flex items-center gap-2.5 text-xs font-semibold flex-wrap">
+          <span class="flex items-center gap-1.5 text-red-800 bg-red-100/80 px-3 py-1.5 rounded-full border border-red-200 shadow-xs">
+            <span class="w-2 h-2 bg-red-600 rounded-full animate-ping"></span>
+            <span id="stat-urgent">0</span> Urgent
+          </span>
           <span class="flex items-center gap-1.5 text-red-700 bg-red-100/60 px-3 py-1.5 rounded-full border border-red-200 shadow-xs">
-            <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+            <span class="w-2 h-2 bg-red-500 rounded-full"></span>
             <span id="stat-lost">0</span> Lost
           </span>
           <span class="flex items-center gap-1.5 text-forest bg-forest/10 px-3 py-1.5 rounded-full border border-forest/20 shadow-xs">
@@ -438,6 +475,81 @@
 
       <!-- Tab 1: All Reports Grid (3D Perspective Canvas) -->
       <div id="tab-panel-reports" class="perspective-canvas">
+
+        <!-- Priority Queue Processing & Binary Heap Inspector Console -->
+        <div id="pq-console-banner" class="mb-7 visionos-panel rounded-3xl p-5 border border-forest/20 shadow-md">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <!-- Heap Status & Top Item -->
+            <div class="flex items-start sm:items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-500 to-amber-500 text-white flex items-center justify-center text-2xl shadow-md shrink-0">
+                ⚡
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-black uppercase tracking-wider text-forest">Binary Max-Heap Priority Queue</span>
+                  <span class="text-[10px] font-bold bg-forest/10 text-forest px-2.5 py-0.5 rounded-full border border-forest/20">
+                    Heap Size: <span id="pq-heap-count">0</span>
+                  </span>
+                  <span id="pq-urgent-badge" class="text-[10px] font-extrabold bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">
+                    🚨 <span id="pq-urgent-count">0</span> Urgent Reports
+                  </span>
+                </div>
+                <div class="mt-1 flex items-center gap-2 flex-wrap">
+                  <span class="text-xs text-gray-500 font-semibold">Heap Root (Next in Line):</span>
+                  <span id="pq-top-title" class="text-sm font-extrabold text-gray-900">—</span>
+                  <span id="pq-top-badge" class="hidden text-[10px] font-black px-2 py-0.5 rounded-full"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Priority Action Controls -->
+            <div class="flex items-center gap-2.5 w-full lg:w-auto">
+              <button onclick="processHighestPriorityReport()"
+                class="flex-1 lg:flex-none visionos-btn text-white text-xs font-extrabold px-5 py-3 rounded-2xl shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-2 transform hover:scale-[1.02]">
+                <span>⚡ Process Highest-Priority Report</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              </button>
+              <button onclick="toggleHeapInspector()" id="btn-toggle-heap"
+                class="border-2 border-sand-d hover:border-forest/50 hover:bg-forest/5 text-gray-700 text-xs font-bold px-4 py-3 rounded-2xl transition-all flex items-center gap-1.5 shadow-2xs">
+                <span>🌳 Binary Heap Inspector</span>
+                <svg id="heap-chevron" class="w-4 h-4 transition-transform text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Collapsible Binary Heap Interactive Inspector -->
+          <div id="heap-inspector-panel" class="hidden mt-5 pt-5 border-t border-sand/80">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
+                  <span>🌳 Binary Max-Heap Memory &amp; Tree Visualizer</span>
+                  <span class="text-[10px] font-mono text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">O(log n) Heapify</span>
+                </h4>
+                <p class="text-xs text-gray-600 mt-0.5">
+                  Complete Binary Tree where Parent Index: <code class="font-mono text-forest font-bold">floor((i - 1) / 2)</code> | Left Child: <code class="font-mono text-forest font-bold">2i + 1</code> | Right Child: <code class="font-mono text-forest font-bold">2i + 2</code>
+                </p>
+              </div>
+              <div class="flex items-center gap-2 text-[11px] font-bold">
+                <span class="inline-flex items-center gap-1 text-red-700 bg-red-100 px-2 py-0.5 rounded">🚨 Urgent (3)</span>
+                <span class="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-0.5 rounded">⚡ Medium (2)</span>
+                <span class="inline-flex items-center gap-1 text-stone-700 bg-stone-200 px-2 py-0.5 rounded">🟢 Low (1)</span>
+              </div>
+            </div>
+
+            <!-- Heap Array Strip -->
+            <div class="mb-4">
+              <p class="text-[11px] font-extrabold text-gray-700 uppercase tracking-wider mb-2">1. Array Representation in Memory (Root at [0]):</p>
+              <div id="heap-array-view" class="flex flex-wrap gap-2 overflow-x-auto pb-1"></div>
+            </div>
+
+            <!-- Heap Tree Hierarchy -->
+            <div>
+              <p class="text-[11px] font-extrabold text-gray-700 uppercase tracking-wider mb-2">2. Logical Complete Binary Tree Hierarchy:</p>
+              <div id="heap-tree-view" class="bg-white/90 rounded-2xl p-4 border border-sand overflow-x-auto shadow-inner"></div>
+            </div>
+          </div>
+        </div>
+
         <div id="reports-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7"></div>
       </div>
 
@@ -725,7 +837,7 @@
 
         <div>
           <label for="input-title" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Item Title</label>
-          <input id="input-title" name="title" type="text" required placeholder="e.g. Student ID Card, Casio Calculator, Wallet"
+          <input id="input-title" name="title" type="text" required placeholder="e.g. iPhone 14, Dell Laptop, Student ID Card, Bike Keys, Wallet"
             class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory" />
         </div>
 
@@ -743,10 +855,56 @@
             </select>
           </div>
           <div>
-            <label for="input-location" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Campus Spot</label>
-            <input id="input-location" name="location" type="text" required placeholder="e.g. Library 2nd Floor, Canteen"
-              class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory" />
+            <div class="flex items-center justify-between mb-1">
+              <label for="input-location" class="block text-xs font-bold text-gray-700 uppercase tracking-wide">Campus Spot</label>
+              <span id="input-location-floor-badge" class="text-[10px] font-mono font-bold text-forest bg-forest/15 px-2 py-0.5 rounded">
+                FRCRCE Floor Map
+              </span>
+            </div>
+            <select id="input-location" name="location" required
+              class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory cursor-pointer font-medium">
+              <!-- Dynamically populated from CampusGraph based on floormaps.vercel.app -->
+            </select>
+            <p class="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
+              <span>📍</span> Directly mapped to campus graph vertex for BFS proximity search &amp; route navigation.
+            </p>
           </div>
+        </div>
+
+        <!-- Automated LLM Priority Engine (User does not manually pick priority) -->
+        <div class="rounded-2xl border border-forest/25 bg-gradient-to-br from-forest/5 via-ivory to-amber-50/50 p-4 shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base">🤖</span>
+              <span class="text-xs font-black text-gray-800 uppercase tracking-wide">LLM Priority Reasoning System</span>
+            </div>
+            <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-forest bg-forest/15 px-2 py-0.5 rounded-full border border-forest/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
+              Auto-Evaluated by AI
+            </span>
+          </div>
+
+          <!-- Dynamic LLM Assessment Display -->
+          <div id="llm-preview-box" class="bg-white/90 rounded-xl p-3 border border-sand shadow-2xs">
+            <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+              <div class="flex items-center gap-2">
+                <span id="llm-tier-badge" class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs">
+                  🟢 LOW PRIORITY (Level 1)
+                </span>
+                <span id="llm-score-badge" class="text-[10px] font-mono text-gray-500 font-bold">Urgency Score: 20/100</span>
+              </div>
+              <span id="llm-model-badge" class="text-[9px] font-mono text-forest font-semibold bg-forest/10 px-2 py-0.5 rounded">Gemini-Campus-Reasoner</span>
+            </div>
+            <p id="llm-reasoning-text" class="text-xs text-gray-700 leading-relaxed italic">
+              "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically."
+            </p>
+            <div id="llm-factors-list" class="flex flex-wrap gap-1.5 mt-2"></div>
+          </div>
+          <p class="text-[10px] text-gray-500 mt-2 flex items-center gap-1 font-medium">
+            <span>🔒</span>
+            <span>Priorities are strictly assigned by the LLM system to eliminate user bias and preserve campus queue integrity.</span>
+          </p>
+          <input type="hidden" id="input-assigned-priority" name="priority" value="1" />
         </div>
 
         <div>

@@ -756,6 +756,9 @@ function executeHandover() {
 
   // 1. Remove item from Active Reports Linked List
   activeReportsList.removeById(claim.itemId);
+  if (typeof activePriorityQueue !== "undefined" && activePriorityQueue) {
+    activePriorityQueue.removeById(claim.itemId);
+  }
 
   const handoverTimestamp = new Date().toISOString();
 
@@ -1384,6 +1387,9 @@ function executeUndo(action) {
     delete restoredReport.recoveredAt;
     delete restoredReport.recoveredViaClaim;
     activeReportsList.insertAtHead(restoredReport);
+    if (typeof activePriorityQueue !== "undefined" && activePriorityQueue) {
+      activePriorityQueue.insert(restoredReport, restoredReport.priority || 1);
+    }
 
     // Re-index into categoryHashTable
     categoryHashTable.insert(restoredReport.category, restoredReport);
@@ -1440,6 +1446,9 @@ function executeUndo(action) {
     restoredReport.status = "Active";
     delete restoredReport.recoveredAt;
     activeReportsList.insertAtHead(restoredReport);
+    if (typeof activePriorityQueue !== "undefined" && activePriorityQueue) {
+      activePriorityQueue.insert(restoredReport, restoredReport.priority || 1);
+    }
 
     categoryHashTable.insert(restoredReport.category, restoredReport);
     restoredReport.title.toLowerCase().split(/\s+/).forEach((w) => {

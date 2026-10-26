@@ -32,6 +32,7 @@ typedef struct {
     char status[16];         /* "Active" or "Recovered"         */
     char timestamp[32];      /* Date/time string                */
     char recoveredAt[32];    /* When recovered (empty if active)*/
+    int  priority;           /* 3 = Urgent, 2 = Medium, 1 = Low */
 } Report;
 
 /* ==========================================================
@@ -294,14 +295,700 @@ void freeHashTable(HashTable *ht) {
 
 
 /* ==========================================================
- *  3.  HELPER — Create a Report struct
+ *  3.  PRIORITY QUEUE (Binary Max-Heap)
+ *      - Root stored at index 0 (highest priority report)
+ *      - Parent index for node i: (i - 1) / 2
+ *      - Left child index:  2 * i + 1
+ *      - Right child index: 2 * i + 2
+ *      - Insertion: O(log n) via Bubble-Up
+ *      - Extract-Max: O(log n) via Bubble-Down
+ *      - Change-Priority: O(n + log n)
+ * ========================================================== */
+
+typedef struct {
+    int    priority;    /* 3 = Urgent, 2 = Medium, 1 = Low */
+    int    insertOrder; /* Tie-breaker for stable FIFO */
+    Report report;
+} HeapNode;
+
+typedef struct {
+    HeapNode data[MAX_REPORTS];
+    int      size;
+    int      orderCounter;
+} PriorityQueue;
+
+PriorityQueue* createPriorityQueue(void) {
+    PriorityQueue *pq = (PriorityQueue *)malloc(sizeof(PriorityQueue));
+    if (!pq) { perror("malloc"); exit(EXIT_FAILURE); }
+    pq->size = 0;
+    pq->orderCounter = 0;
+    return pq;
+}
+
+/* Compare two heap nodes: returns > 0 if a has higher priority than b */
+int pqCompare(HeapNode a, HeapNode b) {
+    if (a.priority != b.priority) {
+        return a.priority - b.priority;
+    }
+    /* FIFO tie-breaker: smaller insertOrder was reported first */
+    return b.insertOrder - a.insertOrder;
+}
+
+void pqSwap(HeapNode *a, HeapNode *b) {
+    HeapNode tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+/* Bubble up from index towards root — O(log n) */
+void pqBubbleUp(PriorityQueue *pq, int index) {
+    while (index > 0) {
+        int parent = (index - 1) / 2;
+        if (pqCompare(pq->data[index], pq->data[parent]) > 0) {
+            pqSwap(&pq->data[index], &pq->data[parent]);
+            index = parent;
+        } else {
+            break;
+        }
+    }
+}
+
+/* Bubble down from index towards leaves — O(log n) */
+void pqBubbleDown(PriorityQueue *pq, int index) {
+    while (2 * index + 1 < pq->size) {
+        int largest = index;
+        int left = 2 * index + 1;
+        int right = 2 * index + 2;
+
+        if (left < pq->size && pqCompare(pq->data[left], pq->data[largest]) > 0) {
+            largest = left;
+        }
+        if (right < pq->size && pqCompare(pq->data[right], pq->data[largest]) > 0) {
+            largest = right;
+        }
+
+        if (largest != index) {
+            pqSwap(&pq->data[index], &pq->data[largest]);
+            index = largest;
+        } else {
+            break;
+        }
+    }
+}
+
+/* Insert report into Priority Queue — O(log n) */
+void pqInsert(PriorityQueue *pq, Report report, int priority) {
+    if (pq->size >= MAX_REPORTS) {
+        printf("  [!] Priority Queue is full!\n");
+        return;
+    }
+    report.priority = priority;
+    HeapNode node;
+    node.priority = priority;
+    node.insertOrder = pq->orderCounter++;
+    node.report = report;
+
+    pq->data[pq->size] = node;
+    pqBubbleUp(pq, pq->size);
+    pq->size++;
+}
+
+/* Extract and remove highest priority report (Root) — O(log n) */
+int pqExtractMax(PriorityQueue *pq, Report *extracted) {
+    if (pq->size == 0) return 0;
+    if (extracted) *extracted = pq->data[0].report;
+
+    pq->data[0] = pq->data[pq->size - 1];
+    pq->size--;
+    if (pq->size > 0) {
+        pqBubbleDown(pq, 0);
+    }
+    return 1;
+}
+
+/* Peek highest priority report without removing — O(1) */
+int pqPeek(PriorityQueue *pq, Report *peeked) {
+    if (pq->size == 0) return 0;
+    if (peeked) *peeked = pq->data[0].report;
+    return 1;
+}
+
+/* Change priority of a report by ID — O(n + log n) */
+int pqChangePriority(PriorityQueue *pq, const char *id, int newPriority) {
+    int idx = -1;
+    for (int i = 0; i < pq->size; i++) {
+        if (strcmp(pq->data[i].report.id, id) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1) return 0;
+
+    int oldPriority = pq->data[idx].priority;
+    pq->data[idx].priority = newPriority;
+    pq->data[idx].report.priority = newPriority;
+
+    if (newPriority > oldPriority) {
+        pqBubbleUp(pq, idx);
+    } else if (newPriority < oldPriority) {
+        pqBubbleDown(pq, idx);
+    }
+    return 1;
+}
+
+/* Remove a report by ID — O(n + log n) */
+int pqRemoveById(PriorityQueue *pq, const char *id, Report *removed) {
+    int idx = -1;
+    for (int i = 0; i < pq->size; i++) {
+        if (strcmp(pq->data[i].report.id, id) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1) return 0;
+
+    if (removed) *removed = pq->data[idx].report;
+    pq->data[idx] = pq->data[pq->size - 1];
+    pq->size--;
+    if (idx < pq->size) {
+        pqBubbleUp(pq, idx);
+        pqBubbleDown(pq, idx);
+    }
+    return 1;
+}
+
+const char* priorityLabel(int p) {
+    switch (p) {
+        case 3: return "URGENT";
+        case 2: return "MEDIUM";
+        case 1: return "LOW";
+        default: return "NORMAL";
+    }
+}
+
+/* Display heap array representation and tree parent-child links */
+void displayPriorityQueueHeap(PriorityQueue *pq) {
+    printf("\n  Priority Queue Max-Heap (size: %d):\n", pq->size);
+    printf("  ----------------------------------------------------------------------\n");
+    printf("  [Index]  Priority  Report ID    Title                         Parent\n");
+    printf("  ----------------------------------------------------------------------\n");
+    for (int i = 0; i < pq->size; i++) {
+        int parent = (i > 0) ? (i - 1) / 2 : -1;
+        char parentStr[16];
+        if (parent >= 0) {
+            snprintf(parentStr, sizeof(parentStr), "[%d]", parent);
+        } else {
+            strcpy(parentStr, "ROOT");
+        }
+        printf("  [%2d]     %-7s   %-10s   %-28s  %s\n",
+               i, priorityLabel(pq->data[i].priority),
+               pq->data[i].report.id, pq->data[i].report.title, parentStr);
+    }
+    printf("  ----------------------------------------------------------------------\n");
+}
+
+/* Display reports sorted by Priority Queue (Heap Sort demonstration) */
+void displayPrioritySortedReports(PriorityQueue *pq) {
+    /* Copy heap to temporary priority queue to avoid destroying active heap */
+    PriorityQueue temp = *pq;
+    printf("\n  REPORTS RANKED BY PRIORITY (Heap-Sort Extraction):\n");
+    printf("  ----------------------------------------------------------------------\n");
+    printf("  Rank  Priority  Type   ID         Title                         Location\n");
+    printf("  ----------------------------------------------------------------------\n");
+    int rank = 1;
+    Report r;
+    while (pqExtractMax(&temp, &r)) {
+        printf("  #%-3d  %-7s   %-5s  %-9s  %-28s  %s\n",
+               rank++, priorityLabel(r.priority), r.type, r.id, r.title, r.location);
+    }
+    printf("  ----------------------------------------------------------------------\n");
+}
+
+void freePriorityQueue(PriorityQueue *pq) {
+    free(pq);
+}
+
+
+/* ==========================================================
+ *  4.  CAMPUS GRAPH & LOCATION NAVIGATOR (Person 2)
+ *      - Graph represented using an Adjacency List
+ *      - BFS to find shortest path with fewest edges
+ *      - DFS to explore connected campus locations
+ * ========================================================== */
+
+#define MAX_CAMPUS_LOCATIONS 60
+
+typedef struct AdjNode {
+    int destIndex;
+    struct AdjNode *next;
+} AdjNode;
+
+typedef struct {
+    char name[64];
+    char floor[32];
+    AdjNode *head;
+} CampusVertex;
+
+typedef struct {
+    CampusVertex vertices[MAX_CAMPUS_LOCATIONS];
+    int numVertices;
+} CampusGraph;
+
+CampusGraph* createCampusGraph(void) {
+    CampusGraph *g = (CampusGraph *)malloc(sizeof(CampusGraph));
+    if (!g) { perror("malloc"); exit(EXIT_FAILURE); }
+    g->numVertices = 0;
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) {
+        g->vertices[i].head = NULL;
+        g->vertices[i].name[0] = '\0';
+        g->vertices[i].floor[0] = '\0';
+    }
+    return g;
+}
+
+int findVertexIndex(CampusGraph *g, const char *name) {
+    if (!name || strlen(name) == 0) return -1;
+    for (int i = 0; i < g->numVertices; i++) {
+        if (strcasecmp(g->vertices[i].name, name) == 0 ||
+            strstr(g->vertices[i].name, name) != NULL) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int addCampusLocation(CampusGraph *g, const char *name, const char *floor) {
+    int existing = findVertexIndex(g, name);
+    if (existing != -1) return existing;
+
+    if (g->numVertices >= MAX_CAMPUS_LOCATIONS) {
+        printf("  [!] Campus graph is full!\n");
+        return -1;
+    }
+
+    int idx = g->numVertices++;
+    strncpy(g->vertices[idx].name, name, sizeof(g->vertices[idx].name) - 1);
+    g->vertices[idx].name[sizeof(g->vertices[idx].name) - 1] = '\0';
+    strncpy(g->vertices[idx].floor, floor, sizeof(g->vertices[idx].floor) - 1);
+    g->vertices[idx].floor[sizeof(g->vertices[idx].floor) - 1] = '\0';
+    g->vertices[idx].head = NULL;
+    return idx;
+}
+
+void addCampusEdge(CampusGraph *g, const char *srcName, const char *destName) {
+    int u = findVertexIndex(g, srcName);
+    int v = findVertexIndex(g, destName);
+    if (u == -1 || v == -1) return;
+
+    /* Add v to u's list */
+    AdjNode *n1 = (AdjNode *)malloc(sizeof(AdjNode));
+    if (!n1) { perror("malloc"); exit(EXIT_FAILURE); }
+    n1->destIndex = v;
+    n1->next = g->vertices[u].head;
+    g->vertices[u].head = n1;
+
+    /* Add u to v's list (Undirected graph) */
+    AdjNode *n2 = (AdjNode *)malloc(sizeof(AdjNode));
+    if (!n2) { perror("malloc"); exit(EXIT_FAILURE); }
+    n2->destIndex = u;
+    n2->next = g->vertices[v].head;
+    g->vertices[v].head = n2;
+}
+
+/* Depth-Limited BFS: Discover nearby locations within maxHops edges (Person 2) */
+void bfsNearbyLocations(CampusGraph *g, const char *startName, int maxHops) {
+    int start = findVertexIndex(g, startName);
+    if (start == -1) {
+        printf("\n  [!] Starting location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+
+    int queue[MAX_CAMPUS_LOCATIONS];
+    int depth[MAX_CAMPUS_LOCATIONS];
+    int parent[MAX_CAMPUS_LOCATIONS];
+    int front = 0, rear = 0;
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) {
+        depth[i] = -1;
+        parent[i] = -1;
+    }
+
+    queue[rear] = start;
+    depth[rear] = 0;
+    visited[start] = 1;
+    rear++;
+
+    int discovered[MAX_CAMPUS_LOCATIONS];
+    int discHops[MAX_CAMPUS_LOCATIONS];
+    int discCount = 0;
+
+    while (front < rear) {
+        int u = queue[front];
+        int d = depth[front];
+        front++;
+
+        discovered[discCount] = u;
+        discHops[discCount] = d;
+        discCount++;
+
+        if (d < maxHops) {
+            AdjNode *curr = g->vertices[u].head;
+            while (curr) {
+                int v = curr->destIndex;
+                if (!visited[v]) {
+                    visited[v] = 1;
+                    parent[v] = u;
+                    queue[rear] = v;
+                    depth[rear] = d + 1;
+                    rear++;
+                }
+                curr = curr->next;
+            }
+        }
+    }
+
+    printf("\n  ==============================================================\n");
+    printf("    DEPTH-LIMITED BFS: NEARBY CAMPUS DISCOVERY (Person 2)\n");
+    printf("  ==============================================================\n");
+    printf("    Selected Spot:     %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Depth Limit:       %d graph edge(s)\n", maxHops);
+    printf("    Locations Reached: %d rooms & corridors within radius\n", discCount);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Discovered Connected Campus Nodes:\n");
+
+    for (int i = 0; i < discCount; i++) {
+        int u = discovered[i];
+        int h = discHops[i];
+        const char *distLabel = (h == 0) ? "Same Room (0 edges)" :
+                                (h == 1) ? "1 Edge Away (Direct connector)" :
+                                           "2 Edges Away (Adjacent wing)";
+
+        printf("    [%d hops] %-30s (%-12s) - %s\n",
+               h, g->vertices[u].name, g->vertices[u].floor, distLabel);
+    }
+    printf("  ==============================================================\n");
+}
+
+/* Breadth-First Search: Shortest path with fewest edges in unweighted graph */
+void bfsShortestRoute(CampusGraph *g, const char *startName, const char *destName) {
+    int start = findVertexIndex(g, startName);
+    int dest = findVertexIndex(g, destName);
+
+    if (start == -1) {
+        printf("\n  [!] Starting location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+    if (dest == -1) {
+        printf("\n  [!] Destination location \"%s\" not found in campus graph.\n", destName);
+        return;
+    }
+
+    int queue[MAX_CAMPUS_LOCATIONS];
+    int front = 0, rear = 0;
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+    int parent[MAX_CAMPUS_LOCATIONS];
+    for (int i = 0; i < MAX_CAMPUS_LOCATIONS; i++) parent[i] = -1;
+
+    int visitedOrder[MAX_CAMPUS_LOCATIONS];
+    int visitedCount = 0;
+
+    queue[rear++] = start;
+    visited[start] = 1;
+
+    int found = 0;
+
+    while (front < rear) {
+        int u = queue[front++];
+        visitedOrder[visitedCount++] = u;
+
+        if (u == dest) {
+            found = 1;
+            break;
+        }
+
+        AdjNode *curr = g->vertices[u].head;
+        while (curr) {
+            int v = curr->destIndex;
+            if (!visited[v]) {
+                visited[v] = 1;
+                parent[v] = u;
+                queue[rear++] = v;
+            }
+            curr = curr->next;
+        }
+    }
+
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS SHORTEST ROUTE (BFS — Fewest Edges in Unweighted Graph)\n");
+    printf("  ==============================================================\n");
+    printf("    Origin:       %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Destination:  %s (%s)\n", g->vertices[dest].name, g->vertices[dest].floor);
+
+    if (!found) {
+        printf("    [!] No path found between \"%s\" and \"%s\".\n", startName, destName);
+        printf("  ==============================================================\n");
+        return;
+    }
+
+    /* Reconstruct path */
+    int path[MAX_CAMPUS_LOCATIONS];
+    int pathLen = 0;
+    int currNode = dest;
+    while (currNode != -1) {
+        path[pathLen++] = currNode;
+        currNode = parent[currNode];
+    }
+
+    printf("    Total Hops:   %d edges (Fewest edges route)\n", pathLen - 1);
+    printf("    Exploration:  %d nodes inspected by queue before finding target\n", visitedCount);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Step-by-Step Campus Corridor & Stair Instructions:\n");
+
+    for (int i = pathLen - 1; i >= 0; i--) {
+        int nodeIdx = path[i];
+        int step = (pathLen - 1 - i) + 1;
+        const char *tag = (i == pathLen - 1) ? "[START]" : (i == 0) ? "[ARRIVED]" : "[CORRIDOR]";
+        printf("    Step %d: %-10s %-32s (%s)\n",
+               step, tag, g->vertices[nodeIdx].name, g->vertices[nodeIdx].floor);
+    }
+
+    printf("  ==============================================================\n");
+}
+
+/* Depth-First Search exploration */
+void dfsExploreHelper(CampusGraph *g, int u, int visited[], int visitedOrder[], int *count) {
+    visited[u] = 1;
+    visitedOrder[(*count)++] = u;
+
+    AdjNode *curr = g->vertices[u].head;
+    while (curr) {
+        int v = curr->destIndex;
+        if (!visited[v]) {
+            dfsExploreHelper(g, v, visited, visitedOrder, count);
+        }
+        curr = curr->next;
+    }
+}
+
+void dfsExplore(CampusGraph *g, const char *startName) {
+    int start = findVertexIndex(g, startName);
+    if (start == -1) {
+        printf("\n  [!] Location \"%s\" not found in campus graph.\n", startName);
+        return;
+    }
+
+    int visited[MAX_CAMPUS_LOCATIONS] = {0};
+    int visitedOrder[MAX_CAMPUS_LOCATIONS];
+    int count = 0;
+
+    dfsExploreHelper(g, start, visited, visitedOrder, &count);
+
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS DEPTH-FIRST EXPLORATION (DFS Traversal & Discovery Tree)\n");
+    printf("  ==============================================================\n");
+    printf("    Starting Location: %s (%s)\n", g->vertices[start].name, g->vertices[start].floor);
+    printf("    Reachable Nodes:   %d / %d campus locations connected\n", count, g->numVertices);
+    printf("  --------------------------------------------------------------\n");
+    printf("    Preorder Depth-First Exploration Sequence:\n");
+
+    for (int i = 0; i < count; i++) {
+        int u = visitedOrder[i];
+        printf("    [%2d] %-30s (%s)\n", i + 1, g->vertices[u].name, g->vertices[u].floor);
+    }
+    printf("  ==============================================================\n");
+}
+
+/* Display formal syllabus Adjacency List */
+void displayAdjacencyList(CampusGraph *g) {
+    printf("\n  ==============================================================\n");
+    printf("    CAMPUS GRAPH ADJACENCY LIST REPRESENTATION: G = (V, E)\n");
+    printf("  ==============================================================\n");
+    printf("    Total Vertices: %d locations\n", g->numVertices);
+    printf("  --------------------------------------------------------------\n");
+
+    for (int i = 0; i < g->numVertices; i++) {
+        printf("  [%2d] %-28s (%-12s) -> ", i, g->vertices[i].name, g->vertices[i].floor);
+        AdjNode *curr = g->vertices[i].head;
+        if (!curr) {
+            printf("NULL\n");
+            continue;
+        }
+        while (curr) {
+            printf("[%s]", g->vertices[curr->destIndex].name);
+            if (curr->next) printf(" -> ");
+            curr = curr->next;
+        }
+        printf(" -> NULL\n");
+    }
+    printf("  ==============================================================\n");
+}
+
+/* Free graph memory */
+void freeCampusGraph(CampusGraph *g) {
+    if (!g) return;
+    for (int i = 0; i < g->numVertices; i++) {
+        AdjNode *curr = g->vertices[i].head;
+        while (curr) {
+            AdjNode *tmp = curr;
+            curr = curr->next;
+            free(tmp);
+        }
+    }
+    free(g);
+}
+
+/* Populate FRCRCE college campus graph matching floormaps.vercel.app */
+CampusGraph* buildCollegeCampusGraph(void) {
+    CampusGraph *g = createCampusGraph();
+
+    /* Ground Floor */
+    addCampusLocation(g, "Gate 1 / Main Entrance", "Ground Floor");
+    addCampusLocation(g, "Parking Lot B", "Ground Floor");
+    addCampusLocation(g, "Campus Quadrangle", "Ground Floor");
+
+    addCampusEdge(g, "Gate 1 / Main Entrance", "Parking Lot B");
+    addCampusEdge(g, "Gate 1 / Main Entrance", "Campus Quadrangle");
+    addCampusEdge(g, "Parking Lot B", "Campus Quadrangle");
+
+    /* Floor 1 */
+    addCampusLocation(g, "Open Canteen", "Floor 1");
+    addCampusLocation(g, "Closed Canteen", "Floor 1");
+    addCampusLocation(g, "Central Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "East Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "West Stairs (Floor 1)", "Floor 1");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 1)", "Floor 1");
+    addCampusLocation(g, "Physics Lab", "Floor 1");
+    addCampusLocation(g, "Chemistry Lab", "Floor 1");
+    addCampusLocation(g, "Principal Cabin", "Floor 1");
+    addCampusLocation(g, "Exam Cell", "Floor 1");
+    addCampusLocation(g, "Fr. Diniz Hall", "Floor 1");
+
+    addCampusEdge(g, "Campus Quadrangle", "Central Stairs (Floor 1)");
+    addCampusEdge(g, "Campus Quadrangle", "Open Canteen");
+    addCampusEdge(g, "Open Canteen", "Closed Canteen");
+    addCampusEdge(g, "Open Canteen", "Central Stairs (Floor 1)");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "Principal Cabin");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "East Stairs (Floor 1)");
+    addCampusEdge(g, "Central Stairs (Floor 1)", "West Stairs (Floor 1)");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Lifts N1/N2 (Floor 1)");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Exam Cell");
+    addCampusEdge(g, "East Stairs (Floor 1)", "Fr. Diniz Hall");
+    addCampusEdge(g, "West Stairs (Floor 1)", "Physics Lab");
+    addCampusEdge(g, "West Stairs (Floor 1)", "Chemistry Lab");
+
+    /* Floor 2 */
+    addCampusLocation(g, "Library 2nd Floor", "Floor 2");
+    addCampusLocation(g, "Central Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "East Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "West Stairs (Floor 2)", "Floor 2");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 2)", "Floor 2");
+
+    addCampusEdge(g, "Library 2nd Floor", "Central Stairs (Floor 2)");
+    addCampusEdge(g, "Library 2nd Floor", "East Stairs (Floor 2)");
+    addCampusEdge(g, "Library 2nd Floor", "Lifts N1/N2 (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "West Stairs (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "East Stairs (Floor 2)");
+
+    /* Floor 3 (Labs & Classrooms) */
+    addCampusLocation(g, "Lab 301", "Floor 3");
+    addCampusLocation(g, "Lab 302", "Floor 3");
+    addCampusLocation(g, "Classroom 303", "Floor 3");
+    addCampusLocation(g, "Lab 304", "Floor 3");
+    addCampusLocation(g, "Classroom 305", "Floor 3");
+    addCampusLocation(g, "Classroom 306", "Floor 3");
+    addCampusLocation(g, "Classroom 307", "Floor 3");
+    addCampusLocation(g, "STUCO Room", "Floor 3");
+    addCampusLocation(g, "Incubation Cell", "Floor 3");
+    addCampusLocation(g, "Classroom 309", "Floor 3");
+    addCampusLocation(g, "Classroom 310", "Floor 3");
+    addCampusLocation(g, "Classroom 311", "Floor 3");
+    addCampusLocation(g, "Classroom 312", "Floor 3");
+    addCampusLocation(g, "HVAC Lab 313", "Floor 3");
+    addCampusLocation(g, "Central Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "East Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "West Stairs (Floor 3)", "Floor 3");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 3)", "Floor 3");
+
+    addCampusEdge(g, "West Stairs (Floor 3)", "Lab 301");
+    addCampusEdge(g, "West Stairs (Floor 3)", "Lab 302");
+    addCampusEdge(g, "Lab 302", "Classroom 303");
+    addCampusEdge(g, "Classroom 303", "Lab 304");
+    addCampusEdge(g, "Lab 304", "Central Stairs (Floor 3)");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Classroom 305");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Classroom 306");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "STUCO Room");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Incubation Cell");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "East Stairs (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Lifts N1/N2 (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Classroom 307");
+    addCampusEdge(g, "East Stairs (Floor 3)", "Classroom 309");
+    addCampusEdge(g, "Classroom 309", "Classroom 310");
+    addCampusEdge(g, "Classroom 310", "Classroom 311");
+    addCampusEdge(g, "Classroom 311", "Classroom 312");
+    addCampusEdge(g, "Classroom 312", "HVAC Lab 313");
+
+    /* Floor 4 */
+    addCampusLocation(g, "CAD Lab (Floor 4)", "Floor 4");
+    addCampusLocation(g, "I.E. Lab (Floor 4)", "Floor 4");
+    addCampusLocation(g, "Classroom 401", "Floor 4");
+    addCampusLocation(g, "Central Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "East Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "West Stairs (Floor 4)", "Floor 4");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 4)", "Floor 4");
+
+    addCampusEdge(g, "Central Stairs (Floor 4)", "CAD Lab (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "I.E. Lab (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "Classroom 401");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "East Stairs (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "West Stairs (Floor 4)");
+    addCampusEdge(g, "East Stairs (Floor 4)", "Lifts N1/N2 (Floor 4)");
+
+    /* Floor 9 */
+    addCampusLocation(g, "Auditorium (Samvad Hall)", "Floor 9");
+    addCampusLocation(g, "Activity Room", "Floor 9");
+    addCampusLocation(g, "Central Stairs (Floor 9)", "Floor 9");
+    addCampusLocation(g, "West Stairs (Floor 9)", "Floor 9");
+    addCampusLocation(g, "Lifts N1/N2 (Floor 9)", "Floor 9");
+
+    addCampusEdge(g, "Auditorium (Samvad Hall)", "Central Stairs (Floor 9)");
+    addCampusEdge(g, "Auditorium (Samvad Hall)", "West Stairs (Floor 9)");
+    addCampusEdge(g, "Central Stairs (Floor 9)", "Activity Room");
+    addCampusEdge(g, "Central Stairs (Floor 9)", "Lifts N1/N2 (Floor 9)");
+
+    /* Vertical Stairs & Elevators */
+    addCampusEdge(g, "Central Stairs (Floor 1)", "Central Stairs (Floor 2)");
+    addCampusEdge(g, "Central Stairs (Floor 2)", "Central Stairs (Floor 3)");
+    addCampusEdge(g, "Central Stairs (Floor 3)", "Central Stairs (Floor 4)");
+    addCampusEdge(g, "Central Stairs (Floor 4)", "Central Stairs (Floor 9)");
+
+    addCampusEdge(g, "West Stairs (Floor 1)", "West Stairs (Floor 2)");
+    addCampusEdge(g, "West Stairs (Floor 2)", "West Stairs (Floor 3)");
+    addCampusEdge(g, "West Stairs (Floor 3)", "West Stairs (Floor 4)");
+    addCampusEdge(g, "West Stairs (Floor 4)", "West Stairs (Floor 9)");
+
+    addCampusEdge(g, "East Stairs (Floor 1)", "East Stairs (Floor 2)");
+    addCampusEdge(g, "East Stairs (Floor 2)", "East Stairs (Floor 3)");
+    addCampusEdge(g, "East Stairs (Floor 3)", "East Stairs (Floor 4)");
+
+    addCampusEdge(g, "Lifts N1/N2 (Floor 1)", "Lifts N1/N2 (Floor 2)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 2)", "Lifts N1/N2 (Floor 3)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 3)", "Lifts N1/N2 (Floor 4)");
+    addCampusEdge(g, "Lifts N1/N2 (Floor 4)", "Lifts N1/N2 (Floor 9)");
+
+    return g;
+}
+
+
+/* ==========================================================
+ *  4.  HELPER — Create a Report struct
  * ========================================================== */
 
 int reportCounter = 1000;
 
 Report createReport(const char *type, const char *title,
                     const char *category, const char *location,
-                    const char *description) {
+                    const char *description, int priority) {
     Report r;
     reportCounter++;
     snprintf(r.id, sizeof(r.id), "REP-%d", reportCounter);
@@ -310,6 +997,7 @@ Report createReport(const char *type, const char *title,
     strncpy(r.category,    category,    sizeof(r.category) - 1);
     strncpy(r.location,    location,    sizeof(r.location) - 1);
     strncpy(r.description, description, sizeof(r.description) - 1);
+    r.priority = (priority >= 1 && priority <= 3) ? priority : 1;
     strcpy(r.status, "Active");
     r.recoveredAt[0] = '\0';
 
@@ -396,22 +1084,147 @@ void printMenu(void) {
     printf("\n");
     printSeparator();
     printf("  FindIt: Campus Lost-and-Found Tracker\n");
-    printf("  Data Structures: Linked List + Hash Table\n");
+    printf("  Data Structures: Linked List + Hash Table + Priority Queue + Graph (BFS/DFS)\n");
     printSeparator();
     printf("  1. Add a Lost Report\n");
     printf("  2. Add a Found Report\n");
-    printf("  3. Search by Keyword / Category\n");
-    printf("  4. View All Active Reports\n");
-    printf("  5. Mark Item as Recovered\n");
-    printf("  6. View Recovery History\n");
-    printf("  7. Find Potential Matches\n");
-    printf("  8. DSA Debug View\n");
-    printf("  9. Exit\n");
+    printf("  3. Search by Keyword / Category (Hash Table O(1))\n");
+    printf("  4. View All Active Reports (Linked List)\n");
+    printf("  5. View Reports Ranked by Priority (Priority Queue / Heap Sort)\n");
+    printf("  6. Process Next Highest-Priority Report (Heap Extract-Max O(log n))\n");
+    printf("  7. Adjust Report Priority (Heap Bubble-Up/Down)\n");
+    printf("  8. Mark Item as Recovered\n");
+    printf("  9. View Recovery History\n");
+    printf("  10. Find Potential Matches\n");
+    printf("  11. DSA Debug View (Heap Array + Tree + Buckets + List)\n");
+    printf("  12. Campus Explorer: Find Items/Rooms Near Location (Depth-Limited BFS)\n");
+    printf("  13. Campus Navigator: Find Shortest Route (BFS — Fewest Edges)\n");
+    printf("  14. Campus Navigator: Explore Reachable Locations (DFS)\n");
+    printf("  15. Campus Navigator: Display Graph Adjacency List\n");
+    printf("  16. Exit\n");
     printSeparator();
     printf("  Enter choice: ");
 }
 
-void addReportInteractive(LinkedList *activeList, HashTable *ht, const char *type) {
+void navigatorNearbyInteractive(CampusGraph *g) {
+    char start[64];
+    int maxHops = 2;
+    printf("\n  --- Campus Explorer: Depth-Limited BFS Proximity Search ---\n");
+    printf("  Enter Selected Location (e.g. Library 2nd Floor, Lab 302, Open Canteen): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    printf("  Enter Search Depth [0 = Room only, 1 = Immediate neighbors, 2 = Expanded wing] (default 2): ");
+    char hopStr[16];
+    if (fgets(hopStr, sizeof(hopStr), stdin) && hopStr[0] != '\n') {
+        maxHops = atoi(hopStr);
+        if (maxHops < 0) maxHops = 0;
+        if (maxHops > 5) maxHops = 5;
+    }
+
+    bfsNearbyLocations(g, start, maxHops);
+}
+
+void navigatorBfsInteractive(CampusGraph *g) {
+    char start[64], dest[64];
+    printf("\n  --- Campus Location Navigator (BFS Shortest Path) ---\n");
+    printf("  Enter Origin / Current Location (e.g. Parking Lot B, Open Canteen, Gate 1): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    printf("  Enter Target Destination (e.g. Lab 302, Library 2nd Floor, Auditorium): ");
+    fgets(dest, sizeof(dest), stdin);
+    dest[strcspn(dest, "\n")] = '\0';
+
+    bfsShortestRoute(g, start, dest);
+}
+
+void navigatorDfsInteractive(CampusGraph *g) {
+    char start[64];
+    printf("\n  --- Campus Location Navigator (DFS Area Exploration) ---\n");
+    printf("  Enter Location to Explore (e.g. STUCO Room, Open Canteen, Gate 1): ");
+    getchar(); /* consume newline */
+    fgets(start, sizeof(start), stdin);
+    start[strcspn(start, "\n")] = '\0';
+
+    dfsExplore(g, start);
+}
+
+int autoAssignPriorityLLM(const char *title, const char *category, const char *desc) {
+    char combined[MAX_STR * 3];
+    char titleLower[MAX_STR];
+    snprintf(combined, sizeof(combined), "%s %s %s", title, category, desc);
+    for (int i = 0; combined[i]; i++) {
+        if (combined[i] >= 'A' && combined[i] <= 'Z') combined[i] += 32;
+    }
+    strncpy(titleLower, title, sizeof(titleLower) - 1);
+    titleLower[sizeof(titleLower) - 1] = '\0';
+    for (int i = 0; titleLower[i]; i++) {
+        if (titleLower[i] >= 'A' && titleLower[i] <= 'Z') titleLower[i] += 32;
+    }
+
+    /* 1. High / Urgent (Priority 3): Phones & Laptops */
+    int isAudio = (strstr(titleLower, "headphone") != NULL ||
+                   strstr(titleLower, "earphone") != NULL ||
+                   strstr(titleLower, "microphone") != NULL);
+    if (!isAudio &&
+        (strstr(titleLower, "phone") || strstr(titleLower, "mobile") ||
+         strstr(titleLower, "iphone") || strstr(titleLower, "android") ||
+         strstr(titleLower, "laptop") || strstr(titleLower, "macbook") ||
+         strstr(titleLower, "dell") || strstr(titleLower, "thinkpad") ||
+         strstr(titleLower, "ipad") || strstr(titleLower, "tablet") ||
+         strstr(combined, "smartphone") || strstr(combined, "macbook"))) {
+        return 3;
+    }
+
+    /* 2. High / Urgent (Priority 3): Wallets, Cash, Keys, Medical */
+    if (strstr(titleLower, "wallet") || strstr(titleLower, "purse") ||
+        strstr(titleLower, "cash") || strstr(titleLower, "money") ||
+        strstr(combined, "key") || strstr(combined, "medicine") ||
+        strstr(combined, "prescription") || strstr(combined, "inhaler")) {
+        return 3;
+    }
+
+    /* 3. Medium (Priority 2): ID Cards (Student ID, College ID, Aadhaar, License) */
+    if (strstr(titleLower, "id") || strstr(titleLower, "card") ||
+        strstr(combined, "student id") || strstr(combined, "college id") ||
+        strstr(combined, "license") || strstr(combined, "passport") ||
+        strstr(combined, "hall ticket") || strstr(combined, "admit")) {
+        return 2;
+    }
+
+    /* Explicit Low Priority utility belongings (overrides generic category) */
+    if (strstr(titleLower, "bottle") || strstr(titleLower, "flask") ||
+        strstr(titleLower, "sipper") || strstr(titleLower, "tumbler") ||
+        strstr(titleLower, "notebook") || strstr(titleLower, "register") ||
+        strstr(titleLower, "notes") || strstr(titleLower, "spiral") ||
+        strstr(titleLower, "pen") || strstr(titleLower, "pencil") ||
+        strstr(titleLower, "stationery") || strstr(titleLower, "folder") ||
+        strstr(titleLower, "umbrella") || strstr(titleLower, "raincoat") ||
+        strstr(titleLower, "jacket") || strstr(titleLower, "hoodie") ||
+        strstr(titleLower, "sweater") || strstr(titleLower, "coat") ||
+        strstr(titleLower, "scarf") || strstr(titleLower, "hat") ||
+        strstr(titleLower, "cap") || strstr(titleLower, "lunch") ||
+        strstr(titleLower, "tiffin") || strstr(titleLower, "box") ||
+        strstr(titleLower, "cable") || strstr(titleLower, "wire") ||
+        strstr(titleLower, "lanyard")) {
+        return 1;
+    }
+
+    /* 4. Medium (Priority 2): Calculators, Audio, Textbooks, Chargers */
+    if (strstr(combined, "calc") || strstr(combined, "airpod") ||
+        strstr(combined, "headphone") || strstr(combined, "textbook") ||
+        strstr(combined, "watch") || strstr(combined, "charger")) {
+        return 2;
+    }
+
+    /* 5. Low (Priority 1): Standard utility items */
+    return 1;
+}
+
+void addReportInteractive(LinkedList *activeList, PriorityQueue *pq, HashTable *ht, const char *type) {
     char title[MAX_STR], category[MAX_STR], location[MAX_STR], desc[256];
 
     printf("\n  --- Add %s Report ---\n", type);
@@ -432,11 +1245,25 @@ void addReportInteractive(LinkedList *activeList, HashTable *ht, const char *typ
     fgets(desc, 256, stdin);
     desc[strcspn(desc, "\n")] = '\0';
 
-    Report r = createReport(type, title, category, location, desc);
+    /* Autonomous LLM Priority Evaluation instead of manual user input */
+    int priority = autoAssignPriorityLLM(title, category, desc);
+    printf("\n  [AI-LLM System] Evaluated Urgency -> Auto-Assigned Priority: %s (Tier %d)\n",
+           priorityLabel(priority), priority);
+    if (priority == 3) {
+        printf("  [AI-LLM Rationale] Critical personal device, financial asset, or security credential. Enqueued to root tier.\n");
+    } else if (priority == 2) {
+        printf("  [AI-LLM Rationale] Academic hardware, campus ID credential, or valuable equipment.\n");
+    } else {
+        printf("  [AI-LLM Rationale] Standard utility belonging with minimal immediate campus disruption.\n");
+    }
+
+    Report r = createReport(type, title, category, location, desc, priority);
     insertAtHead(activeList, r);
+    pqInsert(pq, r, priority);
     indexReport(ht, r);
 
-    printf("\n  [OK] %s report added: %s (%s)\n", type, r.title, r.id);
+    printf("\n  [OK] %s report added: %s (%s) [Priority: %s]\n",
+           type, r.title, r.id, priorityLabel(priority));
 }
 
 void searchInteractive(HashTable *ht) {
@@ -451,15 +1278,80 @@ void searchInteractive(HashTable *ht) {
 
     printf("\n  Search results for \"%s\": %d found\n", query, count);
     for (int i = 0; i < count; i++) {
-        printf("  [%d] %s | %s | %s | %s | %s\n",
+        printf("  [%d] %s | %s | %-7s | %s | %s | %s\n",
                i + 1, results[i].id, results[i].type,
+               priorityLabel(results[i].priority),
                results[i].title, results[i].category, results[i].location);
     }
     if (count == 0)
         printf("  No results found.\n");
 }
 
-void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, HashTable *ht) {
+void processTopPriorityInteractive(LinkedList *activeList, PriorityQueue *pq, LinkedList *recoveryList, HashTable *ht) {
+    Report top;
+    if (!pqExtractMax(pq, &top)) {
+        printf("\n  [!] Priority Queue is empty. No reports to process.\n");
+        return;
+    }
+
+    printf("\n  ======================================================\n");
+    printf("  PROCESSING HIGHEST-PRIORITY REPORT (Heap Extract-Max)\n");
+    printf("  ======================================================\n");
+    printf("  ID:       %s\n", top.id);
+    printf("  Priority: %s (Weight: %d)\n", priorityLabel(top.priority), top.priority);
+    printf("  Type:     %s\n", top.type);
+    printf("  Item:     %s\n", top.title);
+    printf("  Category: %s\n", top.category);
+    printf("  Location: %s\n", top.location);
+    printf("  Details:  %s\n", top.description);
+    printf("  ======================================================\n");
+
+    printf("  Resolve and mark as recovered now? (1 = Yes, 0 = Keep Active): ");
+    int resolve = 0;
+    if (scanf("%d", &resolve) == 1 && resolve == 1) {
+        Report removed;
+        removeById(activeList, top.id, &removed);
+        strcpy(top.status, "Recovered");
+        time_t now = time(NULL);
+        struct tm *t = localtime(&now);
+        strftime(top.recoveredAt, sizeof(top.recoveredAt), "%d/%m/%Y %H:%M", t);
+        insertAtHead(recoveryList, top);
+        hashRemoveById(ht, top.id);
+        printf("  [OK] \"%s\" marked as recovered and moved to history!\n", top.title);
+    } else {
+        /* Re-insert back into heap if admin just wanted to inspect */
+        pqInsert(pq, top, top.priority);
+        printf("  [INFO] Report returned to Priority Queue.\n");
+    }
+}
+
+void adjustPriorityInteractive(LinkedList *activeList, PriorityQueue *pq) {
+    char id[16];
+    int newPriority;
+    printf("\n  Enter Report ID to adjust priority (e.g. REP-1001): ");
+    getchar();
+    fgets(id, 16, stdin);
+    id[strcspn(id, "\n")] = '\0';
+
+    Report *r = findById(activeList, id);
+    if (!r) {
+        printf("  [!] Report %s not found in active list.\n", id);
+        return;
+    }
+
+    printf("  Current Priority: %s (%d)\n", priorityLabel(r->priority), r->priority);
+    printf("  Enter New Priority (3 = Urgent, 2 = Medium, 1 = Low): ");
+    if (scanf("%d", &newPriority) == 1 && newPriority >= 1 && newPriority <= 3) {
+        r->priority = newPriority;
+        pqChangePriority(pq, id, newPriority);
+        printf("  [OK] Priority for %s updated to %s (Binary Heap rebalanced in O(log n))!\n",
+               id, priorityLabel(newPriority));
+    } else {
+        printf("  [!] Invalid priority.\n");
+    }
+}
+
+void markRecoveredInteractive(LinkedList *activeList, PriorityQueue *pq, LinkedList *recoveryList, HashTable *ht) {
     char id[16];
     printf("\n  Enter Report ID to recover (e.g. REP-1001): ");
     getchar();
@@ -474,6 +1366,7 @@ void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, 
         strftime(removed.recoveredAt, sizeof(removed.recoveredAt), "%d/%m/%Y %H:%M", t);
 
         insertAtHead(recoveryList, removed);
+        pqRemoveById(pq, id, NULL);
         hashRemoveById(ht, id);
         printf("\n  [OK] \"%s\" marked as recovered!\n", removed.title);
     } else {
@@ -487,40 +1380,44 @@ void markRecoveredInteractive(LinkedList *activeList, LinkedList *recoveryList, 
  * ========================================================== */
 
 int main(void) {
-    LinkedList *activeList   = createLinkedList();
-    LinkedList *recoveryList = createLinkedList();
-    HashTable  *ht           = createHashTable();
+    LinkedList    *activeList   = createLinkedList();
+    LinkedList    *recoveryList = createLinkedList();
+    HashTable     *ht           = createHashTable();
+    PriorityQueue *pq           = createPriorityQueue();
+    CampusGraph   *campusGraph  = buildCollegeCampusGraph();
 
-    /* --- Seed dummy campus data --- */
+    /* --- Seed dummy campus data with explicit priority ratings --- */
     Report seed[] = {
         createReport("Lost",  "Black Leather Wallet",
                      "ID-Wallet", "Canteen",
-                     "Contains student ID and two credit cards. Roll No: 23CS101"),
+                     "Contains student ID and two credit cards. Roll No: 23CS101", 3),
         createReport("Found", "Casio Scientific Calculator",
                      "Electronics", "Library 2nd Floor",
-                     "Casio fx-991EX on study desk. Turned in at front desk."),
+                     "Casio fx-991EX on study desk. Turned in at front desk.", 2),
         createReport("Lost",  "Blue Spiral Notebook",
                      "Books", "Lab 302",
-                     "100-page notebook, Physics notes, name Ananya S. on cover."),
+                     "100-page notebook, Physics notes, name Ananya S. on cover.", 1),
         createReport("Found", "Honda Bike Key with Red Keychain",
                      "Keys", "Parking Lot B",
-                     "Single Honda key, red silicone keychain. Near bike stand."),
+                     "Single Honda key, red silicone keychain. Near bike stand.", 3),
         createReport("Lost",  "Apple AirPods Pro",
                      "Electronics", "Auditorium",
-                     "White AirPods Pro, black case, initials VS engraved."),
+                     "White AirPods Pro, black case, initials VS engraved.", 2),
         createReport("Found", "Student ID Card",
                      "ID-Wallet", "Canteen",
-                     "ID for Priya M., Dept of CSE, found near counter 3."),
+                     "ID for Priya M., Dept of CSE, found near counter 3.", 2),
     };
 
     int seedCount = sizeof(seed) / sizeof(seed[0]);
     for (int i = 0; i < seedCount; i++) {
         insertAtHead(activeList, seed[i]);
+        pqInsert(pq, seed[i], seed[i].priority);
         indexReport(ht, seed[i]);
     }
 
     printf("\n  *** FindIt: Campus Lost-and-Found Tracker ***\n");
-    printf("  Loaded %d seed reports.\n", seedCount);
+    printf("  Loaded %d seed reports into Linked List, Hash Table, & Binary Heap.\n", seedCount);
+    printf("  Initialized Campus Graph with %d locations from FRCRCE Floor Plans.\n", campusGraph->numVertices);
 
     /* --- Menu loop --- */
     int choice;
@@ -534,10 +1431,10 @@ int main(void) {
 
         switch (choice) {
             case 1:
-                addReportInteractive(activeList, ht, "Lost");
+                addReportInteractive(activeList, pq, ht, "Lost");
                 break;
             case 2:
-                addReportInteractive(activeList, ht, "Found");
+                addReportInteractive(activeList, pq, ht, "Found");
                 break;
             case 3:
                 searchInteractive(ht);
@@ -545,24 +1442,33 @@ int main(void) {
             case 4:
                 printf("\n");
                 printSeparator();
-                printf("  ALL ACTIVE REPORTS\n");
+                printf("  ALL ACTIVE REPORTS (Linked List Chronological Order)\n");
                 printSeparator();
                 {
                     Report arr[MAX_REPORTS];
                     int n = toArray(activeList, arr, MAX_REPORTS);
                     for (int i = 0; i < n; i++) {
-                        printf("  %-8s | %-6s | %-28s | %-12s | %s\n",
-                               arr[i].id, arr[i].type, arr[i].title,
-                               arr[i].category, arr[i].location);
+                        printf("  %-8s | %-5s | %-7s | %-28s | %-12s | %s\n",
+                               arr[i].id, arr[i].type, priorityLabel(arr[i].priority),
+                               arr[i].title, arr[i].category, arr[i].location);
                     }
                     if (n == 0) printf("  (empty)\n");
                 }
                 displayList(activeList, "Active Reports Linked List");
                 break;
             case 5:
-                markRecoveredInteractive(activeList, recoveryList, ht);
+                displayPrioritySortedReports(pq);
                 break;
             case 6:
+                processTopPriorityInteractive(activeList, pq, recoveryList, ht);
+                break;
+            case 7:
+                adjustPriorityInteractive(activeList, pq);
+                break;
+            case 8:
+                markRecoveredInteractive(activeList, pq, recoveryList, ht);
+                break;
+            case 9:
                 printf("\n");
                 printSeparator();
                 printf("  RECOVERY HISTORY\n");
@@ -579,30 +1485,45 @@ int main(void) {
                 }
                 displayList(recoveryList, "Recovery History Linked List");
                 break;
-            case 7:
+            case 10:
                 findAndPrintMatches(activeList);
                 break;
-            case 8:
+            case 11:
                 printf("\n");
                 printSeparator();
-                printf("  DSA DEBUG VIEW\n");
+                printf("  DSA DEBUG VIEW — ALL DATA STRUCTURES\n");
                 printSeparator();
+                displayPriorityQueueHeap(pq);
                 displayList(activeList, "Active Reports Linked List");
                 displayList(recoveryList, "Recovery History Linked List");
                 displayHashTable(ht);
                 break;
-            case 9:
+            case 12:
+                navigatorNearbyInteractive(campusGraph);
+                break;
+            case 13:
+                navigatorBfsInteractive(campusGraph);
+                break;
+            case 14:
+                navigatorDfsInteractive(campusGraph);
+                break;
+            case 15:
+                displayAdjacencyList(campusGraph);
+                break;
+            case 16:
                 printf("\n  Goodbye!\n\n");
                 break;
             default:
                 printf("  Invalid choice. Try again.\n");
         }
-    } while (choice != 9);
+    } while (choice != 16);
 
     /* Cleanup */
     freeLinkedList(activeList);
     freeLinkedList(recoveryList);
     freeHashTable(ht);
+    freePriorityQueue(pq);
+    freeCampusGraph(campusGraph);
 
     return 0;
 }

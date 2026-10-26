@@ -11,9 +11,297 @@ let authMode = "login"; // "login" or "signup"
 
 // ----- Global Data Structures --------------------------------
 let activeReportsList = new LinkedList();
+let activePriorityQueue = new PriorityQueue();
 let recoveryHistoryList = new LinkedList();
 let categoryHashTable = new HashTable();
 let reportCounter = 1000;
+let adminMode = true; // Admin privileges enabled for Campus Lost & Found administrators
+let heapInspectorOpen = false;
+
+// ----- Priority Levels Configuration & Visual Mapping ------
+const PRIORITY_CONFIG = {
+  3: {
+    level: 3,
+    key: "urgent",
+    name: "Urgent",
+    label: "URGENT",
+    icon: "🚨",
+    badgeBg: "bg-red-600 text-white shadow-xs shadow-red-500/30 ring-1 ring-red-400/40",
+    pillBg: "bg-red-50 text-red-700 border border-red-200",
+    borderHighlight: "border-red-400/80 shadow-md shadow-red-500/10",
+    glowDot: "bg-red-500",
+    desc: "Critical items: College IDs, Wallets, Keys, Essential Official Belongings",
+  },
+  2: {
+    level: 2,
+    key: "medium",
+    name: "Medium",
+    label: "MEDIUM",
+    icon: "⚡",
+    badgeBg: "bg-amber-500 text-white shadow-xs shadow-amber-500/20",
+    pillBg: "bg-amber-50 text-amber-800 border border-amber-200",
+    borderHighlight: "border-amber-300",
+    glowDot: "bg-amber-400",
+    desc: "Electronics, Calculators, Audio devices, Textbooks",
+  },
+  1: {
+    level: 1,
+    key: "low",
+    name: "Low",
+    label: "LOW",
+    icon: "🟢",
+    badgeBg: "bg-stone-500 text-white shadow-xs",
+    pillBg: "bg-stone-100 text-stone-700 border border-stone-200",
+    borderHighlight: "border-sand-d",
+    glowDot: "bg-stone-400",
+    desc: "Standard items: Stationery, Umbrellas, Water bottles, Accessories",
+  },
+};
+
+function getPriorityInfo(priority) {
+  const p = Number(priority) || 1;
+  return PRIORITY_CONFIG[p] || PRIORITY_CONFIG[1];
+}
+
+// ============================================================
+//  CAMPUS LLM PRIORITY REASONING ENGINE (AI Assessment System)
+//  Automatically evaluates item sensitivity, credential privilege,
+//  financial exposure, and academic deadline risk to assign
+//  the exact Binary Max-Heap priority tier with full CoT rationale.
+//
+//  Rules:
+//  - Phones & Laptops: HIGH / URGENT Priority (3)
+//  - Keys & Wallets (with cash/cards): HIGH / URGENT Priority (3)
+//  - ID Cards: MEDIUM Priority (2)
+//  - Calculators, Audio, Textbooks: MEDIUM Priority (2)
+//  - Notebooks, Bottles, General items: LOW Priority (1)
+// ============================================================
+function evaluatePriorityWithLLM(item) {
+  const title = (item.title || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  const loc = (item.location || "").toLowerCase();
+  const fullText = `${title} ${desc} ${loc}`.toLowerCase();
+
+  let priority = 1;
+  let score = 25;
+  let reasoning = "";
+  let factors = [];
+  const model = "Gemini-2.5-Campus-Reasoner";
+
+  // Category & Keyword Detectors
+  const isPhoneOrLaptop =
+    !title.includes("headphone") &&
+    !title.includes("earphone") &&
+    !title.includes("microphone") &&
+    (title.includes("phone") ||
+      title.includes("mobile") ||
+      title.includes("iphone") ||
+      title.includes("smartphone") ||
+      title.includes("android") ||
+      title.includes("laptop") ||
+      title.includes("macbook") ||
+      title.includes("notebook computer") ||
+      title.includes("dell") ||
+      title.includes("hp") ||
+      title.includes("lenovo") ||
+      title.includes("thinkpad") ||
+      title.includes("ipad") ||
+      title.includes("tablet") ||
+      desc.includes("smartphone") ||
+      desc.includes("laptop") ||
+      desc.includes("macbook"));
+
+  const isWallet =
+    title.includes("wallet") ||
+    title.includes("purse") ||
+    title.includes("billfold") ||
+    title.includes("cash") ||
+    title.includes("money") ||
+    ((desc.includes("wallet") || desc.includes("purse") || desc.includes("cash")) &&
+      !title.includes("id card") && !title.includes("student id") && !title.includes("college id"));
+
+  const isKey =
+    title.includes("key") ||
+    cat.includes("key") ||
+    fullText.includes("keychain") ||
+    fullText.includes("bike key") ||
+    fullText.includes("scooter key") ||
+    fullText.includes("car key") ||
+    fullText.includes("hostel room key") ||
+    fullText.includes("lab key");
+
+  const isMedical =
+    fullText.includes("medicine") ||
+    fullText.includes("prescription") ||
+    fullText.includes("inhaler") ||
+    fullText.includes("spectacles") ||
+    fullText.includes("glasses") ||
+    fullText.includes("insulin");
+
+  const isIDCard =
+    title.includes("id") ||
+    title.includes("card") ||
+    title.includes("aadhaar") ||
+    title.includes("license") ||
+    title.includes("passport") ||
+    title.includes("hall ticket") ||
+    title.includes("admit") ||
+    fullText.includes("student id") ||
+    fullText.includes("college id") ||
+    fullText.includes("campus id") ||
+    fullText.includes("identity card") ||
+    (cat.includes("id") && !isWallet);
+
+  // Explicit Low Priority Detection: standard utility, stationery, clothing & personal daily accessories
+  const isExplicitLow =
+    title.includes("bottle") ||
+    title.includes("flask") ||
+    title.includes("sipper") ||
+    title.includes("tumbler") ||
+    title.includes("mug") ||
+    title.includes("cup") ||
+    title.includes("notebook") ||
+    title.includes("register") ||
+    title.includes("notes") ||
+    title.includes("spiral") ||
+    title.includes("pen") ||
+    title.includes("pencil") ||
+    title.includes("stationery") ||
+    title.includes("folder") ||
+    title.includes("ruler") ||
+    title.includes("eraser") ||
+    title.includes("paper") ||
+    title.includes("umbrella") ||
+    title.includes("raincoat") ||
+    title.includes("jacket") ||
+    title.includes("hoodie") ||
+    title.includes("sweater") ||
+    title.includes("coat") ||
+    title.includes("scarf") ||
+    title.includes("hat") ||
+    title.includes("cap") ||
+    title.includes("glove") ||
+    title.includes("towel") ||
+    title.includes("lunch") ||
+    title.includes("tiffin") ||
+    title.includes("box") ||
+    title.includes("cable") ||
+    title.includes("wire") ||
+    title.includes("usb") ||
+    title.includes("lanyard") ||
+    title.includes("badge") ||
+    title.includes("tote") ||
+    (title.includes("bag") && !title.includes("laptop") && !desc.includes("laptop")) ||
+    (cat.includes("book") && !fullText.includes("textbook"));
+
+  // ==========================================
+  // Tier 1: URGENT / HIGH PRIORITY (Priority 3)
+  // - Phones & Laptops (High-value digital computing asset)
+  // - Wallets & Cash (Immediate financial exposure)
+  // - Keys (Vehicle mobility & physical security)
+  // - Medical essentials (Personal health risk)
+  // ==========================================
+  if (isPhoneOrLaptop) {
+    priority = 3;
+    score = 96;
+    factors = [
+      "High-Value Digital Computing Asset",
+      "Personal & Coursework Data Exposure",
+      "Primary Communication Line",
+      "Theft Target Vulnerability",
+    ];
+    reasoning = `Classified as primary computing / mobile device (${item.title || "Device"}). High financial asset value combined with acute risk of coursework data loss, personal account exposure, and lost communication capability. Auto-assigned to High/Urgent priority at root of Binary Max-Heap.`;
+  } else if (isWallet) {
+    priority = 3;
+    score = 94;
+    factors = [
+      "Direct Monetary Asset",
+      "Financial Misuse Vulnerability",
+      "Payment Card Compromise",
+    ];
+    reasoning = `Identified wallet or financial instrument (${item.title || "Wallet"}). Substantial risk of unauthorized card transactions and immediate financial loss. Auto-assigned to High/Urgent priority.`;
+  } else if (isKey) {
+    priority = 3;
+    score = 93;
+    factors = [
+      "Physical Security Compromise",
+      "Vehicle Stranded Hazard",
+      "Laboratory / Hostel Access Key",
+    ];
+    reasoning = `Identified high-security physical entry or vehicle access asset (${item.title || "Key"}). Leaves owner stranded and presents immediate security exposure to residential or laboratory premises.`;
+  } else if (isMedical) {
+    priority = 3;
+    score = 97;
+    factors = [
+      "Health & Medical Necessity",
+      "Personal Well-Being Asset",
+      "Immediate Recovery Priority",
+    ];
+    reasoning = `Evaluated as health-critical medical item (${item.title || "Item"}). Rapid retrieval is prioritized to protect student wellness and prevent health complications.`;
+  }
+  // ==========================================
+  // Tier 2: MEDIUM PRIORITY (Priority 2)
+  // - Student ID Cards (Official ID, with administrative reissuance)
+  // - Calculators, AirPods, Headphones, Textbooks, Power Banks, Smartwatches
+  // ==========================================
+  else if (isIDCard) {
+    priority = 2;
+    score = 72;
+    factors = [
+      "Campus Identification Document",
+      "Administrative Reissuance Available",
+      "Library & Gate Access Credential",
+    ];
+    reasoning = `Identified campus identification card (${item.title || "ID Card"}). Essential for campus building access and library check-in; however, temporary passes and administrative reissuance are readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.`;
+  } else if (
+    !isExplicitLow &&
+    (fullText.includes("calc") ||
+      fullText.includes("airpod") ||
+      fullText.includes("headphone") ||
+      fullText.includes("earbud") ||
+      fullText.includes("earphone") ||
+      fullText.includes("headset") ||
+      fullText.includes("speaker") ||
+      fullText.includes("powerbank") ||
+      fullText.includes("power bank") ||
+      fullText.includes("charger") ||
+      fullText.includes("adapter") ||
+      fullText.includes("watch") ||
+      fullText.includes("textbook"))
+  ) {
+    priority = 2;
+    score = 68;
+    factors = [
+      "Academic Tool / Consumer Gadget",
+      "Moderate Replacement Cost",
+      "Lecture Problem-Set Dependency",
+    ];
+    reasoning = `Identified academic computing utility or consumer gadget (${item.title || "Item"}). Involves moderate replacement overhead and ongoing coursework requirements, warranting medium priority tiering.`;
+  }
+  // ==========================================
+  // Tier 3: LOW PRIORITY (Priority 1)
+  // - Standard study notes, stationery, umbrellas, water bottles, generic accessories
+  // ==========================================
+  else {
+    priority = 1;
+    score = 28;
+    factors = [
+      "Standard Utility Belonging",
+      "Non-Sensitive Academic Material",
+      "Minimal Campus Security Impact",
+    ];
+    reasoning = `Analyzed as standard campus utility accessory (${item.title || "Item"}). Poses negligible identity exposure, financial hazard, or academic deadline vulnerability.`;
+  }
+
+  return {
+    priority,
+    score,
+    model,
+    reasoning,
+    factors,
+  };
+}
 
 if (typeof window !== "undefined") {
   window.activeReportsList = activeReportsList;
@@ -66,18 +354,23 @@ function isReviewer(user) {
   );
 }
 
-// ----- Initial Campus Seed Data -----------------------------
+// ----- Initial Campus Seed Data (Pre-Assessed by LLM) -------
 const SEED_DATA = [
   {
     id: "REP-1001",
     type: "Lost",
     title: "Black Leather Wallet",
     category: "ID/Wallet",
-    location: "Canteen",
+    location: "Open Canteen",
     description: "Contains campus student ID card and cash. Contact Roll No: 23CS101 (Siddhraj Nimje).",
     creatorId: "USR-DEMO",
     creatorRoll: "23CS101",
     creatorName: "Siddhraj Nimje",
+    priority: 3, // Urgent
+    llmScore: 96,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Contains official student ID card and monetary cash. Classified as Urgent due to acute financial exposure and campus identity compromise risk.",
+    llmFactors: ["Official Identity Credential", "Financial Misuse Vulnerability", "Biometric Gate Risk"],
     status: "Active",
     timestamp: new Date("2026-10-20T09:15:00").toISOString(),
   },
@@ -91,6 +384,11 @@ const SEED_DATA = [
     creatorId: "USR-REV-01",
     creatorRoll: "FAC-901",
     creatorName: "Dr. Aris Thorne",
+    priority: 2, // Medium
+    llmScore: 68,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Educational electronics tool necessary for engineering lab computations and upcoming quizzes. Medium urgency.",
+    llmFactors: ["Academic Computing Utility", "Moderate Replacement Cost"],
     status: "Active",
     timestamp: new Date("2026-10-20T11:30:00").toISOString(),
   },
@@ -104,6 +402,11 @@ const SEED_DATA = [
     creatorId: "USR-DEMO",
     creatorRoll: "23CS101",
     creatorName: "Siddhraj Nimje",
+    priority: 1, // Low
+    llmScore: 30,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Standard lecture notebook. Low physical security risk; lecture content can be transcribed from peers with minimal disruption.",
+    llmFactors: ["Standard Utility Belonging", "Non-Sensitive Material"],
     status: "Active",
     timestamp: new Date("2026-10-20T14:00:00").toISOString(),
   },
@@ -117,6 +420,11 @@ const SEED_DATA = [
     creatorId: "USR-REV-01",
     creatorRoll: "FAC-901",
     creatorName: "Dr. Aris Thorne",
+    priority: 3, // Urgent
+    llmScore: 94,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Vehicle ignition access key. Immediate vulnerability of motorcycle theft in open parking lot and student mobility obstruction.",
+    llmFactors: ["Vehicle Stranded Hazard", "Theft Vulnerability", "Physical Access Asset"],
     status: "Active",
     timestamp: new Date("2026-10-21T08:00:00").toISOString(),
   },
@@ -125,11 +433,16 @@ const SEED_DATA = [
     type: "Lost",
     title: "Apple AirPods Pro",
     category: "Electronics",
-    location: "Auditorium",
+    location: "Auditorium (Samvad Hall)",
     description: "White AirPods Pro in a matte case. Left on 3rd row right seat.",
     creatorId: "USR-04",
     creatorRoll: "23CS104",
     creatorName: "Rahul Sharma",
+    priority: 2, // Medium
+    llmScore: 74,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "High-value personal audio hardware. High financial replacement cost but zero threat to campus building safety or exam entry.",
+    llmFactors: ["High Monetary Value", "Theft Incentive Risk"],
     status: "Active",
     timestamp: new Date("2026-10-21T10:45:00").toISOString(),
   },
@@ -138,13 +451,48 @@ const SEED_DATA = [
     type: "Found",
     title: "Student ID Card",
     category: "ID/Wallet",
-    location: "Canteen",
+    location: "Open Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
     creatorId: "USR-REV-01",
     creatorRoll: "FAC-901",
     creatorName: "Dr. Aris Thorne",
+    priority: 2, // Medium
+    llmScore: 72,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.",
+    llmFactors: ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"],
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
+  },
+  {
+    id: "REP-1007",
+    type: "Found",
+    title: "HP Laptop Charger (65W USB-C)",
+    category: "Electronics",
+    location: "Central Stairs (Floor 2)",
+    description: "Black HP Type-C fast charger left on the 2nd-floor central stair landing bench near the library entrance.",
+    priority: 3, // Urgent
+    llmScore: 88,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Essential power accessory for engineering laptop computers. Critical for student coding lab evaluations and imminent submissions.",
+    llmFactors: ["Academic Computing Essential", "High Replacement Urgency", "Immediate Academic Risk"],
+    status: "Active",
+    timestamp: new Date("2026-10-21T15:10:00").toISOString(),
+  },
+  {
+    id: "REP-1008",
+    type: "Lost",
+    title: "Black Steel Water Bottle",
+    category: "Accessories",
+    location: "Lab 301",
+    description: "Milton insulated 750ml steel flask with scratch on the cap. Left on lab workbench 4.",
+    priority: 1, // Low
+    llmScore: 22,
+    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmReasoning: "Everyday hydration accessory. Standard utility belonging with zero security or identity compromise risk. Low priority.",
+    llmFactors: ["Everyday Utility Belonging", "Non-Sensitive Material", "Zero Identity Risk"],
+    status: "Active",
+    timestamp: new Date("2026-10-21T16:30:00").toISOString(),
   },
 ];
 
@@ -164,14 +512,54 @@ function loadFromLocalStorage() {
   const recoveredRaw = localStorage.getItem(STORAGE_KEY_RECOVERED);
   const counterRaw = localStorage.getItem(STORAGE_KEY_COUNTER);
 
+  if (!campusGraph && typeof CampusGraph !== "undefined") {
+    campusGraph = CampusGraph.createCampusGraph();
+  }
+
   if (activeRaw) {
-    const activeArr = JSON.parse(activeRaw);
+    let activeArr = JSON.parse(activeRaw);
+    let migrated = false;
+    // Upgrade existing stored records if missing priority, LLM assessment metadata,
+    // or normalize location strings to canonical campus graph vertices from floormaps.vercel.app
+    activeArr = activeArr.map((item) => {
+      if (campusGraph) {
+        const resolved = campusGraph.resolveLocation(item.location);
+        if (resolved && item.location !== resolved) {
+          item.location = resolved;
+          migrated = true;
+        }
+      }
+      if (!item.priority || !item.llmReasoning) {
+        const evalResult = evaluatePriorityWithLLM(item);
+        item.priority = item.priority || evalResult.priority;
+        item.llmScore = item.llmScore || evalResult.score;
+        item.llmModel = item.llmModel || evalResult.model;
+        item.llmReasoning = item.llmReasoning || evalResult.reasoning;
+        item.llmFactors = item.llmFactors || evalResult.factors;
+        migrated = true;
+      } else if (item.id === "REP-1006" && item.priority === 3) {
+        item.priority = 2;
+        item.llmScore = 72;
+        item.llmReasoning = "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.";
+        item.llmFactors = ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"];
+        migrated = true;
+      }
+      return item;
+    });
+
     activeReportsList = LinkedList.fromArray(activeArr);
+    activePriorityQueue = PriorityQueue.fromReports(activeArr);
     categoryHashTable = HashTable.fromReports(activeArr);
     reportCounter = counterRaw ? parseInt(counterRaw, 10) : 1000 + activeArr.length;
+
+    if (migrated) {
+      saveToLocalStorage();
+    }
   } else {
+    activePriorityQueue = new PriorityQueue();
     SEED_DATA.forEach((item) => {
       activeReportsList.insertAtHead(item);
+      activePriorityQueue.insert(item, item.priority || 1);
       categoryHashTable.insert(item.category, item);
       item.title
         .toLowerCase()
@@ -180,7 +568,7 @@ function loadFromLocalStorage() {
           if (w.length > 1) categoryHashTable.insert(w, item);
         });
     });
-    reportCounter = 1006;
+    reportCounter = 1008;
     saveToLocalStorage();
   }
 
@@ -405,20 +793,205 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-// ----- Stats Counter ----------------------------------------
+// ----- Stats Counter & Heap Status ------------------------
 function updateStats() {
   const all = activeReportsList.toArray();
   const lostCount = all.filter((r) => r.type === "Lost").length;
   const foundCount = all.filter((r) => r.type === "Found").length;
   const recoveredCount = recoveryHistoryList.length;
+  const urgentCount = all.filter((r) => r.priority === 3).length;
 
   const statLost = document.getElementById("stat-lost");
   const statFound = document.getElementById("stat-found");
   const statRecovered = document.getElementById("stat-recovered");
+  const statUrgent = document.getElementById("stat-urgent");
 
   if (statLost) statLost.textContent = lostCount;
   if (statFound) statFound.textContent = foundCount;
   if (statRecovered) statRecovered.textContent = recoveredCount;
+  if (statUrgent) statUrgent.textContent = urgentCount;
+
+  // Update Priority Queue Console Desk
+  const pqHeapCount = document.getElementById("pq-heap-count");
+  const pqUrgentCount = document.getElementById("pq-urgent-count");
+  const pqTopTitle = document.getElementById("pq-top-title");
+  const pqTopBadge = document.getElementById("pq-top-badge");
+
+  if (pqHeapCount) pqHeapCount.textContent = activePriorityQueue.size();
+  if (pqUrgentCount) pqUrgentCount.textContent = urgentCount;
+
+  const topReport = activePriorityQueue.peek();
+  if (topReport) {
+    const pInfo = getPriorityInfo(topReport.priority);
+    if (pqTopTitle) pqTopTitle.textContent = `[${topReport.id}] ${topReport.title} — ${topReport.location}`;
+    if (pqTopBadge) {
+      pqTopBadge.className = `inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full ${pInfo.badgeBg}`;
+      pqTopBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} (Level ${pInfo.level})</span>`;
+      pqTopBadge.classList.remove("hidden");
+    }
+  } else {
+    if (pqTopTitle) pqTopTitle.textContent = "Queue Empty (No active reports to process)";
+    if (pqTopBadge) pqTopBadge.classList.add("hidden");
+  }
+
+  if (heapInspectorOpen) {
+    renderHeapInspector();
+  }
+}
+
+// ----- Admin Controls & Priority Queue Actions --------------
+function toggleAdminMode() {
+  adminMode = !adminMode;
+  const btnText = document.getElementById("admin-toggle-label");
+  const btn = document.getElementById("btn-admin-toggle");
+  if (btnText) {
+    btnText.textContent = adminMode ? "Admin: Active" : "Admin: Off";
+  }
+  if (btn) {
+    if (adminMode) {
+      btn.className = "inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-all bg-forest/10 border-forest/30 text-forest hover:bg-forest hover:text-white shadow-xs";
+    } else {
+      btn.className = "inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-all bg-stone-100 border-stone-300 text-stone-500 hover:bg-stone-200 shadow-xs";
+    }
+  }
+  refreshAll();
+  showToast(
+    adminMode
+      ? "🛡️ Admin mode active: priority adjustment and high-priority processing enabled."
+      : "👤 Switched to standard student view (read-only priority tags).",
+    "success"
+  );
+}
+
+function setReportPriority(id, newPriority) {
+  const pVal = Number(newPriority) || 1;
+  // 1. Binary Heap restructure: bubble-up if increased, bubble-down if decreased — O(log n)
+  activePriorityQueue.changePriority(id, pVal);
+
+  // 2. Synchronize report in Linked List
+  const rep = activeReportsList.findById(id);
+  if (rep) {
+    rep.priority = pVal;
+  }
+
+  saveToLocalStorage();
+  refreshAll();
+
+  const pInfo = getPriorityInfo(pVal);
+  showToast(
+    `⭐ ${rep ? rep.title : id} priority set to ${pInfo.name} (${pInfo.icon}) — Binary Heap reorganized in O(log n)`,
+    "success"
+  );
+}
+
+function processHighestPriorityReport() {
+  const top = activePriorityQueue.peek();
+  if (!top) {
+    showToast("⚠️ Priority Queue is empty. No reports to process.", "error");
+    return;
+  }
+  showDetail(top.id, /* isProcessingMode = */ true);
+  const pInfo = getPriorityInfo(top.priority);
+  showToast(
+    `⚡ Processing highest-priority item from Binary Heap: [${top.id}] ${top.title} (${pInfo.name})`,
+    "match"
+  );
+}
+
+function toggleHeapInspector() {
+  heapInspectorOpen = !heapInspectorOpen;
+  const panel = document.getElementById("heap-inspector-panel");
+  const chevron = document.getElementById("heap-chevron");
+  if (!panel) return;
+
+  if (heapInspectorOpen) {
+    panel.classList.remove("hidden");
+    if (chevron) chevron.classList.add("rotate-180");
+    renderHeapInspector();
+  } else {
+    panel.classList.add("hidden");
+    if (chevron) chevron.classList.remove("rotate-180");
+  }
+}
+
+function renderHeapInspector() {
+  const arrayContainer = document.getElementById("heap-array-view");
+  const treeContainer = document.getElementById("heap-tree-view");
+  if (!arrayContainer || !treeContainer) return;
+
+  const snapshot = activePriorityQueue.debugSnapshot();
+  if (snapshot.length === 0) {
+    arrayContainer.innerHTML = `<span class="text-xs text-gray-400 italic">Binary Heap is currently empty.</span>`;
+    treeContainer.innerHTML = `<span class="text-xs text-gray-400 italic">Binary Heap is currently empty.</span>`;
+    return;
+  }
+
+  // 1. Array Memory Representation
+  arrayContainer.innerHTML = snapshot
+    .map((node) => {
+      const pInfo = getPriorityInfo(node.priority);
+      const nodeClass =
+        node.priority === 3
+          ? "heap-node-urgent"
+          : node.priority === 2
+          ? "heap-node-medium"
+          : "heap-node-low";
+
+      return `
+      <div class="flex flex-col items-center">
+        <div class="${nodeClass} rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm">
+          <span class="heap-pill-badge">[${node.index}]</span>
+          <span class="text-xs font-black truncate max-w-[130px]">${escapeHtml(node.title)}</span>
+          <span class="text-[10px] font-black bg-white/20 px-1 rounded">${pInfo.icon} P${node.priority}</span>
+        </div>
+        <span class="text-[9px] text-gray-400 font-mono mt-0.5">${node.id}</span>
+      </div>`;
+    })
+    .join("");
+
+  // 2. Binary Tree Structure (Levels)
+  const levels = [];
+  let levelStart = 0;
+  let levelCount = 1;
+  while (levelStart < snapshot.length) {
+    levels.push(snapshot.slice(levelStart, levelStart + levelCount));
+    levelStart += levelCount;
+    levelCount *= 2;
+  }
+
+  treeContainer.innerHTML = `
+    <div class="space-y-4">
+      ${levels
+        .map((levelNodes, lvlIdx) => {
+          return `
+        <div class="flex flex-col items-center">
+          <div class="text-[10px] font-mono font-bold text-gray-400 mb-1.5">
+            ── Level ${lvlIdx} ${lvlIdx === 0 ? '(Root • Highest Priority)' : ''} ──
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            ${levelNodes
+              .map((node) => {
+                const pInfo = getPriorityInfo(node.priority);
+                const isRoot = node.index === 0;
+                return `
+                <div class="p-3 rounded-2xl bg-white border ${isRoot ? 'border-red-400 ring-2 ring-red-400/40 shadow-md' : 'border-sand'} flex flex-col items-center text-center min-w-[140px] shadow-xs">
+                  <div class="flex items-center gap-1 mb-1">
+                    <span class="text-[10px] font-mono font-bold text-gray-400">[${node.index}]</span>
+                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full ${pInfo.badgeBg}">${pInfo.icon} ${pInfo.label}</span>
+                  </div>
+                  <p class="text-xs font-bold text-gray-800 line-clamp-1">${escapeHtml(node.title)}</p>
+                  <p class="text-[10px] font-mono text-terracotta font-semibold">${node.id}</p>
+                  <div class="mt-1 text-[9px] text-gray-400 font-mono">
+                    ${node.parentIndex !== null ? `Parent: [${node.parentIndex}]` : '<span class="text-forest font-black">HEAP ROOT</span>'}
+                  </div>
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>`;
+        })
+        .join("")}
+    </div>`;
 }
 
 // ============================================================
@@ -636,13 +1209,15 @@ function renderReports(items) {
     .map((r) => {
       const isLost = r.type === "Lost";
       const catInfo = getCategoryInfo(r.category);
-      const badgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
-      const badgeDot = isLost ? "🔴" : "🟢";
-      const badgeLabel = isLost ? "LOST" : "FOUND";
       const isOwner = isReportOwner(user, r);
+      const prioInfo = getPriorityInfo(r.priority);
+      const isUrgent = prioInfo.level === 3;
+      const typeBadgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
+      const typeBadgeDot = isLost ? "🔴" : "🟢";
+      const typeBadgeLabel = isLost ? "LOST" : "FOUND";
 
       return `
-      <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col"
+      <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col ${isUrgent ? 'ring-2 ring-red-500/40 shadow-lg shadow-red-500/10' : ''}"
            onclick="showDetail('${r.id}')">
 
         <!-- Glass Sheen & Specular Glare Highlights -->
@@ -654,6 +1229,14 @@ function renderReports(items) {
           <div class="depth-item w-full h-full flex items-center justify-center">
             ${create3DItemHTML(r.category, r.title)}
           </div>
+          <!-- Priority Badge floating on Top-Right -->
+          <div class="absolute top-3 right-3 z-30">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-md ${prioInfo.badgeBg}">
+              <span>${prioInfo.icon}</span>
+              <span>${prioInfo.label}</span>
+              ${isUrgent ? '<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping ml-0.5"></span>' : ''}
+            </span>
+          </div>
         </div>
 
         <!-- Card Content with Z-Depth Stacking -->
@@ -661,17 +1244,23 @@ function renderReports(items) {
           <!-- Badges Row -->
           <div class="depth-badge flex items-center justify-between mb-3">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-xs ${badgeBg}">
-                ${badgeDot} ${badgeLabel}
+              <span class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${typeBadgeBg}">
+                ${typeBadgeDot} ${typeBadgeLabel}
               </span>
               ${
                 isOwner
                   ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
                   : ""
               }
+              <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
+                ${escapeHtml(r.category)}
+              </span>
+              <span class="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold bg-white/90 text-forest px-1.5 py-0.5 rounded border border-forest/20 shadow-2xs">
+                <span>🤖</span> AI Assigned
+              </span>
             </div>
-            <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
-              ${escapeHtml(r.category)}
+            <span class="text-[10px] font-mono font-bold text-gray-400 bg-sand/30 px-2 py-0.5 rounded border border-sand/60">
+              ${escapeHtml(r.id)}
             </span>
           </div>
 
@@ -685,32 +1274,66 @@ function renderReports(items) {
             ${escapeHtml(r.description)}
           </p>
 
-          <!-- Location & Date -->
+          <!-- Location, Date & Priority Status -->
           <div class="depth-meta mt-auto space-y-1.5 pt-2 border-t border-sand-d/60">
-            <div class="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-              <span class="text-terracotta">📍</span>
-              <span>${escapeHtml(r.location)}</span>
+            <div class="flex items-center justify-between text-xs text-gray-700 font-medium">
+              <div class="flex items-center gap-1.5">
+                <span class="text-terracotta">📍</span>
+                <span>${escapeHtml(r.location)}</span>
+              </div>
+              <span class="text-[11px] font-bold ${isUrgent ? 'text-red-700' : 'text-gray-500'}">
+                Priority: <span class="font-extrabold">${prioInfo.level}/3</span>
+              </span>
             </div>
             <div class="flex items-center justify-between text-xs text-gray-500">
               <span class="flex items-center gap-1">
                 <span>📅</span> ${formatDate(r.timestamp)}
               </span>
-              <span class="font-mono text-[10px] text-gray-400 font-bold">${escapeHtml(r.id)}</span>
+              <span class="text-[10px] text-gray-400 font-mono">Heap Ranked</span>
             </div>
           </div>
+
+          ${
+            adminMode
+              ? `
+          <!-- Admin Direct Priority Adjuster Strip -->
+          <div class="mt-3 pt-2.5 border-t border-sand-d/40 flex items-center justify-between" onclick="event.stopPropagation()">
+            <span class="text-[10px] font-extrabold uppercase text-forest tracking-wider flex items-center gap-1">
+              <span>🛡️ Set Priority:</span>
+            </span>
+            <div class="inline-flex rounded-lg shadow-2xs border border-sand bg-white/90 p-0.5 text-[10px] font-bold">
+              <button onclick="setReportPriority('${r.id}', 3)" title="Assign Urgent Priority (P3)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 3 ? 'bg-red-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-red-700 hover:bg-red-50'}">
+                🚨 Urgent
+              </button>
+              <button onclick="setReportPriority('${r.id}', 2)" title="Assign Medium Priority (P2)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 2 ? 'bg-amber-500 text-white font-black shadow-xs' : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50'}">
+                ⚡ Med
+              </button>
+              <button onclick="setReportPriority('${r.id}', 1)" title="Assign Low Priority (P1)"
+                class="px-2 py-0.5 rounded-md transition-all ${r.priority === 1 ? 'bg-stone-600 text-white font-black shadow-xs' : 'text-gray-600 hover:text-stone-800 hover:bg-stone-100'}">
+                🟢 Low
+              </button>
+            </div>
+          </div>
+          `
+              : ""
+          }
 
           <!-- Action Buttons -->
           ${
             isLost
-              ? `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
-                  class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5 cursor-pointer">
-                  <span>${isOwner ? "Manage Your Report" : "View Details"}</span>
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                </button>`
-              : `<div class="depth-btn mt-4 flex gap-2 w-full">
+              ? `<div class="mt-3">
+                  <button onclick="event.stopPropagation(); showDetail('${r.id}')"
+                    class="depth-btn w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>${isOwner ? "Manage Your Report" : "View Details"}</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                  </button>
+                </div>`
+              : `<div class="depth-btn mt-3 flex gap-2 w-full">
                   <button onclick="event.stopPropagation(); showDetail('${r.id}')"
                     class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 cursor-pointer">
-                    <span>Details</span>
+                    <span>${isOwner ? "Manage Report" : "Details"}</span>
                   </button>
                   ${
                     !isOwner
@@ -771,7 +1394,7 @@ function attach3DTiltListeners() {
 // ============================================================
 //  ITEM DETAIL MODAL
 // ============================================================
-function showDetail(id) {
+function showDetail(id, isProcessingMode = false) {
   const report = activeReportsList.findById(id);
   if (!report) return;
 
@@ -779,6 +1402,7 @@ function showDetail(id) {
   const isLost = report.type === "Lost";
   const badgeBg = isLost ? "bg-red-600 text-white" : "bg-forest text-white";
   const badgeDot = isLost ? "🔴" : "🟢";
+  const prioInfo = getPriorityInfo(report.priority);
 
   const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
   const isOwner = isReportOwner(user, report);
@@ -889,9 +1513,32 @@ function showDetail(id) {
   }
 
   container.innerHTML = `
-    <div class="h-44 -mx-6 -mt-6 rounded-t-3xl bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
+    ${
+      isProcessingMode
+        ? `
+      <div class="mb-4 -mx-6 -mt-6 p-4 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white rounded-t-3xl shadow-md flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">⚡</span>
+          <div>
+            <p class="text-xs font-black uppercase tracking-wider">Priority Queue Active Dispatch Desk</p>
+            <p class="text-[11px] text-white/90">This report occupies the ROOT node of the Binary Max-Heap.</p>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono font-black bg-white/20 px-2.5 py-1 rounded-full border border-white/30">O(1) Peek</span>
+      </div>
+      `
+        : ""
+    }
+
+    <div class="h-44 -mx-6 ${isProcessingMode ? '' : '-mt-6 rounded-t-3xl'} bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
       <div class="scale-110">
         ${create3DItemHTML(report.category, report.title)}
+      </div>
+      <!-- Priority Badge on Header -->
+      <div class="absolute top-3 right-3">
+        <span class="inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-1.5 rounded-full shadow-md ${prioInfo.badgeBg}">
+          ${prioInfo.icon} ${prioInfo.label} PRIORITY
+        </span>
       </div>
     </div>
 
@@ -905,6 +1552,9 @@ function showDetail(id) {
             ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
             : ""
         }
+        <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
+          ${prioInfo.icon} Score: ${prioInfo.level}/3
+        </span>
       </div>
       <span class="text-xs text-gray-500 font-mono font-bold bg-ivory px-2.5 py-1 rounded-md border border-sand">
         ${escapeHtml(report.id)}
@@ -930,10 +1580,108 @@ function showDetail(id) {
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
 
+    <!-- LLM AI Priority Assessment & Reasoning Dossier -->
+    <div class="bg-gradient-to-br from-forest/5 via-ivory to-amber-50/60 rounded-2xl p-4 mb-4 border border-forest/25 text-xs shadow-2xs">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5 font-black text-gray-900">
+          <span class="text-base">🤖</span>
+          <span class="uppercase tracking-wide text-forest font-black">LLM Autonomous Priority Assessment</span>
+        </div>
+        <span class="text-[10px] font-mono text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">
+          ${escapeHtml(report.llmModel || "Gemini-2.5-Campus-Reasoner")}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between mb-2 pb-2 border-b border-sand/80">
+        <span class="font-bold text-gray-700">Urgency Risk Rating:</span>
+        <div class="flex items-center gap-1.5">
+          <span class="font-mono font-black ${report.priority === 3 ? 'text-red-700' : report.priority === 2 ? 'text-amber-700' : 'text-stone-700'}">
+            ${report.llmScore || (report.priority === 3 ? 96 : report.priority === 2 ? 68 : 28)} / 100
+          </span>
+          <span class="text-[10px] text-gray-400">(${prioInfo.name} Heap Tier)</span>
+        </div>
+      </div>
+
+      <div class="mb-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">LLM Chain-of-Thought Rationale:</p>
+        <p class="text-xs text-gray-700 leading-relaxed bg-white/90 p-3 rounded-xl border border-sand italic">
+          "${escapeHtml(report.llmReasoning || prioInfo.desc)}"
+        </p>
+      </div>
+
+      ${
+        report.llmFactors && report.llmFactors.length > 0
+          ? `
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Identified Risk Factors:</p>
+        <div class="flex flex-wrap gap-1">
+          ${report.llmFactors
+            .map(
+              (f) =>
+                `<span class="text-[10px] font-semibold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-sand">✓ ${escapeHtml(
+                  f
+                )}</span>`
+            )
+            .join("")}
+        </div>
+      </div>`
+          : ""
+      }
+    </div>
+
+    ${
+      adminMode
+        ? `
+    <!-- Admin Priority Assignment Panel -->
+    <div class="bg-white rounded-2xl p-4 mb-5 border-2 border-forest/30 shadow-xs">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-xs font-black uppercase text-forest tracking-wide flex items-center gap-1.5">
+          <span>🛡️ Admin Controls: Adjust Priority</span>
+        </h4>
+        <span class="text-[10px] font-mono text-gray-400">Binary Heap Rebalance</span>
+      </div>
+      <p class="text-[11px] text-gray-600 mb-3">
+        Assign urgency to reposition this report in the Priority Queue (bubble-up/down in O(log n)).
+      </p>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setReportPriority('${report.id}', 3); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 3
+              ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-400 shadow-sm'
+              : 'border-sand hover:border-red-400 hover:bg-red-50 text-gray-700'
+          }">
+          <span>🚨 Urgent</span>
+          <span class="text-[9px] opacity-80">P-Score: 3</span>
+        </button>
+        <button onclick="setReportPriority('${report.id}', 2); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 2
+              ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 shadow-sm'
+              : 'border-sand hover:border-amber-400 hover:bg-amber-50 text-gray-700'
+          }">
+          <span>⚡ Medium</span>
+          <span class="text-[9px] opacity-80">P-Score: 2</span>
+        </button>
+        <button onclick="setReportPriority('${report.id}', 1); showDetail('${report.id}', ${isProcessingMode});"
+          class="py-2.5 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${
+            report.priority === 1
+              ? 'bg-stone-600 text-white border-stone-700 ring-2 ring-stone-400 shadow-sm'
+              : 'border-sand hover:border-stone-400 hover:bg-stone-100 text-gray-700'
+          }">
+          <span>🟢 Low</span>
+          <span class="text-[9px] opacity-80">P-Score: 1</span>
+        </button>
+      </div>
+    </div>
+    `
+        : ""
+    }
+
     ${ownershipBannerHtml}
 
     <div class="flex gap-3">
       ${actionsHtml}
+    </div>
     </div>
   `;
 
@@ -1108,7 +1856,15 @@ function renderMatches() {
 //  CORE OPERATIONS: Add Report, Recover, Search
 // ============================================================
 function addReport(formData) {
-  const user = getCurrentUser();
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+
+  // Autonomous LLM Priority Evaluation — User does not assign priority
+  const aiAssessment = evaluatePriorityWithLLM({
+    title: formData.title,
+    category: formData.category,
+    location: formData.location,
+    description: formData.description,
+  });
   const report = {
     id: generateId(),
     type: formData.type,
@@ -1119,14 +1875,22 @@ function addReport(formData) {
     creatorId: user ? user.id : null,
     creatorRoll: user ? user.rollNo : null,
     creatorName: user ? user.name : null,
+    priority: aiAssessment.priority,
+    llmScore: aiAssessment.score,
+    llmModel: aiAssessment.model,
+    llmReasoning: aiAssessment.reasoning,
+    llmFactors: aiAssessment.factors,
     status: "Active",
     timestamp: new Date().toISOString(),
   };
 
-  // Singly Linked List — O(1) prepend
+  // 1. Singly Linked List — O(1) prepend
   activeReportsList.insertAtHead(report);
 
-  // Hash Table — index category and title keywords
+  // 2. Binary Max-Heap Priority Queue — O(log n) bubble-up insertion
+  activePriorityQueue.insert(report, report.priority);
+
+  // 3. Hash Table — O(1) average index by category and title keywords
   categoryHashTable.insert(report.category, report);
   report.title
     .toLowerCase()
@@ -1149,14 +1913,18 @@ function addReport(formData) {
         r.id !== report.id
     );
 
+  const prioInfo = getPriorityInfo(report.priority);
   if (categoryMatches.length > 0) {
     showToast(
-      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}".`,
+      `🔗 Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon}).`,
       "match"
     );
     switchTab("matches");
   } else {
-    showToast(`✅ ${report.type} report posted: ${report.title}`, "success");
+    showToast(
+      `🤖 LLM auto-assigned ${prioInfo.name} Priority (${prioInfo.icon} Score: ${report.llmScore}/100) for "${report.title}". Binary Max-Heap restructured!`,
+      "success"
+    );
   }
 
   return report;
@@ -1166,7 +1934,7 @@ function markRecovered(id) {
   const report = activeReportsList.findById(id);
   if (!report) return;
 
-  const user = getCurrentUser();
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
 
   // Enforce role and ownership authorization checks
   if (report.type === "Lost") {
@@ -1209,6 +1977,11 @@ function markRecovered(id) {
   }
 
   activeReportsList.removeById(id);
+
+  // Remove from Binary Heap Priority Queue — O(n + log n)
+  if (typeof activePriorityQueue !== "undefined" && activePriorityQueue) {
+    activePriorityQueue.removeById(id);
+  }
   report.status = "Recovered";
   report.recoveredAt = new Date().toISOString();
 
@@ -1234,7 +2007,7 @@ function markRecovered(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`🎉 "${report.title}" marked as recovered!`, "success");
+  showToast(`🎉 "${report.title}" marked as recovered and removed from Priority Queue!`, "success");
 }
 
 // State variables for report modal confirmations
@@ -1418,6 +2191,10 @@ function searchAndFilter() {
   const categoryFilter = catFilter ? catFilter.value : "All";
   const tFilter = document.getElementById("filter-type");
   const typeFilter = tFilter ? tFilter.value : "All";
+  const prioFilter = document.getElementById("filter-priority");
+  const priorityFilter = prioFilter ? prioFilter.value : "All";
+  const sortFilter = document.getElementById("filter-sort");
+  const sortMode = sortFilter ? sortFilter.value : "priority";
 
   let results;
 
@@ -1444,15 +2221,42 @@ function searchAndFilter() {
       }
     });
   } else {
-    results = activeReportsList.toArray();
+    // When priority sort is requested, retrieve reports ranked by Binary Heap!
+    if (sortMode === "priority") {
+      results = activePriorityQueue.getSortedReports();
+    } else {
+      results = activeReportsList.toArray();
+    }
   }
 
+  // Filter by Category
   if (categoryFilter !== "All") {
     results = results.filter((r) => r.category === categoryFilter);
   }
 
+  // Filter by Type
   if (typeFilter !== "All") {
     results = results.filter((r) => r.type === typeFilter);
+  }
+
+  // Filter by Priority Level
+  if (priorityFilter !== "All") {
+    const pNum = Number(priorityFilter);
+    results = results.filter((r) => r.priority === pNum);
+  }
+
+  // Sorting
+  if (sortMode === "priority") {
+    results.sort((a, b) => {
+      if ((b.priority || 1) !== (a.priority || 1)) {
+        return (b.priority || 1) - (a.priority || 1);
+      }
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    });
+  } else if (sortMode === "newest") {
+    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  } else if (sortMode === "oldest") {
+    results.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }
 
   renderReports(results);
@@ -1489,6 +2293,74 @@ function switchTab(tabName) {
   });
 }
 
+// ============================================================
+//  CAMPUS SPOT DROPDOWN & CLAIM ACTIONS (FLOOR MAP LOCATIONS)
+// ============================================================
+let campusGraph = null;
+
+/**
+ * Populate Post Item Modal Campus Spot dropdown
+ * Directly sourced from floormaps.vercel.app official campus floors
+ */
+function populatePostItemLocationSelect() {
+  if (!campusGraph && typeof CampusGraph !== "undefined") {
+    campusGraph = CampusGraph.createCampusGraph();
+  }
+  const locSelect = document.getElementById("input-location");
+  if (!locSelect || !campusGraph) return;
+
+  const allLocations = campusGraph.getAllLocations();
+  const floors = {};
+  allLocations.forEach((loc) => {
+    const meta = campusGraph.getMetadata(loc);
+    const fl = meta.floor || "Other";
+    floors[fl] = floors[fl] || [];
+    floors[fl].push({ name: loc, ...meta });
+  });
+
+  const currentVal = locSelect.value;
+  locSelect.innerHTML = Object.keys(floors)
+    .map((fl) => {
+      const opts = floors[fl]
+        .map(
+          (loc) =>
+            `<option value="${escapeHtml(loc.name)}" ${loc.name === currentVal ? "selected" : ""}>${loc.icon || "📍"} ${escapeHtml(
+              loc.name
+            )}</option>`
+        )
+        .join("");
+      return `<optgroup label="── ${escapeHtml(fl)} ──">${opts}</optgroup>`;
+    })
+    .join("");
+
+  const updateFloorBadge = () => {
+    const badge = document.getElementById("input-location-floor-badge");
+    if (badge && locSelect.value) {
+      const meta = campusGraph.getMetadata(locSelect.value);
+      badge.textContent = meta.floor || "FRCRCE Floor Map";
+    }
+  };
+
+  locSelect.onchange = () => {
+    updateFloorBadge();
+    updateLLMPriorityPreview();
+  };
+  updateFloorBadge();
+}
+
+/**
+ * Submit Ownership Claim on an item
+ */
+function submitClaim(reportId) {
+  const report = activeReportsList ? activeReportsList.findById(reportId) : null;
+  if (!report) return;
+
+  showToast(
+    `✅ Claim submitted for "${report.title}"! Campus recovery desk notified for ownership verification.`,
+    "success"
+  );
+}
+
 // ----- Toast Notifications ----------------------------------
 function showToast(message, type = "success") {
   if (typeof window !== "undefined" && typeof window.onToast === "function") {
@@ -1523,11 +2395,112 @@ function showToast(message, type = "success") {
   }, 4000);
 }
 
-// ----- Post Item Modal Controls -----------------------------
+// ----- Smart Category Auto-Detection -------------------------
+function detectCategoryFromTitle(title) {
+  const t = (title || "").toLowerCase();
+  if (t.includes("phone") || t.includes("mobile") || t.includes("iphone") || t.includes("android") || t.includes("laptop") || t.includes("macbook") || t.includes("airpod") || t.includes("calc") || t.includes("charger") || t.includes("headphone") || t.includes("watch") || t.includes("powerbank")) return "Electronics";
+  if (t.includes("id") || t.includes("card") || t.includes("wallet") || t.includes("purse") || t.includes("aadhaar") || t.includes("license") || t.includes("passport")) return "ID/Wallet";
+  if (t.includes("key")) return "Keys";
+  if (t.includes("notebook") || t.includes("notes") || t.includes("register") || t.includes("textbook") || t.includes("book")) return "Books";
+  if (t.includes("umbrella") || t.includes("bottle") || t.includes("flask") || t.includes("jacket") || t.includes("hoodie") || t.includes("pen") || t.includes("pencil") || t.includes("bag") || t.includes("lunch") || t.includes("tiffin")) return "Accessories";
+  return null;
+}
+
+// ----- Post Item Modal Controls & LLM Live Assessment --------
+function updateLLMPriorityPreview() {
+  const inputTitle = document.getElementById("input-title");
+  const selectCat = document.getElementById("input-category");
+  const inputLocation = document.getElementById("input-location");
+  const inputDesc = document.getElementById("input-description");
+
+  const titleVal = inputTitle ? inputTitle.value.trim() : "";
+
+  // Auto-detect and set appropriate category if user hasn't explicitly chosen one
+  if (inputTitle && selectCat && titleVal && !selectCat.dataset.userModified) {
+    const autoCat = detectCategoryFromTitle(titleVal);
+    if (autoCat && selectCat.value !== autoCat) {
+      selectCat.value = autoCat;
+    }
+  }
+
+  const catVal = selectCat ? selectCat.value : "Other";
+  const locVal = inputLocation ? inputLocation.value.trim() : "";
+  const descVal = inputDesc ? inputDesc.value.trim() : "";
+
+  const tierBadge = document.getElementById("llm-tier-badge");
+  const scoreBadge = document.getElementById("llm-score-badge");
+  const reasoningText = document.getElementById("llm-reasoning-text");
+  const factorsList = document.getElementById("llm-factors-list");
+  const hiddenInput = document.getElementById("input-assigned-priority");
+
+  if (!titleVal && !descVal) {
+    if (tierBadge) {
+      tierBadge.className = "inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs";
+      tierBadge.innerHTML = "🟢 LOW PRIORITY (Level 1)";
+    }
+    if (scoreBadge) {
+      scoreBadge.textContent = "Urgency Risk: 20/100";
+      scoreBadge.className = "text-[10px] font-mono text-gray-500 font-bold";
+    }
+    if (reasoningText) {
+      reasoningText.textContent = "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically.";
+    }
+    if (factorsList) {
+      factorsList.innerHTML = "";
+    }
+    if (hiddenInput) hiddenInput.value = "1";
+    return;
+  }
+
+  const aiAssessment = evaluatePriorityWithLLM({
+    title: titleVal,
+    category: catVal,
+    location: locVal,
+    description: descVal,
+  });
+
+  if (hiddenInput) {
+    hiddenInput.value = String(aiAssessment.priority);
+  }
+
+  const pInfo = getPriorityInfo(aiAssessment.priority);
+
+  if (tierBadge) {
+    tierBadge.className = `inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs ${pInfo.badgeBg}`;
+    tierBadge.innerHTML = `<span>${pInfo.icon}</span> <span>${pInfo.label} PRIORITY (Level ${pInfo.level})</span>`;
+  }
+
+  if (scoreBadge) {
+    scoreBadge.textContent = `Urgency Risk: ${aiAssessment.score}/100`;
+    scoreBadge.className = `text-[10px] font-mono font-black ${
+      aiAssessment.priority === 3 ? "text-red-700" : aiAssessment.priority === 2 ? "text-amber-700" : "text-stone-700"
+    }`;
+  }
+
+  if (reasoningText) {
+    reasoningText.textContent = `"${aiAssessment.reasoning}"`;
+  }
+
+  if (factorsList) {
+    factorsList.innerHTML = aiAssessment.factors
+      .map(
+        (f) =>
+          `<span class="text-[9px] font-semibold text-gray-700 bg-sand/40 px-2 py-0.5 rounded border border-sand">✓ ${escapeHtml(
+            f
+          )}</span>`
+      )
+      .join("");
+  }
+}
+
 function openModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
+  populatePostItemLocationSelect();
+  const selectCat = document.getElementById("input-category");
+  if (selectCat) delete selectCat.dataset.userModified;
+  updateLLMPriorityPreview();
   const titleInput = document.getElementById("input-title");
   if (titleInput) titleInput.focus();
 }
@@ -1536,8 +2509,11 @@ function closeModal() {
   const modal = document.getElementById("report-modal");
   modal.classList.add("hidden");
   modal.classList.remove("flex");
+  const selectCat = document.getElementById("input-category");
+  if (selectCat) delete selectCat.dataset.userModified;
   const form = document.getElementById("report-form");
   if (form) form.reset();
+  updateLLMPriorityPreview();
 }
 
 // ----- Refresh All Views ------------------------------------
@@ -1622,7 +2598,7 @@ document.addEventListener("DOMContentLoaded", () => {
     authBackdrop.addEventListener("click", closeAuthModal);
   }
 
-  // Post Report Form Submit
+  // Post Report Form Submit (Priority determined exclusively by LLM system)
   const reportForm = document.getElementById("report-form");
   if (reportForm) {
     reportForm.addEventListener("submit", (e) => {
@@ -1639,6 +2615,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Autonomous LLM Priority Assessment Listeners (Real-time CoT Reasoning)
+  const inputTitle = document.getElementById("input-title");
+  const selectCat = document.getElementById("input-category");
+  const inputLocation = document.getElementById("input-location");
+  const inputDesc = document.getElementById("input-description");
+
+  if (inputTitle) inputTitle.addEventListener("input", updateLLMPriorityPreview);
+  if (selectCat) {
+    selectCat.addEventListener("change", () => {
+      selectCat.dataset.userModified = "true";
+      updateLLMPriorityPreview();
+    });
+  }
+  if (inputLocation) inputLocation.addEventListener("input", updateLLMPriorityPreview);
+  if (inputDesc) inputDesc.addEventListener("input", updateLLMPriorityPreview);
+
   // Search & Filter listeners
   const searchInput = document.getElementById("search-input");
   if (searchInput) searchInput.addEventListener("input", searchAndFilter);
@@ -1648,6 +2640,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const filterType = document.getElementById("filter-type");
   if (filterType) filterType.addEventListener("change", searchAndFilter);
+
+  const filterPriority = document.getElementById("filter-priority");
+  if (filterPriority) filterPriority.addEventListener("change", searchAndFilter);
+
+  const filterSort = document.getElementById("filter-sort");
+  if (filterSort) filterSort.addEventListener("change", searchAndFilter);
 
   // Tab Buttons
   const tabReports = document.getElementById("tab-btn-reports");
@@ -1664,6 +2662,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const tabClaimRequests = document.getElementById("tab-btn-claim-requests");
   if (tabClaimRequests) tabClaimRequests.addEventListener("click", () => switchTab("claim-requests"));
+
+  // Initialize Post Item modal campus location dropdown
+  populatePostItemLocationSelect();
 
   // Modal Controls
   const btnOpenModal = document.getElementById("btn-open-modal");
@@ -1715,3 +2716,12 @@ window.showToast = showToast;
 window.formatDate = formatDate;
 window.formatDateLong = formatDateLong;
 window.refreshAll = refreshAll;
+
+window.toggleAdminMode = toggleAdminMode;
+window.setReportPriority = setReportPriority;
+window.processHighestPriorityReport = processHighestPriorityReport;
+window.toggleHeapInspector = toggleHeapInspector;
+window.populatePostItemLocationSelect = populatePostItemLocationSelect;
+window.updateLLMPriorityPreview = updateLLMPriorityPreview;
+window.evaluatePriorityWithLLM = evaluatePriorityWithLLM;
+window.getActivePriorityQueue = () => (typeof activePriorityQueue !== "undefined" ? activePriorityQueue : null);
