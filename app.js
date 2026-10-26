@@ -15,6 +15,12 @@ let recoveryHistoryList = new LinkedList();
 let categoryHashTable = new HashTable();
 let reportCounter = 1000;
 
+if (typeof window !== "undefined") {
+  window.activeReportsList = activeReportsList;
+  window.recoveryHistoryList = recoveryHistoryList;
+  window.categoryHashTable = categoryHashTable;
+}
+
 // ----- Category Palette & Visual Mapping --------------------
 const CATEGORY_MAP = {
   Electronics: { emoji: "📱", gradient: "from-amber-50 to-stone-100", accent: "forest" },
@@ -29,6 +35,37 @@ function getCategoryInfo(category) {
   return CATEGORY_MAP[category] || CATEGORY_MAP["Other"];
 }
 
+// ----- Report Creator Ownership Helper -----------------------
+function isReportOwner(user, report) {
+  if (!user || !report) return false;
+  // Match on unique user ID if both present
+  if (user.id && report.creatorId && user.id === report.creatorId) {
+    return true;
+  }
+  // Match on student roll number (case-insensitive)
+  if (
+    user.rollNo &&
+    report.creatorRoll &&
+    user.rollNo.trim().toUpperCase() === report.creatorRoll.trim().toUpperCase()
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// ----- Reviewer / Admin Role Authorization Helper ------------
+function isReviewer(user) {
+  if (!user) return false;
+  return Boolean(
+    user.role === "reviewer" ||
+    (user.rollNo && (
+      user.rollNo.toUpperCase().startsWith("REV") ||
+      user.rollNo.toUpperCase().startsWith("FAC") ||
+      user.rollNo.toUpperCase().startsWith("ADMIN")
+    ))
+  );
+}
+
 // ----- Initial Campus Seed Data -----------------------------
 const SEED_DATA = [
   {
@@ -38,6 +75,9 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Contains campus student ID card and cash. Contact Roll No: 23CS101 (Siddhraj Nimje).",
+    creatorId: "USR-DEMO",
+    creatorRoll: "23CS101",
+    creatorName: "Siddhraj Nimje",
     status: "Active",
     timestamp: new Date("2026-10-20T09:15:00").toISOString(),
   },
@@ -48,6 +88,9 @@ const SEED_DATA = [
     category: "Electronics",
     location: "Library 2nd Floor",
     description: "Casio fx-991EX found on study desk near window. Turned in at front desk.",
+    creatorId: "USR-REV-01",
+    creatorRoll: "FAC-901",
+    creatorName: "Dr. Aris Thorne",
     status: "Active",
     timestamp: new Date("2026-10-20T11:30:00").toISOString(),
   },
@@ -58,6 +101,9 @@ const SEED_DATA = [
     category: "Books",
     location: "Lab 302",
     description: "100-page notebook with Physics and DSA notes, name 'Siddhraj' on cover.",
+    creatorId: "USR-DEMO",
+    creatorRoll: "23CS101",
+    creatorName: "Siddhraj Nimje",
     status: "Active",
     timestamp: new Date("2026-10-20T14:00:00").toISOString(),
   },
@@ -68,6 +114,9 @@ const SEED_DATA = [
     category: "Keys",
     location: "Parking Lot B",
     description: "Single Honda key with a red silicone keychain. Found near bike stand.",
+    creatorId: "USR-REV-01",
+    creatorRoll: "FAC-901",
+    creatorName: "Dr. Aris Thorne",
     status: "Active",
     timestamp: new Date("2026-10-21T08:00:00").toISOString(),
   },
@@ -78,6 +127,9 @@ const SEED_DATA = [
     category: "Electronics",
     location: "Auditorium",
     description: "White AirPods Pro in a matte case. Left on 3rd row right seat.",
+    creatorId: "USR-04",
+    creatorRoll: "23CS104",
+    creatorName: "Rahul Sharma",
     status: "Active",
     timestamp: new Date("2026-10-21T10:45:00").toISOString(),
   },
@@ -88,6 +140,9 @@ const SEED_DATA = [
     category: "ID/Wallet",
     location: "Canteen",
     description: "Campus ID card for 'Priya M.' — Dept. of CSE. Found on table near counter 3.",
+    creatorId: "USR-REV-01",
+    creatorRoll: "FAC-901",
+    creatorName: "Dr. Aris Thorne",
     status: "Active",
     timestamp: new Date("2026-10-21T13:20:00").toISOString(),
   },
@@ -133,6 +188,12 @@ function loadFromLocalStorage() {
     recoveryHistoryList = LinkedList.fromArray(JSON.parse(recoveredRaw));
   }
 
+  if (typeof window !== "undefined") {
+    window.activeReportsList = activeReportsList;
+    window.recoveryHistoryList = recoveryHistoryList;
+    window.categoryHashTable = categoryHashTable;
+  }
+
   // Load persisted claims & reconstruct FIFO queue
   if (typeof loadClaimsFromLocalStorage === "function") {
     loadClaimsFromLocalStorage();
@@ -155,6 +216,10 @@ function getCurrentUser() {
 }
 
 function setCurrentUser(user) {
+  if (!user) {
+    localStorage.removeItem(AUTH_KEY);
+    return;
+  }
   localStorage.setItem(
     AUTH_KEY,
     JSON.stringify({ id: user.id, name: user.name, rollNo: user.rollNo, role: user.role })
@@ -331,9 +396,13 @@ function formatDateLong(iso) {
 }
 
 function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // ----- Stats Counter ----------------------------------------
@@ -561,6 +630,8 @@ function renderReports(items) {
     return;
   }
 
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+
   grid.innerHTML = items
     .map((r) => {
       const isLost = r.type === "Lost";
@@ -568,6 +639,7 @@ function renderReports(items) {
       const badgeBg = isLost ? "bg-red-600/90 text-white" : "bg-forest text-white";
       const badgeDot = isLost ? "🔴" : "🟢";
       const badgeLabel = isLost ? "LOST" : "FOUND";
+      const isOwner = isReportOwner(user, r);
 
       return `
       <div class="card-3d visionos-card rounded-3xl cursor-pointer group flex flex-col"
@@ -588,9 +660,16 @@ function renderReports(items) {
         <div class="preserve-3d-space p-5 flex flex-col flex-1 relative z-30">
           <!-- Badges Row -->
           <div class="depth-badge flex items-center justify-between mb-3">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-xs ${badgeBg}">
-              ${badgeDot} ${badgeLabel}
-            </span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full shadow-xs ${badgeBg}">
+                ${badgeDot} ${badgeLabel}
+              </span>
+              ${
+                isOwner
+                  ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
+                  : ""
+              }
+            </div>
             <span class="text-xs text-forest font-semibold bg-white/70 px-2.5 py-0.5 rounded-full border border-sand-d">
               ${escapeHtml(r.category)}
             </span>
@@ -624,19 +703,23 @@ function renderReports(items) {
           ${
             isLost
               ? `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
-                  class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5">
-                  <span>View Details</span>
+                  class="depth-btn mt-4 w-full visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>${isOwner ? "Manage Your Report" : "View Details"}</span>
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </button>`
               : `<div class="depth-btn mt-4 flex gap-2 w-full">
                   <button onclick="event.stopPropagation(); showDetail('${r.id}')"
-                    class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1">
+                    class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 cursor-pointer">
                     <span>Details</span>
                   </button>
-                  <button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
-                    class="visionos-btn-terracotta text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 shadow-sm">
-                    <span>🛡️ Claim</span>
-                  </button>
+                  ${
+                    !isOwner
+                      ? `<button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
+                          class="visionos-btn-terracotta text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all duration-200 hover:brightness-110 flex items-center justify-center gap-1 shadow-sm cursor-pointer">
+                          <span>🛡️ Claim</span>
+                        </button>`
+                      : ""
+                  }
                 </div>`
           }
         </div>
@@ -697,7 +780,114 @@ function showDetail(id) {
   const badgeBg = isLost ? "bg-red-600 text-white" : "bg-forest text-white";
   const badgeDot = isLost ? "🔴" : "🟢";
 
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+  const isOwner = isReportOwner(user, report);
+  const reviewerMode = typeof isReviewer === "function" ? isReviewer(user) : false;
+
   const container = document.getElementById("detail-content");
+
+  // Determine actions based on report type and ownership
+  let actionsHtml = "";
+  let ownershipBannerHtml = "";
+
+  if (isLost) {
+    if (isOwner) {
+      ownershipBannerHtml = `
+        <div class="bg-amber-50 rounded-2xl p-3 mb-4 border border-amber-200 text-xs text-amber-900 flex items-center gap-2.5">
+          <span class="text-base">👑</span>
+          <div class="flex-1">
+            <p class="font-black">Your Report</p>
+            <p class="text-[11px] text-amber-800">You reported this lost item. When found, mark it as found to move it to resolved history, or remove it.</p>
+          </div>
+        </div>`;
+      actionsHtml = `
+        <button id="btn-detail-mark-found" onclick="triggerMarkFoundConfirm('${report.id}')"
+          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span>Mark as Found</span>
+        </button>
+        <button id="btn-detail-remove" onclick="triggerRemoveReportConfirm('${report.id}')"
+          class="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+          <span>🗑️ Remove</span>
+        </button>
+        <button onclick="closeDetailModal()"
+          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    } else if (reviewerMode) {
+      ownershipBannerHtml = `
+        <div class="bg-blue-50 rounded-2xl p-3 mb-4 border border-blue-200 text-xs text-blue-900 flex items-center gap-2.5">
+          <span class="text-base">🛡️</span>
+          <div class="flex-1">
+            <p class="font-black">Reviewer / Admin View</p>
+            <p class="text-[11px] text-blue-800">Reported lost by ${escapeHtml(report.creatorName || report.creatorRoll || 'Student')}. You have administrative oversight.</p>
+          </div>
+        </div>`;
+      actionsHtml = `
+        <button onclick="triggerMarkFoundConfirm('${report.id}')"
+          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
+          <span>✨ Mark as Found</span>
+        </button>
+        <button onclick="triggerRemoveReportConfirm('${report.id}')"
+          class="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+          <span>🗑️ Remove</span>
+        </button>
+        <button onclick="closeDetailModal()"
+          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    } else {
+      // Regular student who is NOT the owner
+      ownershipBannerHtml = `
+        <div class="bg-sand/30 rounded-2xl p-3.5 mb-4 border border-sand text-xs text-gray-600 flex items-center gap-2.5">
+          <span class="text-lg">ℹ️</span>
+          <div>
+            <p class="font-bold text-gray-800">Reported Lost by ${escapeHtml(report.creatorName || report.creatorRoll || 'a Student')}</p>
+            <p class="text-[11px] text-gray-500">Only the original creator may mark this item as found or remove the report.</p>
+          </div>
+        </div>`;
+      actionsHtml = `
+        <button onclick="closeDetailModal()"
+          class="w-full py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    }
+  } else {
+    // Found item
+    if (reviewerMode) {
+      actionsHtml = `
+        <button onclick="closeDetailModal(); switchTab('claim-requests');"
+          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
+          <span>📋 Review Claims</span>
+        </button>
+        <button onclick="closeDetailModal()"
+          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    } else if (isOwner) {
+      ownershipBannerHtml = `
+        <div class="bg-forest/10 rounded-2xl p-3 mb-4 border border-forest/20 text-xs text-forest flex items-center gap-2">
+          <span>🟢</span>
+          <span class="font-bold">You reported finding this item. Campus reviewers manage verification and handovers.</span>
+        </div>`;
+      actionsHtml = `
+        <button onclick="closeDetailModal()"
+          class="w-full py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    } else {
+      actionsHtml = `
+        <button onclick="closeDetailModal(); openClaimModal('${report.id}');"
+          class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2 cursor-pointer text-xs">
+          <span>🛡️ Claim This Found Item</span>
+        </button>
+        <button onclick="closeDetailModal()"
+          class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs cursor-pointer">
+          Close
+        </button>`;
+    }
+  }
+
   container.innerHTML = `
     <div class="h-44 -mx-6 -mt-6 rounded-t-3xl bg-gradient-to-b ${catInfo.gradient} border-b border-sand flex items-center justify-center relative overflow-hidden mb-5">
       <div class="scale-110">
@@ -706,9 +896,16 @@ function showDetail(id) {
     </div>
 
     <div class="flex items-center justify-between mb-3">
-      <span class="inline-flex items-center gap-1.5 text-xs font-black ${badgeBg} px-3 py-1 rounded-full shadow-xs">
-        ${badgeDot} ${report.type.toUpperCase()} ITEM
-      </span>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 text-xs font-black ${badgeBg} px-3 py-1 rounded-full shadow-xs">
+          ${badgeDot} ${report.type.toUpperCase()} ITEM
+        </span>
+        ${
+          isOwner
+            ? `<span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">👑 Your Report</span>`
+            : ""
+        }
+      </div>
       <span class="text-xs text-gray-500 font-mono font-bold bg-ivory px-2.5 py-1 rounded-md border border-sand">
         ${escapeHtml(report.id)}
       </span>
@@ -728,28 +925,15 @@ function showDetail(id) {
       </span>
     </div>
 
-    <div class="bg-ivory rounded-2xl p-4 mb-5 border border-sand">
+    <div class="bg-ivory rounded-2xl p-4 mb-4 border border-sand">
       <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Description &amp; Contact Info</h4>
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
 
+    ${ownershipBannerHtml}
+
     <div class="flex gap-3">
-      ${
-        report.type === "Found"
-          ? `<button onclick="closeDetailModal(); openClaimModal('${report.id}');"
-              class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
-              <span>🛡️ Claim This Found Item</span>
-            </button>`
-          : `<button onclick="markRecovered('${report.id}'); closeDetailModal();"
-              class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl shadow-md transition-all hover:brightness-110 flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-              <span>Mark as Recovered</span>
-            </button>`
-      }
-      <button onclick="closeDetailModal()"
-        class="px-5 py-3 border-2 border-sand hover:border-gray-400 text-gray-700 font-bold rounded-xl transition-all hover:bg-white text-xs">
-        Close
-      </button>
+      ${actionsHtml}
     </div>
   `;
 
@@ -932,6 +1116,7 @@ function addReport(formData) {
     category: formData.category,
     location: formData.location.trim(),
     description: formData.description.trim(),
+    creatorId: user ? user.id : null,
     creatorRoll: user ? user.rollNo : null,
     creatorName: user ? user.name : null,
     status: "Active",
@@ -981,6 +1166,21 @@ function markRecovered(id) {
   const report = activeReportsList.findById(id);
   if (!report) return;
 
+  const user = getCurrentUser();
+
+  // Enforce role and ownership authorization checks
+  if (report.type === "Lost") {
+    if (!isReportOwner(user, report) && !isReviewer(user)) {
+      showToast("Unauthorized: Only the creator of this lost item report can mark it as recovered or found.", "error");
+      return;
+    }
+  } else if (report.type === "Found") {
+    if (!isReviewer(user)) {
+      showToast("Unauthorized: Only authorized reviewers can mark found items as recovered.", "error");
+      return;
+    }
+  }
+
   // Snapshot before removal for undo stack
   const reportSnapshot = JSON.parse(JSON.stringify(report));
   const invalidatedClaims = (typeof allClaims !== "undefined" && Array.isArray(allClaims))
@@ -995,7 +1195,7 @@ function markRecovered(id) {
         }))
     : [];
 
-  if (typeof recordAdminAction === "function") {
+  if (typeof recordAdminAction === "function" && isReviewer(user)) {
     recordAdminAction(
       "DIRECT_RECOVERY",
       `Marked "${report.title}" as recovered`,
@@ -1035,6 +1235,180 @@ function markRecovered(id) {
   saveToLocalStorage();
   refreshAll();
   showToast(`🎉 "${report.title}" marked as recovered!`, "success");
+}
+
+// State variables for report modal confirmations
+let pendingMarkFoundId = null;
+let pendingRemoveReportId = null;
+
+function triggerMarkFoundConfirm(id) {
+  const report = activeReportsList.findById(id);
+  if (!report) return;
+
+  const user = getCurrentUser();
+  if (!isReportOwner(user, report) && !isReviewer(user)) {
+    showToast("Unauthorized: Only the creator of this report can mark it as found.", "error");
+    return;
+  }
+
+  pendingMarkFoundId = id;
+  const titleEl = document.getElementById("mark-found-modal-item-title");
+  const idEl = document.getElementById("mark-found-modal-item-id");
+  const ownerEl = document.getElementById("mark-found-modal-item-owner");
+  if (titleEl) titleEl.textContent = report.title;
+  if (idEl) idEl.textContent = report.id;
+  if (ownerEl) {
+    ownerEl.textContent = report.creatorName
+      ? `${report.creatorName} (${report.creatorRoll || ''})`
+      : (report.creatorRoll || 'Report Owner');
+  }
+
+  closeDetailModal();
+  const modal = document.getElementById("mark-found-confirm-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeMarkFoundConfirmModal() {
+  pendingMarkFoundId = null;
+  const modal = document.getElementById("mark-found-confirm-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+function confirmMarkLostItemFound() {
+  if (!pendingMarkFoundId) return;
+  const id = pendingMarkFoundId;
+  closeMarkFoundConfirmModal();
+  markLostItemFound(id);
+}
+
+function markLostItemFound(id) {
+  const report = activeReportsList.findById(id);
+  if (!report) {
+    showToast("Report not found or already resolved.", "error");
+    return;
+  }
+
+  const user = getCurrentUser();
+  if (!isReportOwner(user, report) && !isReviewer(user)) {
+    showToast("Unauthorized: Only the creator of this report can mark it as found.", "error");
+    return;
+  }
+
+  activeReportsList.removeById(id);
+  report.status = "Found";
+  report.resolvedAt = new Date().toISOString();
+  report.recoveredAt = report.resolvedAt;
+  report.resolvedBy = user ? (user.name || user.rollNo || user.id) : "Owner";
+
+  recoveryHistoryList.insertAtHead(report);
+  categoryHashTable.removeById(id);
+
+  // Invalidate any active pending claims if any existed
+  if (typeof allClaims !== "undefined" && Array.isArray(allClaims)) {
+    allClaims.forEach((c) => {
+      if (c.itemId === id && c.status === "Pending") {
+        c.status = "Cancelled";
+        c.rejectionReason = "Item was marked as found by its owner.";
+        if (typeof pendingClaimQueue !== "undefined" && pendingClaimQueue.removeById) {
+          pendingClaimQueue.removeById(c.id);
+        }
+      }
+    });
+    if (typeof saveClaimsToLocalStorage === "function") {
+      saveClaimsToLocalStorage();
+    }
+  }
+
+  saveToLocalStorage();
+  refreshAll();
+  showToast(`🎉 "${report.title}" marked as found! Moved to resolved history.`, "success");
+}
+
+function triggerRemoveReportConfirm(id) {
+  const report = activeReportsList.findById(id);
+  if (!report) return;
+
+  const user = getCurrentUser();
+  if (!isReportOwner(user, report) && !isReviewer(user)) {
+    showToast("Unauthorized: Only the report creator can remove this report.", "error");
+    return;
+  }
+
+  pendingRemoveReportId = id;
+  const titleEl = document.getElementById("remove-report-modal-item-title");
+  const idEl = document.getElementById("remove-report-modal-item-id");
+  if (titleEl) titleEl.textContent = report.title;
+  if (idEl) idEl.textContent = report.id;
+
+  closeDetailModal();
+  const modal = document.getElementById("remove-report-confirm-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+}
+
+function closeRemoveReportConfirmModal() {
+  pendingRemoveReportId = null;
+  const modal = document.getElementById("remove-report-confirm-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+}
+
+function confirmRemoveReport() {
+  if (!pendingRemoveReportId) return;
+  const id = pendingRemoveReportId;
+  closeRemoveReportConfirmModal();
+  removeReport(id);
+}
+
+function removeReport(id) {
+  const report = activeReportsList.findById(id);
+  if (!report) {
+    showToast("Report not found.", "error");
+    return;
+  }
+
+  const user = getCurrentUser();
+  if (!isReportOwner(user, report) && !isReviewer(user)) {
+    showToast("Unauthorized: Only the report creator can remove this report.", "error");
+    return;
+  }
+
+  activeReportsList.removeById(id);
+  categoryHashTable.removeById(id);
+
+  report.status = "Removed";
+  report.removedAt = new Date().toISOString();
+  report.removedBy = user ? (user.name || user.rollNo || user.id) : "Owner";
+
+  // Data integrity: update any associated pending claims safely
+  if (typeof allClaims !== "undefined" && Array.isArray(allClaims)) {
+    allClaims.forEach((c) => {
+      if (c.itemId === id && c.status === "Pending") {
+        c.status = "Cancelled";
+        c.rejectionReason = "Report was removed by its creator.";
+        if (typeof pendingClaimQueue !== "undefined" && pendingClaimQueue.removeById) {
+          pendingClaimQueue.removeById(c.id);
+        }
+      }
+    });
+    if (typeof saveClaimsToLocalStorage === "function") {
+      saveClaimsToLocalStorage();
+    }
+  }
+
+  saveToLocalStorage();
+  refreshAll();
+  showToast(`🗑️ Report "${report.title}" removed successfully.`, "info");
 }
 
 function searchAndFilter() {
@@ -1117,8 +1491,11 @@ function switchTab(tabName) {
 
 // ----- Toast Notifications ----------------------------------
 function showToast(message, type = "success") {
+  if (typeof window !== "undefined" && typeof window.onToast === "function") {
+    window.onToast(message, type);
+  }
   const container = document.getElementById("toast-container");
-  if (!container) return;
+  if (!container || typeof container.appendChild !== "function") return;
   const toast = document.createElement("div");
 
   const colors = {
@@ -1132,9 +1509,13 @@ function showToast(message, type = "success") {
 
   container.appendChild(toast);
 
-  requestAnimationFrame(() => {
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      toast.classList.remove("translate-x-full", "opacity-0");
+    });
+  } else {
     toast.classList.remove("translate-x-full", "opacity-0");
-  });
+  }
 
   setTimeout(() => {
     toast.classList.add("translate-x-full", "opacity-0");
@@ -1303,6 +1684,34 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
       closeDetailModal();
       closeAuthModal();
+      closeMarkFoundConfirmModal();
+      closeRemoveReportConfirmModal();
     }
   });
 });
+
+// Explicit global exports for inline event handlers and console access
+window.triggerMarkFoundConfirm = triggerMarkFoundConfirm;
+window.confirmMarkLostItemFound = confirmMarkLostItemFound;
+window.closeMarkFoundConfirmModal = closeMarkFoundConfirmModal;
+window.triggerRemoveReportConfirm = triggerRemoveReportConfirm;
+window.confirmRemoveReport = confirmRemoveReport;
+window.closeRemoveReportConfirmModal = closeRemoveReportConfirmModal;
+window.markLostItemFound = markLostItemFound;
+window.removeReport = removeReport;
+window.markRecovered = markRecovered;
+window.isReportOwner = isReportOwner;
+window.getCurrentUser = getCurrentUser;
+window.setCurrentUser = setCurrentUser;
+window.addReport = addReport;
+window.showDetail = showDetail;
+window.saveToLocalStorage = saveToLocalStorage;
+window.loadFromLocalStorage = loadFromLocalStorage;
+window.getActiveReportsList = () => activeReportsList;
+window.getRecoveryHistoryList = () => recoveryHistoryList;
+window.getCategoryHashTable = () => categoryHashTable;
+window.isReviewer = isReviewer;
+window.showToast = showToast;
+window.formatDate = formatDate;
+window.formatDateLong = formatDateLong;
+window.refreshAll = refreshAll;

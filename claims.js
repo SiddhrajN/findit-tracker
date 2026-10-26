@@ -1523,6 +1523,13 @@ function closeUndoConfirmModal() {
 }
 
 function confirmUndoModalAction() {
+  const user = getCurrentUser();
+  if (!isReviewer(user)) {
+    showToast("Unauthorized: Switch to Reviewer mode to undo administrative actions.", "error");
+    closeUndoConfirmModal();
+    return;
+  }
+
   if (isUndoing) return;
   isUndoing = true;
 
@@ -1700,6 +1707,9 @@ if (typeof window !== "undefined") {
   window.recordAdminAction = recordAdminAction;
   window.executeUndo = executeUndo;
   window.performUndo = confirmUndoModalAction;
+  window.confirmUndoModalAction = confirmUndoModalAction;
+  window.handleUndoClick = handleUndoClick;
+  window.clearUndoHistory = clearUndoHistory;
   window.confirmApproveClaim = confirmApproveClaim;
   window.confirmRejectClaim = confirmRejectClaim;
   window.executeHandover = executeHandover;

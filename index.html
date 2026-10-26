@@ -1227,6 +1227,108 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!--  MODAL: CONFIRM MARK LOST ITEM AS FOUND (OWNER ONLY)    -->
+  <!-- ======================================================= -->
+  <div id="mark-found-confirm-modal" class="hidden fixed inset-0 z-[95] items-center justify-center p-4">
+    <div onclick="closeMarkFoundConfirmModal()" class="absolute inset-0 bg-neutral-950/70 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 z-10 border border-sand animate-fadeIn">
+      <div class="w-14 h-14 rounded-2xl bg-forest/15 text-forest flex items-center justify-center text-3xl mx-auto mb-4 border border-forest/25">
+        🎉
+      </div>
+
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Item Found</h3>
+      <p class="text-xs text-center text-gray-600 mb-4">
+        Did you find your missing item?
+      </p>
+
+      <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Item Title:</span>
+          <span id="mark-found-modal-item-title" class="font-bold text-gray-900">Item title</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Report ID:</span>
+          <span id="mark-found-modal-item-id" class="font-mono font-bold text-gray-600 bg-white px-2 py-0.5 rounded border border-sand">REP-0000</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Owner:</span>
+          <span id="mark-found-modal-item-owner" class="font-bold text-forest">Student Name</span>
+        </div>
+      </div>
+
+      <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-200 text-[11px] text-emerald-900 mb-5">
+        <p class="font-bold mb-1">📋 What happens next:</p>
+        <p class="leading-relaxed">
+          • Item will be marked as <strong>Found</strong> and moved to resolved recovery history.<br>
+          • It will be unlinked from active campus lost-item listings in O(1).<br>
+          • This prevents further changes to a resolved report while preserving record history.
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="btn-confirm-mark-found" onclick="confirmMarkLostItemFound()"
+          class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>✨ Yes, Mark as Found</span>
+        </button>
+        <button onclick="closeMarkFoundConfirmModal()"
+          class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!--  MODAL: CONFIRM REMOVE REPORT (OWNER ONLY)               -->
+  <!-- ======================================================= -->
+  <div id="remove-report-confirm-modal" class="hidden fixed inset-0 z-[95] items-center justify-center p-4">
+    <div onclick="closeRemoveReportConfirmModal()" class="absolute inset-0 bg-neutral-950/70 backdrop-blur-md"></div>
+
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 z-10 border border-sand animate-fadeIn">
+      <div class="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center text-2xl mx-auto mb-4 border border-red-200">
+        🗑️
+      </div>
+
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Remove Lost Item Report</h3>
+      <p class="text-xs text-center text-gray-600 mb-4">
+        Are you sure you want to remove your report?
+      </p>
+
+      <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Item Title:</span>
+          <span id="remove-report-modal-item-title" class="font-bold text-gray-900">Item title</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-500 font-medium">Report ID:</span>
+          <span id="remove-report-modal-item-id" class="font-mono font-bold text-gray-600 bg-white px-2 py-0.5 rounded border border-sand">REP-0000</span>
+        </div>
+      </div>
+
+      <div class="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[11px] text-amber-900 mb-5">
+        <p class="font-bold mb-1">⚠️ Notice:</p>
+        <p class="leading-relaxed">
+          • Your report will be unlinked from active listings in O(1).<br>
+          • Other students will no longer see it in campus searches.<br>
+          • Related records and claim histories are safely preserved per data-integrity rules.
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="btn-confirm-remove-report" onclick="confirmRemoveReport()"
+          class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>🗑️ Yes, Remove Report</span>
+        </button>
+        <button onclick="closeRemoveReportConfirmModal()"
+          class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="dsa.js"></script>
   <script src="app.js"></script>
