@@ -43,37 +43,37 @@ const PRIORITY_CONFIG = {
     level: 3,
     key: "urgent",
     name: "Urgent",
-    label: "URGENT",
+    label: "Urgent",
     dotClass: "bg-rose-500",
     badgeBg: "bg-rose-600 text-white shadow-xs ring-1 ring-rose-400/40",
     pillBg: "bg-rose-50 text-rose-700 border border-rose-200",
     borderHighlight: "border-rose-300",
     glowDot: "bg-rose-500",
-    desc: "Critical items: College IDs, Wallets, Keys, Essential Official Belongings",
+    desc: "Wallets, phones, keys, and IDs that people need right away",
   },
   2: {
     level: 2,
     key: "medium",
     name: "Medium",
-    label: "MEDIUM",
+    label: "Medium",
     dotClass: "bg-amber-500",
     badgeBg: "bg-amber-500 text-white shadow-xs",
     pillBg: "bg-amber-50 text-amber-800 border border-amber-200",
     borderHighlight: "border-amber-300",
     glowDot: "bg-amber-400",
-    desc: "Electronics, Calculators, Audio devices, Textbooks",
+    desc: "Electronics, calculators, headphones, and textbooks needed for class",
   },
   1: {
     level: 1,
     key: "low",
     name: "Low",
-    label: "LOW",
+    label: "Low",
     dotClass: "bg-slate-400",
     badgeBg: "bg-slate-600 text-white shadow-xs",
     pillBg: "bg-slate-100 text-slate-700 border border-slate-200",
     borderHighlight: "border-slate-300",
     glowDot: "bg-slate-400",
-    desc: "Standard items: Stationery, Umbrellas, Water bottles, Accessories",
+    desc: "Everyday items like notebooks, water bottles, and stationery",
   },
 };
 
@@ -106,7 +106,7 @@ function evaluatePriorityWithLLM(item) {
   let score = 25;
   let reasoning = "";
   let factors = [];
-  const model = "Gemini-2.5-Campus-Reasoner";
+  const model = "Urgency guide";
 
   // Category & Keyword Detectors
   const isPhoneOrLaptop =
@@ -224,40 +224,23 @@ function evaluatePriorityWithLLM(item) {
   if (isPhoneOrLaptop) {
     priority = 3;
     score = 96;
-    factors = [
-      "High-Value Digital Computing Asset",
-      "Personal & Coursework Data Exposure",
-      "Primary Communication Line",
-      "Theft Target Vulnerability",
-    ];
-    reasoning = `Classified as primary computing / mobile device (${item.title || "Device"}). High financial asset value combined with acute risk of coursework data loss, personal account exposure, and lost communication capability. Auto-assigned to High/Urgent priority at root of Binary Max-Heap.`;
+    factors = ["Personal accounts & files", "Coursework & study files", "Needed for communication"];
+    reasoning = `Phones and laptops contain personal accounts and study files, so they need to be returned right away.`;
   } else if (isWallet) {
     priority = 3;
     score = 94;
-    factors = [
-      "Direct Monetary Asset",
-      "Financial Misuse Vulnerability",
-      "Payment Card Compromise",
-    ];
-    reasoning = `Identified wallet or financial instrument (${item.title || "Wallet"}). Substantial risk of unauthorized card transactions and immediate financial loss. Auto-assigned to High/Urgent priority.`;
+    factors = ["Bank cards & cash", "Official documents"];
+    reasoning = `Wallets contain money and cards that need to be secured immediately.`;
   } else if (isKey) {
     priority = 3;
     score = 93;
-    factors = [
-      "Physical Security Compromise",
-      "Vehicle Stranded Hazard",
-      "Laboratory / Hostel Access Key",
-    ];
-    reasoning = `Identified high-security physical entry or vehicle access asset (${item.title || "Key"}). Leaves owner stranded and presents immediate security exposure to residential or laboratory premises.`;
+    factors = ["Vehicle or room access", "Immediate everyday need"];
+    reasoning = `Keys unlock vehicles or rooms, so owners need them back as soon as possible.`;
   } else if (isMedical) {
     priority = 3;
     score = 97;
-    factors = [
-      "Health & Medical Necessity",
-      "Personal Well-Being Asset",
-      "Immediate Recovery Priority",
-    ];
-    reasoning = `Evaluated as health-critical medical item (${item.title || "Item"}). Rapid retrieval is prioritized to protect student wellness and prevent health complications.`;
+    factors = ["Daily health essential", "Immediate need"];
+    reasoning = `Medical supplies and glasses are essential for personal health.`;
   }
   // ==========================================
   // Tier 2: MEDIUM PRIORITY (Priority 2)
@@ -267,12 +250,8 @@ function evaluatePriorityWithLLM(item) {
   else if (isIDCard) {
     priority = 2;
     score = 72;
-    factors = [
-      "Campus Identification Document",
-      "Administrative Reissuance Available",
-      "Library & Gate Access Credential",
-    ];
-    reasoning = `Identified campus identification card (${item.title || "ID Card"}). Essential for campus building access and library check-in; however, temporary passes and administrative reissuance are readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.`;
+    factors = ["Campus & library access", "Official student ID"];
+    reasoning = `ID cards should be returned quickly for campus access and library check-in.`;
   } else if (
     !isExplicitLow &&
     (fullText.includes("calc") ||
@@ -291,12 +270,8 @@ function evaluatePriorityWithLLM(item) {
   ) {
     priority = 2;
     score = 68;
-    factors = [
-      "Academic Tool / Consumer Gadget",
-      "Moderate Replacement Cost",
-      "Lecture Problem-Set Dependency",
-    ];
-    reasoning = `Identified academic computing utility or consumer gadget (${item.title || "Item"}). Involves moderate replacement overhead and ongoing coursework requirements, warranting medium priority tiering.`;
+    factors = ["Needed for class", "Everyday study tool"];
+    reasoning = `Everyday study tools and gadgets needed for classes.`;
   }
   // ==========================================
   // Tier 3: LOW PRIORITY (Priority 1)
@@ -305,12 +280,8 @@ function evaluatePriorityWithLLM(item) {
   else {
     priority = 1;
     score = 28;
-    factors = [
-      "Standard Utility Belonging",
-      "Non-Sensitive Academic Material",
-      "Minimal Campus Security Impact",
-    ];
-    reasoning = `Analyzed as standard campus utility accessory (${item.title || "Item"}). Poses negligible identity exposure, financial hazard, or academic deadline vulnerability.`;
+    factors = ["Everyday belonging", "Non-sensitive item"];
+    reasoning = `Everyday personal item with low urgency.`;
   }
 
   return {
@@ -387,7 +358,7 @@ const SEED_DATA = [
     creatorName: "Siddhraj Nimje",
     priority: 3, // Urgent
     llmScore: 96,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Contains official student ID card and monetary cash. Classified as Urgent due to acute financial exposure and campus identity compromise risk.",
     llmFactors: ["Official Identity Credential", "Financial Misuse Vulnerability", "Biometric Gate Risk"],
     status: "Active",
@@ -405,7 +376,7 @@ const SEED_DATA = [
     creatorName: "Dr. Aris Thorne",
     priority: 2, // Medium
     llmScore: 68,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Educational electronics tool necessary for engineering lab computations and upcoming quizzes. Medium urgency.",
     llmFactors: ["Academic Computing Utility", "Moderate Replacement Cost"],
     status: "Active",
@@ -423,7 +394,7 @@ const SEED_DATA = [
     creatorName: "Siddhraj Nimje",
     priority: 1, // Low
     llmScore: 30,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Standard lecture notebook. Low physical security risk; lecture content can be transcribed from peers with minimal disruption.",
     llmFactors: ["Standard Utility Belonging", "Non-Sensitive Material"],
     status: "Active",
@@ -441,7 +412,7 @@ const SEED_DATA = [
     creatorName: "Dr. Aris Thorne",
     priority: 3, // Urgent
     llmScore: 94,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Vehicle ignition access key. Immediate vulnerability of motorcycle theft in open parking lot and student mobility obstruction.",
     llmFactors: ["Vehicle Stranded Hazard", "Theft Vulnerability", "Physical Access Asset"],
     status: "Active",
@@ -459,7 +430,7 @@ const SEED_DATA = [
     creatorName: "Rahul Sharma",
     priority: 2, // Medium
     llmScore: 74,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "High-value personal audio hardware. High financial replacement cost but zero threat to campus building safety or exam entry.",
     llmFactors: ["High Monetary Value", "Theft Incentive Risk"],
     status: "Active",
@@ -477,7 +448,7 @@ const SEED_DATA = [
     creatorName: "Dr. Aris Thorne",
     priority: 2, // Medium
     llmScore: 72,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.",
     llmFactors: ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"],
     status: "Active",
@@ -492,7 +463,7 @@ const SEED_DATA = [
     description: "Black HP Type-C fast charger left on the 2nd-floor central stair landing bench near the library entrance.",
     priority: 3, // Urgent
     llmScore: 88,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Essential power accessory for engineering laptop computers. Critical for student coding lab evaluations and imminent submissions.",
     llmFactors: ["Academic Computing Essential", "High Replacement Urgency", "Immediate Academic Risk"],
     status: "Active",
@@ -507,7 +478,7 @@ const SEED_DATA = [
     description: "Milton insulated 750ml steel flask with scratch on the cap. Left on lab workbench 4.",
     priority: 1, // Low
     llmScore: 22,
-    llmModel: "Gemini-2.5-Campus-Reasoner",
+    llmModel: "Urgency guide",
     llmReasoning: "Everyday hydration accessory. Standard utility belonging with zero security or identity compromise risk. Low priority.",
     llmFactors: ["Everyday Utility Belonging", "Non-Sensitive Material", "Zero Identity Risk"],
     status: "Active",
@@ -559,8 +530,14 @@ function loadFromLocalStorage() {
       } else if (item.id === "REP-1006" && item.priority === 3) {
         item.priority = 2;
         item.llmScore = 72;
-        item.llmReasoning = "Campus identification credential. Essential for campus access and library check-in; administrative reissuance is readily obtainable through the student affairs desk. Auto-assigned to Medium Priority.";
-        item.llmFactors = ["Campus Identification Document", "Administrative Reissuance Available", "Library & Gate Access Credential"];
+        item.llmReasoning = "ID cards should be returned quickly for campus access and library check-in.";
+        item.llmFactors = ["Campus & library access", "Official student ID"];
+        migrated = true;
+      }
+      if (item.llmReasoning && (item.llmReasoning.includes("Binary Max-Heap") || item.llmReasoning.includes("Auto-assigned") || item.llmReasoning.includes("Classified as primary computing"))) {
+        const evalResult = evaluatePriorityWithLLM(item);
+        item.llmReasoning = evalResult.reasoning;
+        item.llmFactors = evalResult.factors;
         migrated = true;
       }
       return item;
@@ -708,7 +685,7 @@ function initBentoHashDemo() {
     const rawVal = input.value.trim();
     const val = rawVal || "Wallet";
     const bucket = categoryHashTable.hash(val);
-    pill.innerHTML = `<span>hash("${escapeHtml(val)}") → Bucket #${bucket}</span>`;
+    pill.innerHTML = `<span>"${escapeHtml(val)}" matches instantly</span>`;
 
     // Render 7 surrounding bucket slots
     const visibleBuckets = [];
@@ -728,7 +705,7 @@ function initBentoHashDemo() {
               : "bg-white/90 border-sand text-slate-500 font-medium"
           }">
             <span class="text-[9px] block opacity-75">Bucket</span>
-            <span class="text-xs font-mono font-bold">#${b}</span>
+            <span class="text-xs font-semibold">#${b}</span>
           </div>`;
       })
       .join("");
@@ -782,7 +759,7 @@ function setDemoRole(role) {
   }
 
   refreshAll();
-  showToast(`Switched active role to: ${user.role === "reviewer" ? "Reviewer" : "Student"}`, "success");
+  showToast(`You're now viewing as a ${user.role === "reviewer" ? "reviewer." : "student."}`, "success");
 }
 
 function updateNavRoleUI() {
@@ -978,7 +955,7 @@ function updateStats() {
     const pInfo = getPriorityInfo(topReport.priority);
     if (pqTopTitle) pqTopTitle.textContent = `[${topReport.id}] ${topReport.title} — ${topReport.location}`;
     if (pqTopBadge) {
-      pqTopBadge.className = `inline-flex items-center gap-1.5 font-mono text-[10px] font-bold px-2 py-0.5 rounded ${pInfo.pillBg}`;
+      pqTopBadge.className = `inline-flex items-center gap-1.5 text-xs text-slate-500 font-bold px-2 py-0.5 rounded ${pInfo.pillBg}`;
       pqTopBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${pInfo.dotClass}"></span><span>P-Score: ${pInfo.level}/3 · ${pInfo.name}</span>`;
       pqTopBadge.classList.remove("hidden");
     }
@@ -1010,8 +987,8 @@ function toggleAdminMode() {
   refreshAll();
   showToast(
     adminMode
-      ? "Admin mode active: priority adjustment and high-priority processing enabled."
-      : "Switched to standard student view (read-only priority tags).",
+      ? "Staff controls are now on."
+      : "You're viewing as a student.",
     "success"
   );
 }
@@ -1032,7 +1009,7 @@ function setReportPriority(id, newPriority) {
 
   const pInfo = getPriorityInfo(pVal);
   showToast(
-    `${rep ? rep.title : id} priority updated to ${pInfo.name} (P${pInfo.level}) — Heap rebalanced in O(log n)`,
+    `Urgency for "${rep ? rep.title : id}" set to ${pInfo.name.toLowerCase()}.`,
     "success"
   );
 }
@@ -1040,13 +1017,13 @@ function setReportPriority(id, newPriority) {
 function processHighestPriorityReport() {
   const top = activePriorityQueue.peek();
   if (!top) {
-    showToast("⚠️ Priority Queue is empty. No reports to process.", "error");
+    showToast("No urgent items waiting right now.", "error");
     return;
   }
   showDetail(top.id, /* isProcessingMode = */ true);
   const pInfo = getPriorityInfo(top.priority);
   showToast(
-    `Processing highest-priority item from Binary Heap: [${top.id}] ${top.title} (${pInfo.name} · P${pInfo.level})`,
+    `Opening most urgent item: "${top.title}".`,
     "match"
   );
 }
@@ -1118,7 +1095,7 @@ function renderHeapInspector() {
         .map((levelNodes, lvlIdx) => {
           return `
         <div class="flex flex-col items-center">
-          <div class="text-[10px] font-mono font-bold text-gray-400 mb-1.5">
+          <div class="text-[10px] font-semibold text-gray-400 mb-1.5">
             ── Level ${lvlIdx} ${lvlIdx === 0 ? '(Root • Highest Priority)' : ''} ──
           </div>
           <div class="flex flex-wrap items-center justify-center gap-3">
@@ -1129,7 +1106,7 @@ function renderHeapInspector() {
                 return `
                 <div class="p-3 rounded-2xl bg-white border ${isRoot ? 'border-red-400 ring-2 ring-red-400/40 shadow-md' : 'border-sand'} flex flex-col items-center text-center min-w-[140px] shadow-xs">
                   <div class="flex items-center gap-1 mb-1">
-                    <span class="text-[10px] font-mono font-bold text-gray-400">[${node.index}]</span>
+                    <span class="text-[10px] font-semibold text-gray-400">[${node.index}]</span>
                     <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${pInfo.pillBg} flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full ${pInfo.dotClass}"></span>${pInfo.label}</span>
                   </div>
                   <p class="text-xs font-bold text-gray-800 line-clamp-1">${escapeHtml(node.title)}</p>
@@ -1233,7 +1210,7 @@ function create3DItemHTML(category, title) {
           </div>
           <div class="layer-3d z-front w-22 h-24 p-2 flex flex-col justify-between pointer-events-none">
             <div class="w-full h-5 bg-emerald-950/90 rounded border border-emerald-800/80 p-1 flex items-center justify-end shadow-inner mt-3">
-              <span class="text-[8px] font-mono text-emerald-400 font-bold tracking-wider">O(1) HASH</span>
+              <span class="text-[8px] font-mono text-emerald-400 font-bold tracking-wider">0.00</span>
             </div>
             <div class="grid grid-cols-4 gap-1 mb-1">
               <div class="h-2 rounded-xs bg-neutral-600 shadow-xs"></div>
@@ -1350,8 +1327,8 @@ function renderReports(items) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M21 21l-5.197-5.197M16.804 15.804A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0011.608 10.608z"/>
         </svg>
-        <p class="text-lg font-bold text-gray-800">No matching reports found</p>
-        <p class="text-sm text-gray-500 mt-1">Try another search keyword or submit a new report.</p>
+        <p class="text-lg font-bold text-gray-800">No items found</p>
+        <p class="text-sm text-gray-500 mt-1">Try searching for a different word or report an item.</p>
       </div>`;
     return;
   }
@@ -1403,7 +1380,7 @@ function renderReports(items) {
               ${ICONS[catInfo.icon] ? ICONS[catInfo.icon]("w-5 h-5 " + (catInfo.icon === 'key' ? 'text-amber-700' : catInfo.icon === 'card' ? 'text-emerald-700' : catInfo.icon === 'electronics' ? 'text-sky-700' : catInfo.icon === 'book' ? 'text-yellow-700' : catInfo.icon === 'accessory' ? 'text-rose-700' : 'text-slate-600')) : ''}
             </div>
             <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-0.5">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-0.5">
                 <span class="font-bold text-slate-500">${escapeHtml(r.id)}</span>
                 ${isOwner ? '<span class="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Your Report</span>' : ''}
               </div>
@@ -1425,7 +1402,7 @@ function renderReports(items) {
                 ${ICONS.mapPin("w-3.5 h-3.5 text-forest shrink-0")}
                 <span class="truncate">${escapeHtml(r.location)}</span>
               </div>
-              <div class="flex items-center gap-1.5 shrink-0 text-slate-400 font-mono text-[11px]">
+              <div class="flex items-center gap-1.5 shrink-0 text-slate-400 text-xs text-slate-500">
                 ${ICONS.calendar("w-3.5 h-3.5 text-slate-400 shrink-0")}
                 <span>${formatDate(r.timestamp)}</span>
               </div>
@@ -1439,16 +1416,16 @@ function renderReports(items) {
                 ? `<button onclick="event.stopPropagation(); openClaimModal('${r.id}')"
                     class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                     ${ICONS.shield("w-3.5 h-3.5")}
-                    <span>Claim Item</span>
+                    <span>This is mine</span>
                     ${ICONS.arrowRight("w-3.5 h-3.5")}
                   </button>
                   <button onclick="event.stopPropagation(); showDetail('${r.id}')"
                     class="py-2 px-3.5 text-xs font-semibold rounded-xl bg-sand-l text-gray-700 hover:bg-sand border border-sand hover:border-sand-d transition-all flex items-center justify-center gap-1 cursor-pointer">
-                    <span>View Details</span>
+                    <span>View details</span>
                   </button>`
                 : `<button onclick="event.stopPropagation(); showDetail('${r.id}')"
                     class="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-forest text-white hover:bg-forest-d transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-                    <span>${isOwner ? "Manage" : "View Details"}</span>
+                    <span>${isOwner ? "Manage your report" : "View details"}</span>
                     ${ICONS.arrowRight("w-3.5 h-3.5")}
                   </button>`
             }
@@ -1617,7 +1594,7 @@ function showDetail(id, isProcessingMode = false) {
         <button onclick="closeDetailModal(); openClaimModal('${report.id}');"
           class="flex-1 text-xs font-semibold px-4 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-d text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
           ${ICONS.shield("w-4 h-4")}
-          <span>Claim This Found Item</span>
+          <span>This is mine</span>
         </button>
         <button onclick="closeDetailModal()"
           class="px-5 py-2.5 border border-sand hover:border-slate-400 text-slate-700 font-semibold rounded-xl transition-all hover:bg-sand-l/30 text-xs cursor-pointer">
@@ -1636,11 +1613,11 @@ function showDetail(id, isProcessingMode = false) {
             ${ICONS.sparkles("w-4 h-4 text-white")}
           </div>
           <div>
-            <p class="text-xs font-bold uppercase tracking-wider">Urgent Action Queue · Active Dispatch</p>
-            <p class="text-[11px] text-white/80">This report occupies the ROOT node of the Binary Max-Heap.</p>
+            <p class="text-xs font-bold uppercase tracking-wider">Urgent item · Needs quick return</p>
+            <p class="text-[11px] text-white/80">This item is at the top of the urgency list.</p>
           </div>
         </div>
-        <span class="font-mono text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/30">Max-Heap Root · O(1) Peek</span>
+        <span class="text-xs text-slate-500 font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/30">Needs quick return</span>
       </div>
       `
         : ""
@@ -1672,11 +1649,11 @@ function showDetail(id, isProcessingMode = false) {
             ? `<span class="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">Your Report</span>`
             : ""
         }
-        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
-          P-Score: ${prioInfo.level}/3
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${prioInfo.pillBg}">
+          ${prioInfo.name} priority
         </span>
       </div>
-      <span class="text-xs text-slate-500 font-mono font-bold bg-sand-l/60 px-2.5 py-1 rounded-md border border-sand">
+      <span class="text-xs text-slate-500 font-semibold bg-sand-l/60 px-2.5 py-1 rounded-md border border-sand">
         ${escapeHtml(report.id)}
       </span>
     </div>
@@ -1692,7 +1669,7 @@ function showDetail(id, isProcessingMode = false) {
         ${ICONS.mapPin("w-3.5 h-3.5 text-forest")}
         <span>${escapeHtml(report.location)}</span>
       </span>
-      <span class="inline-flex items-center gap-1.5 text-slate-500 bg-sand-l/80 px-3 py-1 rounded-lg border border-sand font-mono text-[11px]">
+      <span class="inline-flex items-center gap-1.5 text-slate-500 bg-sand-l/80 px-3 py-1 rounded-lg border border-sand text-xs text-slate-500">
         ${ICONS.calendar("w-3.5 h-3.5 text-slate-400")}
         <span>${formatDateLong(report.timestamp)}</span>
       </span>
@@ -1703,30 +1680,29 @@ function showDetail(id, isProcessingMode = false) {
       <p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(report.description)}</p>
     </div>
 
-    <!-- Priority Assessment Panel (Refined Pro HUD) -->
+    <!-- How urgent is this? Panel (Refined Pro HUD) -->
     <div class="bg-gradient-to-br from-forest/5 via-ivory to-amber-50/40 rounded-2xl p-4 mb-4 border border-forest/20 text-xs shadow-2xs">
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-1.5 font-bold text-gray-900">
           ${ICONS.sparkles("w-4 h-4 text-forest")}
-          <span class="uppercase tracking-wide text-forest font-bold text-xs">Priority Assessment</span>
+          <span class="uppercase tracking-wide text-forest font-bold text-xs">How urgent is this?</span>
         </div>
         <span class="text-[10px] font-mono text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">
-          ${escapeHtml(report.llmModel || "Gemini-2.5-Campus-Reasoner")}
+          ${escapeHtml(report.llmModel || "Urgency guide")}
         </span>
       </div>
 
       <div class="flex items-center justify-between mb-2 pb-2 border-b border-sand/80">
-        <span class="font-semibold text-gray-700">Urgency Risk Rating:</span>
+        <span class="font-semibold text-gray-700">Urgency level:</span>
         <div class="flex items-center gap-1.5">
-          <span class="font-mono font-bold ${report.priority === 3 ? 'text-rose-700' : report.priority === 2 ? 'text-amber-700' : 'text-slate-700'}">
-            ${report.llmScore || (report.priority === 3 ? 96 : report.priority === 2 ? 68 : 28)} / 100
+          <span class="font-semibold ${report.priority === 3 ? 'text-rose-700' : report.priority === 2 ? 'text-amber-700' : 'text-slate-700'}">
+            ${prioInfo.name} priority
           </span>
-          <span class="text-[10px] text-slate-500 font-mono">(${prioInfo.name} Tier)</span>
         </div>
       </div>
 
       <div class="mb-2.5">
-        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Assessment Rationale:</p>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Why this urgency:</p>
         <p class="text-xs text-slate-700 leading-relaxed bg-white/90 p-3 rounded-xl border border-sand italic">
           "${escapeHtml(report.llmReasoning || prioInfo.desc)}"
         </p>
@@ -1736,7 +1712,7 @@ function showDetail(id, isProcessingMode = false) {
         report.llmFactors && report.llmFactors.length > 0
           ? `
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Evaluated Factors:</p>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Key points:</p>
         <div class="flex flex-wrap gap-1">
           ${report.llmFactors
             .map(
@@ -1761,12 +1737,12 @@ function showDetail(id, isProcessingMode = false) {
       <div class="flex items-center justify-between mb-2">
         <h4 class="text-xs font-bold uppercase text-forest tracking-wide flex items-center gap-1.5">
           ${ICONS.shield("w-4 h-4 text-forest")}
-          <span>Admin Controls: Adjust Priority</span>
+          <span>Staff controls: Change urgency</span>
         </h4>
-        <span class="font-mono text-[10px] text-slate-400">Heap Rebalance O(log n)</span>
+        <span class="text-xs text-slate-500 text-slate-400">Change urgency</span>
       </div>
       <p class="text-[11px] text-slate-600 mb-3">
-        Assign urgency to reposition this report in the Priority Queue (bubble-up/down in O(log n)).
+        Set how quickly this item needs to be returned.
       </p>
       <div class="grid grid-cols-3 gap-2">
         <button onclick="setReportPriority('${report.id}', 3); showDetail('${report.id}', ${isProcessingMode});"
@@ -1779,7 +1755,7 @@ function showDetail(id, isProcessingMode = false) {
             <span class="w-1.5 h-1.5 rounded-full ${report.priority === 3 ? 'bg-white' : 'bg-rose-500'}"></span>
             <span>Urgent</span>
           </span>
-          <span class="font-mono text-[9px] opacity-80">P-Score: 3</span>
+          <span class="font-mono text-[9px] opacity-80">Urgent</span>
         </button>
         <button onclick="setReportPriority('${report.id}', 2); showDetail('${report.id}', ${isProcessingMode});"
           class="py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
@@ -1791,7 +1767,7 @@ function showDetail(id, isProcessingMode = false) {
             <span class="w-1.5 h-1.5 rounded-full ${report.priority === 2 ? 'bg-white' : 'bg-amber-500'}"></span>
             <span>Medium</span>
           </span>
-          <span class="font-mono text-[9px] opacity-80">P-Score: 2</span>
+          <span class="font-mono text-[9px] opacity-80">Medium</span>
         </button>
         <button onclick="setReportPriority('${report.id}', 1); showDetail('${report.id}', ${isProcessingMode});"
           class="py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
@@ -1803,7 +1779,7 @@ function showDetail(id, isProcessingMode = false) {
             <span class="w-1.5 h-1.5 rounded-full ${report.priority === 1 ? 'bg-white' : 'bg-slate-500'}"></span>
             <span>Low</span>
           </span>
-          <span class="font-mono text-[9px] opacity-80">P-Score: 1</span>
+          <span class="font-mono text-[9px] opacity-80">Low</span>
         </button>
       </div>
     </div>
@@ -1847,8 +1823,8 @@ function renderRecoveryHistory() {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
         </svg>
-        <p class="text-base font-bold text-gray-700">No recovered items yet</p>
-        <p class="text-xs text-gray-400 mt-1">Items unlinked from active Linked List and moved here will show up.</p>
+        <p class="text-base font-bold text-gray-700">No returned items yet</p>
+        <p class="text-xs text-gray-400 mt-1">Items returned to their owners will appear here.</p>
       </div>`;
     return;
   }
@@ -1873,7 +1849,7 @@ function renderRecoveryHistory() {
               const catInfo = getCategoryInfo(r.category);
               return `
             <tr class="hover:bg-sand/30 transition-colors">
-              <td class="py-3 pr-4 font-mono text-xs text-gray-500 font-bold">${escapeHtml(r.id)}</td>
+              <td class="py-3 pr-4 text-xs text-gray-500 font-bold">${escapeHtml(r.id)}</td>
               <td class="py-3 pr-4">
                 <div class="flex items-center gap-2">
                   <span class="text-base">${catInfo.emoji}</span>
@@ -1944,8 +1920,8 @@ function renderMatches() {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
         </svg>
-        <p class="text-base font-bold text-gray-800">No matches currently detected</p>
-        <p class="text-xs text-gray-500 mt-1">Automatic matches appear when a Found item shares the same category &amp; spot as a Lost item.</p>
+        <p class="text-base font-bold text-gray-800">No matches found yet</p>
+        <p class="text-xs text-gray-500 mt-1">We automatically look for lost and found items in the same location.</p>
       </div>`;
     return;
   }
@@ -1961,13 +1937,13 @@ function renderMatches() {
     <div class="bg-gradient-to-r from-sand-l/80 to-amber-50/50 border border-sand rounded-3xl p-5 shadow-xs">
       <div class="flex items-center gap-2.5 mb-4">
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-forest text-white text-xs font-bold shadow-xs">${i + 1}</span>
-        <h4 class="font-bold text-gray-900 text-base">Potential Match Detected: Category + Spot Overlap</h4>
+        <h4 class="font-bold text-gray-900 text-base">Possible match found</h4>
       </div>
       <!-- Match Bridge Header Connector (Cleanly positioned above columns, zero text overlap) -->
       <div class="flex items-center justify-center mb-3">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-amber-300 shadow-xs font-mono text-xs font-bold text-amber-900">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-amber-300 shadow-xs text-xs font-bold text-amber-900">
           <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span>94% Match · Category &amp; Spot Correlated</span>
+          <span>Matching item &amp; location</span>
         </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
@@ -1978,12 +1954,12 @@ function renderMatches() {
               <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
               Lost Item
             </span>
-            <span class="font-mono text-[10px] text-gray-400 ml-auto">${escapeHtml(m.lost.id)}</span>
+            <span class="text-xs text-slate-500 text-gray-400 ml-auto">${escapeHtml(m.lost.id)}</span>
           </div>
           <p class="font-bold text-gray-900">${escapeHtml(m.lost.title)}</p>
           <div class="flex items-center gap-3 text-xs text-slate-500 mt-2">
             <span class="flex items-center gap-1">${ICONS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(m.lost.location)}</span>
-            <span class="flex items-center gap-1 font-mono text-[11px]">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.lost.timestamp)}</span>
+            <span class="flex items-center gap-1 text-xs text-slate-500">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.lost.timestamp)}</span>
           </div>
         </div>
         <div class="bg-white/95 rounded-2xl p-4 border border-forest/30 shadow-xs">
@@ -1993,18 +1969,18 @@ function renderMatches() {
               <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
               Found Item
             </span>
-            <span class="font-mono text-[10px] text-gray-400 ml-auto">${escapeHtml(m.found.id)}</span>
+            <span class="text-xs text-slate-500 text-gray-400 ml-auto">${escapeHtml(m.found.id)}</span>
           </div>
           <p class="font-bold text-gray-900">${escapeHtml(m.found.title)}</p>
           <div class="flex items-center gap-3 text-xs text-slate-500 mt-2">
             <span class="flex items-center gap-1">${ICONS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(m.found.location)}</span>
-            <span class="flex items-center gap-1 font-mono text-[11px]">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.found.timestamp)}</span>
+            <span class="flex items-center gap-1 text-xs text-slate-500">${ICONS.calendar("w-3.5 h-3.5 text-slate-400")} ${formatDate(m.found.timestamp)}</span>
           </div>
         </div>
       </div>
       <p class="text-xs text-forest mt-3 font-medium flex items-center gap-1.5">
         ${ICONS.link("w-3.5 h-3.5 text-forest")}
-        <span>Both indexed in <strong>${escapeHtml(m.found.category)}</strong> at <strong>${escapeHtml(m.found.location)}</strong></span>
+        <span>Both reported in <strong>${escapeHtml(m.found.category)}</strong> around <strong>${escapeHtml(m.found.location)}</strong></span>
       </p>
     </div>`;
     })
@@ -2075,13 +2051,13 @@ function addReport(formData) {
   const prioInfo = getPriorityInfo(report.priority);
   if (categoryMatches.length > 0) {
     showToast(
-      `Match detected! ${categoryMatches.length} ${oppositeType.toLowerCase()} item(s) in "${report.category}" at "${report.location}". LLM auto-assigned ${prioInfo.name} Priority (Score: ${report.llmScore}/100).`,
+      `We found a potential match for your ${report.type.toLowerCase()} item at ${report.location}!`,
       "match"
     );
     switchTab("matches");
   } else {
     showToast(
-      `LLM auto-assigned ${prioInfo.name} Priority (Score: ${report.llmScore}/100) for "${report.title}". Binary Max-Heap restructured!`,
+      `Report submitted! Set to ${prioInfo.name.toLowerCase()} priority.`,
       "success"
     );
   }
@@ -2098,12 +2074,12 @@ function markRecovered(id) {
   // Enforce role and ownership authorization checks
   if (report.type === "Lost") {
     if (!isReportOwner(user, report) && !isReviewer(user)) {
-      showToast("Unauthorized: Only the creator of this lost item report can mark it as recovered or found.", "error");
+      showToast("Only the person who posted this report can mark it as found.", "error");
       return;
     }
   } else if (report.type === "Found") {
     if (!isReviewer(user)) {
-      showToast("Unauthorized: Only authorized reviewers can mark found items as recovered.", "error");
+      showToast("Only staff reviewers can mark found items as returned.", "error");
       return;
     }
   }
@@ -2166,7 +2142,7 @@ function markRecovered(id) {
 
   saveToLocalStorage();
   refreshAll();
-  showToast(`"${report.title}" marked as recovered and removed from Priority Queue!`, "success");
+  showToast(`"${report.title}" marked as returned!`, "success");
 }
 
 // State variables for report modal confirmations
@@ -2179,7 +2155,7 @@ function triggerMarkFoundConfirm(id) {
 
   const user = getCurrentUser();
   if (!isReportOwner(user, report) && !isReviewer(user)) {
-    showToast("Unauthorized: Only the creator of this report can mark it as found.", "error");
+    showToast("Only the person who posted this report can mark it as found.", "error");
     return;
   }
 
@@ -2228,7 +2204,7 @@ function markLostItemFound(id) {
 
   const user = getCurrentUser();
   if (!isReportOwner(user, report) && !isReviewer(user)) {
-    showToast("Unauthorized: Only the creator of this report can mark it as found.", "error");
+    showToast("Only the person who posted this report can mark it as found.", "error");
     return;
   }
 
@@ -2268,7 +2244,7 @@ function triggerRemoveReportConfirm(id) {
 
   const user = getCurrentUser();
   if (!isReportOwner(user, report) && !isReviewer(user)) {
-    showToast("Unauthorized: Only the report creator can remove this report.", "error");
+    showToast("Only the person who posted this report can delete it.", "error");
     return;
   }
 
@@ -2311,7 +2287,7 @@ function removeReport(id) {
 
   const user = getCurrentUser();
   if (!isReportOwner(user, report) && !isReviewer(user)) {
-    showToast("Unauthorized: Only the report creator can remove this report.", "error");
+    showToast("Only the person who posted this report can delete it.", "error");
     return;
   }
 
@@ -2428,7 +2404,7 @@ function switchTab(tabName) {
     const reviewerMode = typeof isReviewer === "function" && isReviewer(user);
     if (!reviewerMode) {
       if (typeof showToast === "function") {
-        showToast("Access Restricted: Reviewer authorization required.", "error");
+        showToast("Only staff reviewers can view this section.", "error");
       }
       tabName = "reports";
     }
@@ -2598,11 +2574,11 @@ function updateLLMPriorityPreview() {
       tierBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> <span>Low Priority (Level 1)</span>`;
     }
     if (scoreBadge) {
-      scoreBadge.textContent = "Urgency Risk: 20/100";
+      scoreBadge.textContent = "Urgency: Low";
       scoreBadge.className = "text-[10px] font-mono text-gray-500 font-bold";
     }
     if (reasoningText) {
-      reasoningText.textContent = "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically.";
+      reasoningText.textContent = "Type the item name and details above. We'll automatically set the urgency based on what the item is.";
     }
     if (factorsList) {
       factorsList.innerHTML = "";
@@ -2630,7 +2606,7 @@ function updateLLMPriorityPreview() {
   }
 
   if (scoreBadge) {
-    scoreBadge.textContent = `Urgency Risk: ${aiAssessment.score}/100`;
+    scoreBadge.textContent = `Urgency: ${pInfo.name}`;
     scoreBadge.className = `text-[10px] font-mono font-black ${
       aiAssessment.priority === 3 ? "text-red-700" : aiAssessment.priority === 2 ? "text-amber-700" : "text-stone-700"
     }`;
@@ -2774,7 +2750,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Autonomous LLM Priority Assessment Listeners (Real-time CoT Reasoning)
+  // Autonomous LLM How urgent is this? Listeners (Real-time CoT Reasoning)
   const inputTitle = document.getElementById("input-title");
   const selectCat = document.getElementById("input-category");
   const inputLocation = document.getElementById("input-location");

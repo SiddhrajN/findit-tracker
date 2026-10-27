@@ -82,7 +82,7 @@ function toggleDemoRole() {
 
   refreshAll();
   if (typeof updateNavRoleUI === "function") updateNavRoleUI();
-  showToast(`Switched active role to: ${newRole === "reviewer" ? "Reviewer" : "Student"}`, "success");
+  showToast(`You're now viewing as a ${newRole === "reviewer" ? "reviewer." : "student."}`, "success");
 }
 
 function quickReviewerLogin() {
@@ -110,7 +110,7 @@ function quickReviewerLogin() {
   setCurrentUser(user);
   closeAuthModal();
   renderAppView();
-  showToast(`Logged in as Reviewer: ${revName}!`, "success");
+  showToast(`Welcome, Dr. Aris Thorne (Reviewer)!`, "success");
 }
 
 function updateRoleUI() {
@@ -405,7 +405,7 @@ function handleClaimSubmit(e) {
   refreshAll();
 
   const pos = pendingClaimQueue.size();
-  showToast(`Claim submitted! Your request is #${pos} in the FIFO review queue.`, "success");
+  showToast(`Claim submitted! Your request is #${pos} in line for review.`, "success");
 }
 
 // ----- Claim Reviewer Operations (FIFO Queue & Review Modal) --
@@ -420,7 +420,7 @@ function openReviewModal(claimId) {
 
   // Strict Privacy: Only authorized campus reviewers can open the review modal and view private details
   if (!isReviewer(user)) {
-    showToast("Access Restricted: Only authorized campus reviewers can inspect claim evidence.", "error");
+    showToast("Only staff reviewers can view private claim details.", "error");
     return;
   }
 
@@ -456,7 +456,7 @@ function openReviewModal(claimId) {
   const queuePosElement = document.getElementById("review-queue-position");
   if (queuePosElement) {
     if (claim.status === "Pending" && queueIdx !== -1) {
-      queuePosElement.textContent = `#${queueIdx + 1} of ${pendingClaimQueue.size()} in FIFO Queue`;
+      queuePosElement.textContent = `Claim #${queueIdx + 1} in line`;
       queuePosElement.classList.remove("hidden");
     } else {
       queuePosElement.classList.add("hidden");
@@ -570,7 +570,7 @@ function toggleRejectInput() {
 function confirmApproveClaim() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Action restricted: Authorized Reviewer role required.", "error");
+    showToast("Only staff reviewers can perform this action.", "error");
     return;
   }
 
@@ -613,13 +613,13 @@ function confirmApproveClaim() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`Claim ${claim.id} approved. Ready for physical handover confirmation.`, "success");
+  showToast(`Claim approved! Ready for student pickup.`, "success");
 }
 
 function confirmRejectClaim() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Action restricted: Authorized Reviewer role required.", "error");
+    showToast("Only staff reviewers can perform this action.", "error");
     return;
   }
 
@@ -634,7 +634,7 @@ function confirmRejectClaim() {
 
   const reason = document.getElementById("review-reject-reason-input").value.trim();
   if (!reason || reason.length < 5) {
-    showToast("Please provide a meaningful rejection reason (minimum 5 characters).", "error");
+    showToast("Please write a short reason for rejecting this claim.", "error");
     document.getElementById("review-reject-reason-input").focus();
     return;
   }
@@ -667,14 +667,14 @@ function confirmRejectClaim() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`Claim ${claim.id} has been rejected. Reason logged for claimant.`, "info");
+  showToast(`Claim rejected. The student can see the reason.`, "info");
 }
 
 // ----- Handover & Recovery Integration (Feature D) -----------
 function triggerHandoverConfirmation(claimId) {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Action restricted: Authorized Reviewer role required.", "error");
+    showToast("Only staff reviewers can perform this action.", "error");
     return;
   }
 
@@ -719,7 +719,7 @@ function closeHandoverConfirmModal() {
 function executeHandover() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Action restricted: Authorized Reviewer role required.", "error");
+    showToast("Only staff reviewers can perform this action.", "error");
     closeHandoverConfirmModal();
     return;
   }
@@ -819,26 +819,26 @@ function executeHandover() {
   closeReviewModal();
   refreshAll();
 
-  showToast(`Handover confirmed: "${report.title}" is officially recorded as Recovered.`, "success");
+  showToast(`Handover complete: "${report.title}" is marked as returned.`, "success");
 }
 
 // ----- FIFO Queue Inspector Action ---------------------------
 function processNextInQueue() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Action restricted: Switch to Reviewer role to process the queue.", "error");
+    showToast("Please switch to reviewer mode to review claims.", "error");
     return;
   }
 
   // Inspect front without removing
   const nextClaim = pendingClaimQueue.peek();
   if (!nextClaim) {
-    showToast("The FIFO Pending Claim Queue is currently empty!", "match");
+    showToast("No claims are waiting for review right now.", "match");
     return;
   }
 
   openReviewModal(nextClaim.id);
-  showToast(`Inspecting Front of Queue (FIFO): Claim ${nextClaim.id}`, "success");
+  showToast(`Opening claim for "${nextClaim.itemTitle}".`, "success");
 }
 
 // ----- UI Rendering: Claim Requests Dashboard (Feature C) ----
@@ -884,8 +884,8 @@ function renderClaimRequests() {
         <div class="w-16 h-16 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center mx-auto mb-4 border border-terracotta/20">
           ${CLAIM_SVGS.lock("w-8 h-8 text-terracotta")}
         </div>
-        <h3 class="text-lg font-extrabold text-gray-900 mb-1">Access Restricted: Reviewer Authority Required</h3>
-        <p class="text-xs text-gray-500 max-w-md mx-auto">This desk contains confidential student ownership evidence and is restricted to authorized campus reviewers and administrative staff.</p>
+        <h3 class="text-lg font-extrabold text-gray-900 mb-1">Staff access only</h3>
+        <p class="text-xs text-gray-500 max-w-md mx-auto">This section contains private student proof and is only visible to campus staff.</p>
       </div>`;
     return;
   }
@@ -951,9 +951,9 @@ function renderClaimRequests() {
           // Find queue position if pending
           const qIndex = isPending ? queueArray.findIndex((c) => c.id === claim.id) : -1;
           const posBadge = qIndex !== -1
-            ? `<span class="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+            ? `<span class="inline-flex items-center gap-1.5 text-[10px] font-semibold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                <span>FIFO #${qIndex + 1}</span>
+                <span>#${qIndex + 1} in line</span>
               </span>`
             : "";
 
@@ -963,7 +963,7 @@ function renderClaimRequests() {
               <!-- Header Badges -->
               <div class="flex items-center justify-between gap-2 mb-3">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="font-mono text-xs font-black text-gray-700 bg-white/80 px-2.5 py-0.5 rounded-lg border border-sand">
+                  <span class="text-xs font-bold text-gray-700 bg-white/80 px-2.5 py-0.5 rounded-lg border border-sand">
                     ${escapeHtml(claim.id)}
                   </span>
                   ${renderStatusBadgeHTML(claim.status, isHandedOver)}
@@ -978,7 +978,7 @@ function renderClaimRequests() {
                 <div class="text-xs text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
                   <span class="flex items-center gap-1">${CLAIM_SVGS.mapPin("w-3.5 h-3.5 text-forest")} ${escapeHtml(claim.itemLocation)}</span>
                   <span class="flex items-center gap-1">${CLAIM_SVGS.tag("w-3.5 h-3.5 text-slate-500")} ${escapeHtml(claim.itemCategory)}</span>
-                  <span class="font-mono font-bold text-[11px] bg-sand-l/60 px-1.5 py-0.5 rounded border border-sand">${escapeHtml(claim.itemId)}</span>
+                  <span class="font-semibold text-[11px] bg-sand-l/60 px-1.5 py-0.5 rounded border border-sand">${escapeHtml(claim.itemId)}</span>
                 </div>
               </div>
 
@@ -990,7 +990,7 @@ function renderClaimRequests() {
                 </div>
                 <div class="flex items-center justify-between mt-1">
                   <span class="text-gray-500 font-medium">Roll Number:</span>
-                  <span class="font-mono font-bold text-terracotta">${escapeHtml(claim.claimantRollNumber)}</span>
+                  <span class="font-semibold text-terracotta">${escapeHtml(claim.claimantRollNumber)}</span>
                 </div>
               </div>
 
@@ -1009,7 +1009,7 @@ function renderClaimRequests() {
             <div class="pt-3 border-t border-sand-d/40 flex items-center gap-2">
               <button onclick="openReviewModal('${claim.id}')"
                 class="flex-1 visionos-btn text-white text-xs font-bold py-2.5 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-1.5">
-                <span>Inspect Evidence</span>
+                <span>Review claim</span>
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </button>
 
@@ -1018,7 +1018,7 @@ function renderClaimRequests() {
                   ? `<button onclick="triggerHandoverConfirmation('${claim.id}')"
                       class="visionos-btn-terracotta text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all hover:brightness-110 flex items-center gap-1">
                       ${CLAIM_SVGS.handover("w-3.5 h-3.5")}
-                      <span>Confirm Handover</span>
+                      <span>Hand over item</span>
                     </button>`
                   : ""
               }
@@ -1097,7 +1097,7 @@ function renderMyClaims() {
           if (isPending) {
             const qIdx = queueArr.findIndex((c) => c.id === claim.id);
             const qMsg = qIdx !== -1
-              ? `Waiting for reviewer verification (Position #${qIdx + 1} in FIFO Queue).`
+              ? `Waiting for staff review (#${qIdx + 1} in line).`
               : "Waiting for reviewer verification.";
             statusDetailHTML = `
               <div class="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-center gap-2">
@@ -1144,7 +1144,7 @@ function renderMyClaims() {
           <div class="visionos-panel rounded-2xl p-5 border border-white/60 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-sand">
               <div class="flex items-center gap-2">
-                <span class="font-mono text-xs font-black text-gray-700 bg-white px-2 py-0.5 rounded-md border border-sand">
+                <span class="text-xs font-bold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-sand">
                   ${escapeHtml(claim.id)}
                 </span>
                 <span class="text-xs text-gray-500 font-mono">Item ID: ${escapeHtml(claim.itemId)}</span>
@@ -1164,7 +1164,7 @@ function renderMyClaims() {
               </div>
               <button onclick="openMyClaimDetailModal('${claim.id}')"
                 class="text-xs font-bold text-forest hover:text-forest-d bg-forest/10 hover:bg-forest/15 px-4 py-2 rounded-xl transition-all self-start sm:self-auto border border-forest/20">
-                View My Submitted Evidence
+                View what I submitted
               </button>
             </div>
 
@@ -1198,7 +1198,7 @@ function openMyClaimDetailModal(claimId) {
 
   // Security check: only the claimant who submitted it or an authorized reviewer can view
   if (!isReviewer(user) && !isOwner) {
-    showToast("Unauthorized: You cannot view another student's private claim details.", "error");
+    showToast("You can only view your own claim details.", "error");
     return;
   }
 
@@ -1518,12 +1518,12 @@ function executeUndo(action) {
 function handleUndoClick() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Unauthorized: Switch to Reviewer mode to undo administrative actions.", "error");
+    showToast("Please switch to reviewer mode to undo actions.", "error");
     return;
   }
 
   if (adminActionStack.isEmpty()) {
-    showToast("No administrative actions available to undo.", "match");
+    showToast("No recent actions to undo.", "match");
     return;
   }
 
@@ -1537,13 +1537,13 @@ function handleUndoClick() {
 
   let impactText = "";
   if (action.type === "HANDOVER") {
-    impactText = "• Item will be unlinked from Recovery History and returned to Active reports in O(1).\n• Category Hash Table index will be restored.\n• Primary claim will return to Approved (awaiting handover).\n• Any competing claims closed during handover will be restored to Pending.";
+    impactText = "• The item will be moved back to active listings.\n• The approved claim will be reopened for handover.\n• Any other claims closed during handover will be reopened.";
   } else if (action.type === "DIRECT_RECOVERY") {
-    impactText = "• Item will be removed from Recovery History and returned to Active reports in O(1).\n• Category Hash Table index will be restored.";
+    impactText = "• The item will be moved back to active listings.";
   } else if (action.type === "APPROVE_CLAIM") {
-    impactText = "• Claim will be reverted from Approved back to Pending in the FIFO review queue.\n• Review verification notes and timestamp will be cleared.";
+    impactText = "• The claim will be returned to pending review.";
   } else if (action.type === "REJECT_CLAIM") {
-    impactText = "• Claim will be reverted from Rejected back to Pending in the FIFO review queue.\n• Rejection reason will be cleared, making the claim eligible for review again.";
+    impactText = "• The claim will be returned to pending review.";
   }
 
   document.getElementById("undo-modal-impact-text").textContent = impactText;
@@ -1566,7 +1566,7 @@ function closeUndoConfirmModal() {
 function confirmUndoModalAction() {
   const user = getCurrentUser();
   if (!isReviewer(user)) {
-    showToast("Unauthorized: Switch to Reviewer mode to undo administrative actions.", "error");
+    showToast("Please switch to reviewer mode to undo actions.", "error");
     closeUndoConfirmModal();
     return;
   }
@@ -1675,8 +1675,8 @@ function renderUndoHistoryList() {
   if (actions.length === 0) {
     container.innerHTML = `
       <div class="p-8 text-center text-gray-400">
-        <p class="font-bold text-sm text-gray-700">Action Stack is currently empty</p>
-        <p class="text-xs text-gray-500 mt-1">Actions like claim reviews and handovers will be pushed to this LIFO stack.</p>
+        <p class="font-bold text-sm text-gray-700">No recent actions</p>
+        <p class="text-xs text-gray-500 mt-1">Recent staff actions like claim reviews and handovers will appear here.</p>
       </div>`;
     return;
   }
@@ -1692,12 +1692,12 @@ function renderUndoHistoryList() {
       } text-xs">
         <div class="flex items-center justify-between gap-2 mb-1">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="font-mono font-bold text-[10px] px-2 py-0.5 rounded ${
+            <span class="font-semibold text-[10px] px-2 py-0.5 rounded ${
               isTop ? "bg-terracotta text-white" : "bg-sand text-gray-700"
             }">
-              ${isTop ? "TOP OF STACK · Next Undo" : `Stack Index #${actions.length - idx}`}
+              ${isTop ? "Most recent action" : `Action #${actions.length - idx}`}
             </span>
-            <span class="font-mono text-[10px] text-gray-500 font-bold">${escapeHtml(act.type)}</span>
+            <span class="text-xs text-slate-500 text-gray-500 font-bold">${escapeHtml(act.type)}</span>
           </div>
           <span class="text-[10px] text-gray-400 font-medium">${act.timestamp ? formatDateLong(act.timestamp) : "Recently"}</span>
         </div>
@@ -1724,7 +1724,7 @@ function clearUndoHistory() {
   saveUndoStack();
   updateUndoUI();
   closeUndoHistoryModal();
-  showToast("Admin Undo Stack cleared successfully.", "success");
+  showToast("Action history cleared.", "success");
 }
 
 // Data Separation: Public Summary Helper (Excludes private identifying evidence)

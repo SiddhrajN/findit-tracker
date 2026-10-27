@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FindIt — Campus Lost &amp; Found Tracker</title>
+  <title>Lost &amp; Found — Fr. CRCE Campus Tracker</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -71,14 +71,14 @@
               <h1 class="text-lg font-black tracking-tight leading-tight">
                 <span class="text-gray-900">Lost</span> <span class="text-terracotta">&amp;</span> <span class="text-gray-900">Found</span>
               </h1>
-              <p class="font-mono text-[9px] text-forest font-bold tracking-wider uppercase -mt-0.5">CRCE · v2.4</p>
+              <p class="text-[11px] text-forest font-semibold -mt-0.5">Fr. CRCE Campus</p>
             </div>
           </div>
 
           <!-- Navigation Links -->
           <div class="hidden sm:flex items-center gap-6 text-xs sm:text-sm font-semibold text-slate-600">
-            <a href="#features" class="hover:text-forest transition-colors tracking-tight">Architecture</a>
-            <a href="#how-it-works" class="hover:text-forest transition-colors tracking-tight">Workflow</a>
+            <a href="#features" class="hover:text-forest transition-colors tracking-tight">How it works</a>
+            <a href="#how-it-works" class="hover:text-forest transition-colors tracking-tight">Steps</a>
           </div>
 
           <!-- Auth Actions -->
@@ -109,33 +109,29 @@
             <!-- Live System Status Eyebrow Pill -->
             <div class="hero-status-pill">
               <span class="hero-status-dot"></span>
-              <span>SYSTEM ONLINE · 15 FR.CRCE CAMPUS NODES INDEXED</span>
+              <span>Fr. CRCE Campus Lost &amp; Found · Active directory</span>
             </div>
 
             <!-- Editorial Mixed-Typography Headline (Ample line-height avoids vertical overlap) -->
             <h2 class="text-4xl sm:text-5xl lg:text-[58px] font-black text-gray-900 leading-[1.18] sm:leading-[1.15] lg:leading-[1.12] tracking-tight mb-5">
-              <span class="block">Lost Something</span>
-              <span class="block editorial-serif text-4xl sm:text-5xl lg:text-[60px] my-0.5">on Campus?</span>
-              <span class="block">
-                <span style="color: #1B4332;">Reunited in</span>
-                <span class="editorial-serif inline-block mx-1" style="color: #8C6239;">O(1)</span>
-                <span style="color: #1B4332;">Time.</span>
-              </span>
+              <span class="block">Lost something</span>
+              <span class="block editorial-serif text-4xl sm:text-5xl lg:text-[60px] my-0.5">on campus?</span>
+              <span class="block" style="color: #1B4332;">Find your lost item fast.</span>
             </h2>
             <p class="text-base text-slate-600 leading-relaxed mb-7 max-w-lg">
-              An autonomous recovery engine engineered for Fr. CRCE. Powered by browser-native <strong class="text-forest font-semibold">Polynomial Hash Tables</strong>, <strong class="text-terracotta font-semibold">Max-Heap Priority Queues</strong>, and <strong class="font-semibold text-gray-800">BFS Graph Routing</strong> across 9 campus floors.
+              Quickly report missing belongings or check what has been turned in around Fr. CRCE. We connect lost items with their owners and prioritize urgent things like keys, wallets, and IDs.
             </p>
 
             <!-- Single-Row Unified CTA -->
             <div class="flex flex-wrap items-center gap-3">
               <button onclick="openAuthModal('signup')"
                 class="inline-flex items-center gap-2 visionos-btn text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-lg transition-all hover:brightness-110 cursor-pointer">
-                Explore Live Tracker
+                Search lost &amp; found
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
               </button>
               <!-- Compact Quick Demo Segmented Bar -->
               <div class="flex items-center gap-0.5 bg-sand-l/90 border border-sand rounded-xl p-1 text-xs font-semibold">
-                <span class="text-slate-500 px-2 text-[11px] font-mono">Quick Demo:</span>
+                <span class="text-slate-500 px-2 text-xs font-medium">Try demo:</span>
                 <button onclick="quickDemoLogin()" class="px-3 py-1.5 rounded-lg bg-white text-gray-800 shadow-xs hover:bg-ivory transition-all cursor-pointer">Student</button>
                 <button onclick="quickReviewerLogin()" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-gray-800 transition-all cursor-pointer">Reviewer</button>
               </div>
@@ -145,15 +141,15 @@
             <div class="flex gap-8 mt-8 pt-6 border-t border-sand-d/50">
               <div>
                 <p class="text-2xl font-bold text-gray-900 tracking-tight">500+</p>
-                <p class="font-mono text-[11px] text-slate-500 tracking-wide mt-0.5">Items Recovered</p>
+                <p class="text-xs text-slate-500 mt-0.5">Items returned</p>
               </div>
               <div>
                 <p class="text-2xl font-bold text-gray-900 tracking-tight">2K+</p>
-                <p class="font-mono text-[11px] text-slate-500 tracking-wide mt-0.5">Students Registered</p>
+                <p class="text-xs text-slate-500 mt-0.5">Students &amp; staff</p>
               </div>
               <div>
-                <p class="text-2xl font-bold tracking-tight" style="color: #1B4332; font-family: 'JetBrains Mono', monospace;">O(1)</p>
-                <p class="font-mono text-[11px] text-slate-500 tracking-wide mt-0.5">Avg Lookup Time</p>
+                <p class="text-2xl font-bold tracking-tight text-forest">Instant</p>
+                <p class="text-xs text-slate-500 tracking-wide mt-0.5">Search time</p>
               </div>
             </div>
           </div>
@@ -167,7 +163,7 @@
             <div class="hidden sm:block absolute top-4 right-4 z-30 pointer-events-none">
               <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-black/[0.08] shadow-md">
                 <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
-                <span class="font-mono text-[10px] font-bold text-gray-700 tracking-wide">HASH KEY: "11091" → BUCKET #07</span>
+                <span class="text-xs font-semibold text-gray-700">Student ID · Returned to owner</span>
               </div>
             </div>
 
@@ -178,7 +174,7 @@
             <div class="hidden sm:block absolute bottom-20 left-4 z-30 pointer-events-none">
               <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-black/[0.08] shadow-md">
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="font-mono text-[10px] font-bold text-gray-700 tracking-wide">MAX-HEAP ROOT · PRIORITY 3/3</span>
+                <span class="text-xs font-semibold text-gray-700">High priority · Needs quick return</span>
               </div>
             </div>
           </div>
@@ -190,14 +186,14 @@
     <section id="features" class="py-24 bg-white border-t border-sand relative">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-          <span class="font-mono text-xs font-bold text-forest uppercase tracking-widest bg-forest/10 px-3 py-1 rounded-full border border-forest/20">
-            Engineered Campus Architecture
+          <span class="text-xs font-semibold text-forest font-medium bg-forest/10 px-3 py-1 rounded-full border border-forest/20">
+            For reviewers &amp; developers
           </span>
           <h3 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mt-3 mb-3">
-            Algorithmic Precision <em class="editorial-serif text-3xl sm:text-4xl not-italic" style="font-style: italic;">for Campus</em> Recoveries
+            How it works <em class="editorial-serif text-3xl sm:text-4xl not-italic" style="font-style: italic;">behind the scenes</em>
           </h3>
           <p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
-            Interactive, browser-native data structures eliminate sequential table scanning with sub-millisecond execution.
+            Computer science concepts keep searches instant, prioritize urgent belongings, and keep returns fair.
           </p>
         </div>
 
@@ -213,40 +209,40 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <span class="font-mono text-xs font-bold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
-                  O(1) Average Lookup
+                <span class="text-xs font-semibold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
+                  Instant search (Hash Table)
                 </span>
               </div>
               <h4 class="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                Direct Hash Table Indexing
+                Find items without waiting
               </h4>
               <p class="text-sm text-slate-600 mt-1.5 max-w-xl leading-relaxed">
-                Keywords and categories are transformed into bucket slots via polynomial hashing, executing instant lookups without scanning the entire active report dataset.
+                Keywords and categories are indexed directly in a Hash Table so search runs in O(1) instant time without scanning every report.
               </p>
             </div>
 
             <!-- Live Interactive Hash Simulator Sandbox -->
             <div class="bg-white/95 rounded-2xl p-5 border border-sand shadow-inner mt-6">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5 shrink-0">
+                <span class="text-xs font-semibold text-slate-600 flex items-center gap-1.5 shrink-0">
                   <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Live Polynomial Hash Sandbox</span>
+                  <span>Try the instant search test</span>
                 </span>
-                <span class="hash-formula font-mono text-[11px] text-slate-500 shrink-0">Σ(char × 31ⁱ) % 53 &nbsp;·&nbsp; Cap: 53 · Prime: 31</span>
+                <span class="hash-formula text-xs text-slate-500 shrink-0">Σ(char × 31ⁱ) % 53 &nbsp;·&nbsp; Cap: 53 · Prime: 31</span>
               </div>
 
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3.5">
                 <div class="relative flex-1">
-                  <input id="bento-hash-input" type="text" value="Wallet" placeholder="Type an item (e.g. Wallet, Laptop, Casio)..."
+                  <input id="bento-hash-input" type="text" value="Wallet" placeholder="Type an item (e.g., wallet, laptop, bottle)..."
                     class="w-full px-4 py-2.5 text-sm font-semibold border border-sand rounded-xl bg-ivory focus:outline-none focus:ring-2 focus:ring-forest text-gray-900" />
                 </div>
-                <div id="bento-hash-pill" class="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl shadow-xs font-mono text-xs font-bold shrink-0 justify-center whitespace-nowrap">
-                  <span>hash("Wallet") → Bucket #14</span>
+                <div id="bento-hash-pill" class="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl shadow-xs text-xs font-semibold shrink-0 justify-center whitespace-nowrap">
+                  <span>Wallet matches instantly</span>
                 </div>
               </div>
 
               <!-- Live Bucket Array Strip -->
-              <div id="bento-bucket-strip" class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-mono">
+              <div id="bento-bucket-strip" class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-medium">
                 <!-- Dynamically populated in app.js -->
               </div>
             </div>
@@ -261,15 +257,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <span class="font-mono text-xs font-bold text-terracotta bg-terracotta/10 px-2.5 py-0.5 rounded-full border border-terracotta/20">
-                  O(log n) Heapify
+                <span class="text-xs font-semibold text-terracotta bg-terracotta/10 px-2.5 py-0.5 rounded-full border border-terracotta/20">
+                  Urgency queue (Max-Heap)
                 </span>
               </div>
               <h4 class="text-xl font-bold text-gray-900 tracking-tight">
-                Urgency Max-Heap Queue
+                Urgent belongings come first
               </h4>
               <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Complete binary tree array implementation bubbles high-urgency items (phones, IDs, vehicle keys) directly to the root node.
+                High-priority items bubble straight to the top using a Binary Max-Heap in O(log n) time so wallets and IDs are never buried.
               </p>
             </div>
             <!-- Mini Heap Pyramid -->
@@ -277,18 +273,18 @@
               <div class="heap-pyramid-row">
                 <div class="heap-pyramid-node root">
                   <div class="heap-pyramid-connector"></div>
-                  [0] P3 · ID Card / Wallet
+                  High · Phone, Wallet, Keys
                 </div>
               </div>
               <div class="heap-pyramid-row">
-                <div class="heap-pyramid-node mid">[1] P2 · AirPods / Calc</div>
-                <div class="heap-pyramid-node mid">[2] P2 · Headphones</div>
+                <div class="heap-pyramid-node mid">Medium · Calculator, Earbuds</div>
+                <div class="heap-pyramid-node mid">Medium · Charger, Glasses</div>
               </div>
               <div class="heap-pyramid-row">
-                <div class="heap-pyramid-node low">[3] P1 · Notebook</div>
-                <div class="heap-pyramid-node low">[4] P1 · Bottle</div>
+                <div class="heap-pyramid-node low">Low · Notebook, Umbrella</div>
+                <div class="heap-pyramid-node low">Low · Water bottle, Stationery</div>
               </div>
-              <div class="mt-1 text-[10px] font-mono text-slate-400 tracking-wide">Complete Array Heap · O(1) peek · O(log n) bubble</div>
+              <div class="mt-1 text-[10px] font-mono text-slate-400 tracking-wide">Important items stay at the top of the queue.</div>
             </div>
           </div>
 
@@ -301,13 +297,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                   </svg>
                 </div>
-                <span class="font-mono text-xs font-bold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
-                  BFS Shortest Path
+                <span class="text-xs font-semibold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
+                  Campus floor map (Graph BFS)
                 </span>
               </div>
-              <h4 class="text-lg font-bold text-gray-900 tracking-tight">Campus Graph Routing</h4>
+              <h4 class="text-lg font-bold text-gray-900 tracking-tight">Mapped across campus locations</h4>
               <p class="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
-                55 canonical college vertices modeled across 9 floors enable depth-limited proximity queries between loss and found spots.
+                College rooms and floors are modeled as graph locations to help you find nearby lost and found items in seconds.
               </p>
               <!-- BFS path micro-graphic -->
               <div class="mt-4 graph-path-strip">
@@ -316,16 +312,16 @@
                 <span class="graph-path-node">Canteen</span>
                 <span class="graph-path-edge">──●──</span>
                 <span class="graph-path-node">Lab 302</span>
-                <span class="font-mono text-[10px] text-slate-400 ml-2">2 hops · BFS</span>
+                <span class="text-[11px] text-slate-500 ml-2">2 stops away</span>
               </div>
             </div>
-            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs font-mono text-slate-500">
-              <span>55 FRCRCE Vertices</span>
-              <span>Floors 0 – 2</span>
+            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs text-xs text-slate-500">
+              <span>55 campus spots</span>
+              <span>Across all floors</span>
             </div>
           </div>
 
-          <!-- Bento Card 4: FIFO Claim Verification Queue -->
+          <!-- Bento Card 4: Claim review queue -->
           <div class="visionos-panel rounded-3xl p-7 flex flex-col justify-between border border-black/[0.07] shadow-sm bg-white">
             <div>
               <div class="flex items-center gap-2 mb-3">
@@ -334,18 +330,18 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                 </div>
-                <span class="font-mono text-xs font-bold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
-                  FIFO Linked List
+                <span class="text-xs font-semibold text-forest bg-forest/10 px-2.5 py-0.5 rounded-full border border-forest/20">
+                  First-come review (FIFO Queue)
                 </span>
               </div>
-              <h4 class="text-lg font-bold text-gray-900 tracking-tight">FIFO Claim Pipeline</h4>
+              <h4 class="text-lg font-bold text-gray-900 tracking-tight">Fair, first-come claim review</h4>
               <p class="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Guarantees chronological arrival review for student claims with private proof protection and O(1) front inspection.
+                Claims are reviewed strictly in the order received using a first-in, first-out queue to guarantee fairness.
               </p>
             </div>
-            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs font-mono text-slate-500">
-              <span>Strict Order</span>
-              <span>O(1) Enqueue/Dequeue</span>
+            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs text-xs text-slate-500">
+              <span>Arrival order</span>
+              <span>Fair &amp; private</span>
             </div>
           </div>
 
@@ -358,18 +354,18 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6" />
                   </svg>
                 </div>
-                <span class="font-mono text-xs font-bold text-terracotta bg-terracotta/10 px-2.5 py-0.5 rounded-full border border-terracotta/20">
-                  LIFO Bounded Stack
+                <span class="text-xs font-semibold text-terracotta bg-terracotta/10 px-2.5 py-0.5 rounded-full border border-terracotta/20">
+                  Action rollback (LIFO Stack)
                 </span>
               </div>
-              <h4 class="text-lg font-bold text-gray-900 tracking-tight">LIFO Action Rollback</h4>
+              <h4 class="text-lg font-bold text-gray-900 tracking-tight">Mistake-proof staff actions</h4>
               <p class="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Maintains a 20-action depth rollback stack to reverse admin approvals, rejections, and physical handovers with full state recovery.
+                Staff can instantly undo recent approvals or status changes using a 20-action history stack.
               </p>
             </div>
-            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs font-mono text-slate-500">
-              <span>Stack Depth: 20</span>
-              <span>Full Rebalancing</span>
+            <div class="mt-5 pt-3 border-t border-sand/60 flex items-center justify-between text-xs text-xs text-slate-500">
+              <span>20-action history</span>
+              <span>Safe to undo</span>
             </div>
           </div>
 
@@ -381,11 +377,11 @@
     <section id="how-it-works" class="py-24 border-t border-sand bg-ivory relative overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="text-center mb-16">
-          <span class="font-mono text-xs font-bold text-terracotta uppercase tracking-widest bg-terracotta/10 px-3 py-1 rounded-full border border-terracotta/20">
-            Lifecycle Workflow
+          <span class="text-xs font-semibold text-terracotta font-medium bg-terracotta/10 px-3 py-1 rounded-full border border-terracotta/20">
+            Simple 3-step process
           </span>
-          <h3 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mt-3 mb-2">How <em class="editorial-serif text-3xl sm:text-4xl" style="font-style: italic; color: #8C6239;">It Works</em></h3>
-          <p class="text-slate-600 text-sm sm:text-base">Three streamlined steps connecting lost belongings to verified owners.</p>
+          <h3 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mt-3 mb-2">How to get your <em class="editorial-serif text-3xl sm:text-4xl" style="font-style: italic; color: #8C6239;">item back</em></h3>
+          <p class="text-slate-600 text-sm sm:text-base">Three simple steps from reporting to pickup.</p>
         </div>
 
         <!-- Clean Connected Horizontal Timeline (Awwwards Edition) -->
@@ -404,9 +400,9 @@
               <div class="relative z-10 w-14 h-14 rounded-full bg-forest text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest/20 mb-5 border-2 border-white ring-4 ring-forest/10">
                 1
               </div>
-              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Post &amp; Auto-Triage</h4>
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">1. Post what's lost or found</h4>
               <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
-                Submit item title and campus location. Gemini Reasoner evaluates credential risk and indexes the report into the Binary Max-Heap in <span class="font-mono text-forest font-semibold">O(log n)</span>.
+                Enter what the item is and where you saw it. Urgency is calculated automatically so critical belongings get seen first.
               </p>
             </div>
 
@@ -416,9 +412,9 @@
               <div class="relative z-10 w-14 h-14 rounded-full bg-terracotta text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-terracotta/20 mb-5 border-2 border-white ring-4 ring-terracotta/10">
                 2
               </div>
-              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">O(1) Instant Match</h4>
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">2. Check instant matches</h4>
               <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
-                Polynomial Hash Table computes bucket addresses across category and location keywords to surface high-confidence matches in <span class="font-mono text-terracotta font-semibold">O(1)</span>.
+                The system links reports with matching categories and locations right away so you don't have to scroll.
               </p>
             </div>
 
@@ -428,9 +424,9 @@
               <div class="relative z-10 w-14 h-14 rounded-full bg-forest-d text-white font-mono font-semibold text-sm flex items-center justify-center shadow-lg shadow-forest-d/20 mb-5 border-2 border-white ring-4 ring-forest/10">
                 3
               </div>
-              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">Verified Handover</h4>
+              <h4 class="relative z-10 text-base font-semibold text-gray-900 mb-1.5 tracking-tight">3. Confirm and collect</h4>
               <p class="relative z-10 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xs">
-                Claimants submit private proof in FIFO order. Reviewers execute handover with full <span class="font-mono text-gray-700 font-semibold">LIFO</span> stack rollback capability.
+                Share a private detail only the real owner would know. Once campus staff verifies it, pick up your item.
               </p>
             </div>
           </div>
@@ -447,9 +443,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
-          <span class="font-bold text-gray-200">FindIt — Campus Lost &amp; Found Tracker</span>
+          <span class="font-bold text-gray-200">Lost &amp; Found — Fr. CRCE Campus Tracker</span>
         </div>
-        <p>&copy; 2026 Siddhraj Nimje (Roll No: 23CS101). Built with Linked Lists &amp; Hash Tables in C &amp; JS.</p>
+        <p>&copy; 2026 Siddhraj Nimje (Roll number: 23CS101) · Fr. CRCE Campus Lost &amp; Found</p>
       </div>
     </footer>
   </div>
@@ -473,7 +469,7 @@
               <h1 class="text-lg font-extrabold tracking-tight text-gray-900">
                 Lost <span class="text-terracotta">&amp;</span> Found
               </h1>
-              <p class="text-[10px] text-forest font-semibold -mt-1 tracking-wide">Campus Lost-and-Found Tracker</p>
+              <p class="text-[10px] text-forest font-semibold -mt-1 tracking-wide">Fr. CRCE Campus</p>
             </div>
           </div>
 
@@ -485,7 +481,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              <span>Post Item</span>
+              <span>Report an item</span>
             </button>
 
             <!-- Segmented Role Switcher (One-Click Demo Switcher) -->
@@ -511,7 +507,7 @@
                 </div>
                 <div class="hidden sm:block text-left leading-none">
                   <p id="user-name" class="text-xs font-bold text-gray-800">Siddhraj Nimje</p>
-                  <p id="user-roll" class="text-[10px] font-mono text-slate-500 mt-0.5">23CS101</p>
+                  <p id="user-roll" class="text-[10px] text-xs text-slate-500 mt-0.5">23CS101</p>
                 </div>
                 <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
@@ -523,8 +519,8 @@
                 <div class="px-3 py-2 border-b border-sand/60 mb-1">
                   <p class="text-xs font-bold text-gray-900">Signed in as</p>
                   <div class="flex items-center gap-1.5 mt-0.5">
-                    <span id="user-role-badge" class="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-forest/10 text-forest">Student</span>
-                    <span id="dropdown-user-roll" class="text-[11px] font-mono text-slate-500">23CS101</span>
+                    <span id="user-role-badge" class="text-xs font-medium px-1.5 py-0.2 rounded bg-forest/10 text-forest">Student</span>
+                    <span id="dropdown-user-roll" class="text-xs font-medium text-slate-500">23CS101</span>
                   </div>
                 </div>
 
@@ -535,9 +531,9 @@
                     <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
-                    <span>Admin Controls</span>
+                    <span>Staff controls</span>
                   </span>
-                  <span id="admin-toggle-label" class="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-forest/10 text-forest">Active</span>
+                  <span id="admin-toggle-label" class="text-xs font-semibold px-2 py-0.5 rounded bg-forest/10 text-forest">Active</span>
                 </button>
 
                 <!-- Header Undo Action Button -->
@@ -547,9 +543,9 @@
                     <svg class="w-4 h-4 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/>
                     </svg>
-                    <span>Undo Last Action</span>
+                    <span>Undo last action</span>
                   </span>
-                  <span id="undo-stack-badge" class="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-terracotta/15 text-terracotta">0</span>
+                  <span id="undo-stack-badge" class="text-xs font-semibold px-2 py-0.5 rounded bg-terracotta/15 text-terracotta">0</span>
                 </button>
 
                 <div class="my-1 border-t border-sand/60"></div>
@@ -560,7 +556,7 @@
                   <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                   </svg>
-                  <span>Log Out</span>
+                  <span>Log out</span>
                 </button>
               </div>
             </div>
@@ -578,12 +574,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input id="search-input" type="text"
-              placeholder="Search items by name, category, location, or report ID (e.g. 'wallet', 'REP-1001')..."
+              placeholder="Search by item name, place, or ID (e.g., wallet, canteen, REP-1001)..."
               class="w-full pl-12 pr-36 py-3 text-sm bg-ivory border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest focus:border-forest transition-all" />
-            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-mono font-medium text-slate-500 bg-sand/40 px-2.5 py-1 rounded-lg hidden md:inline-flex items-center gap-1.5 border border-sand">
-              <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
-              O(1) Hash Index
-            </span>
+            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 hidden md:inline-flex items-center gap-1.5">Instant search</span>
           </div>
 
           <button onclick="searchAndFilter()"
@@ -611,9 +604,9 @@
             </span>
             <select id="filter-type"
               class="pl-8 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-xs text-gray-700">
-              <option value="All">All Types</option>
-              <option value="Lost">Lost Only</option>
-              <option value="Found">Found Only</option>
+              <option value="All">All types</option>
+              <option value="Lost">Lost items</option>
+              <option value="Found">Found items</option>
             </select>
             <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
@@ -627,9 +620,9 @@
             </span>
             <select id="filter-category"
               class="pl-8 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-xs text-gray-700">
-              <option value="All">All Categories</option>
+              <option value="All">All categories</option>
               <option value="Electronics">Electronics</option>
-              <option value="ID/Wallet">ID / Wallet</option>
+              <option value="ID/Wallet">IDs &amp; Wallets</option>
               <option value="Books">Books</option>
               <option value="Keys">Keys</option>
               <option value="Accessories">Accessories</option>
@@ -647,10 +640,10 @@
             </span>
             <select id="filter-priority"
               class="pl-8 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-xs text-gray-700">
-              <option value="All">All Priorities</option>
-              <option value="3">Urgent (P3)</option>
-              <option value="2">Medium (P2)</option>
-              <option value="1">Low (P1)</option>
+              <option value="All">All priorities</option>
+              <option value="3">Urgent</option>
+              <option value="2">Medium</option>
+              <option value="1">Low</option>
             </select>
             <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
@@ -664,9 +657,9 @@
             </span>
             <select id="filter-sort"
               class="pl-8 pr-8 py-2 text-xs sm:text-sm font-semibold bg-white border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest cursor-pointer appearance-none shadow-xs text-gray-700">
-              <option value="priority">Priority Queue (Highest First)</option>
-              <option value="newest">Chronological (Newest First)</option>
-              <option value="oldest">Chronological (Oldest First)</option>
+              <option value="priority">Most urgent first</option>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
             </select>
             <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
@@ -701,7 +694,7 @@
             <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
               <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
             </svg>
-            <span>All Items</span>
+            <span>All items</span>
           </button>
           <button id="tab-btn-matches"
             class="pb-3 px-1 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-forest transition-colors relative flex items-center gap-1.5 cursor-pointer">
@@ -710,7 +703,7 @@
             </svg>
             <span>Matches</span>
             <span id="matches-badge"
-              class="hidden absolute -top-1.5 -right-4 inline-flex items-center justify-center w-5 h-5 text-[10px] font-mono font-bold text-white bg-terracotta rounded-full shadow-xs">
+              class="hidden absolute -top-1.5 -right-4 inline-flex items-center justify-center w-5 h-5 text-[10px] font-semibold text-white bg-terracotta rounded-full shadow-xs">
               0
             </span>
           </button>
@@ -719,16 +712,16 @@
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span>Recovery History</span>
+            <span>Returned items</span>
           </button>
           <button id="tab-btn-my-claims"
             class="pb-3 px-1 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-forest transition-colors relative flex items-center gap-1.5 cursor-pointer">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
-            <span>My Claims</span>
+            <span>My claims</span>
             <span id="my-claims-badge"
-              class="hidden inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-mono font-bold text-white bg-forest rounded-full shadow-xs">
+              class="hidden inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-semibold text-white bg-forest rounded-full shadow-xs">
               0
             </span>
           </button>
@@ -737,9 +730,9 @@
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>
-            <span>Claim Requests</span>
+            <span>Review claims</span>
             <span id="claims-queue-badge"
-              class="hidden inline-flex items-center justify-center px-2 py-0.2 text-[10px] font-mono font-bold text-white bg-terracotta rounded-full shadow-xs">
+              class="hidden inline-flex items-center justify-center px-2 py-0.2 text-[10px] font-semibold text-white bg-terracotta rounded-full shadow-xs">
               0
             </span>
           </button>
@@ -761,21 +754,21 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-sm font-bold text-gray-900 tracking-tight">Urgent Action Queue</h3>
-                  <span class="font-mono text-[11px] font-semibold text-slate-600 bg-sand-l/80 px-2 py-0.5 rounded border border-sand">
+                  <h3 class="text-sm font-bold text-gray-900 tracking-tight">Urgent items</h3>
+                  <span class="text-xs font-semibold text-slate-600 bg-sand-l/80 px-2 py-0.5 rounded border border-sand">
                     Heap: <span id="pq-heap-count" class="font-bold text-gray-900">0</span>
                   </span>
                   <span id="pq-urgent-badge" class="font-mono text-[11px] font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
                     <span id="pq-urgent-count">0</span> Urgent
                   </span>
                   <span class="font-mono text-[10px] text-slate-500 bg-sand/30 px-2 py-0.5 rounded border border-sand/60">
-                    Max-Heap Root · O(1) Peek
+                    Needs quick return
                   </span>
                 </div>
                 <div class="mt-1 flex items-center gap-2 flex-wrap text-xs text-slate-600">
-                  <span class="font-medium text-slate-500">Root Item:</span>
+                  <span class="font-medium text-slate-500">Top item:</span>
                   <span id="pq-top-title" class="font-bold text-gray-900 tracking-tight">—</span>
-                  <span id="pq-top-badge" class="hidden font-mono text-[10px] font-bold px-2 py-0.5 rounded"></span>
+                  <span id="pq-top-badge" class="hidden text-xs font-semibold px-2 py-0.5 rounded"></span>
                 </div>
               </div>
             </div>
@@ -784,7 +777,7 @@
             <div class="flex items-center gap-2.5 w-full lg:w-auto">
               <button onclick="processHighestPriorityReport()"
                 class="flex-1 lg:flex-none text-xs font-semibold px-4 py-2.5 rounded-xl bg-forest hover:bg-forest-d text-white transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                <span>Review Root Item</span>
+                <span>Review top item</span>
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
               </button>
               <button onclick="toggleHeapInspector()" id="btn-toggle-heap"
@@ -792,7 +785,7 @@
                 <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
-                <span>Inspect Binary Heap</span>
+                <span>Technical details</span>
                 <svg id="heap-chevron" class="w-3.5 h-3.5 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
@@ -803,29 +796,29 @@
             <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
                 <h4 class="text-xs font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                  <span>Binary Max-Heap Memory &amp; Tree Visualizer</span>
-                  <span class="font-mono text-[10px] text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">O(log n) Heapify</span>
+                  <span>Urgency queue order (for reviewers)</span>
+                  <span class="font-mono text-[10px] text-forest bg-forest/10 px-2 py-0.5 rounded border border-forest/20 font-bold">Urgency queue (Max-Heap)</span>
                 </h4>
                 <p class="text-[11px] text-slate-500 mt-0.5 font-mono">
-                  Parent Index: floor((i - 1) / 2) | Left Child: 2i + 1 | Right Child: 2i + 2
+                  Items ranked by urgency so critical belongings are handled first.
                 </p>
               </div>
-              <div class="flex items-center gap-2 text-[10px] font-mono font-semibold">
-                <span class="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">Urgent (P3)</span>
-                <span class="inline-flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">Medium (P2)</span>
-                <span class="inline-flex items-center gap-1 text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">Low (P1)</span>
+              <div class="flex items-center gap-2 text-xs font-medium">
+                <span class="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">Urgent</span>
+                <span class="inline-flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">Medium</span>
+                <span class="inline-flex items-center gap-1 text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">Low</span>
               </div>
             </div>
 
             <!-- Heap Array Strip -->
             <div class="mb-4">
-              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 font-mono">1. Array Representation in Memory (Root at [0]):</p>
+              <p class="text-[10px] font-bold text-slate-500 font-medium mb-2 font-mono">1. Queue order in memory:</p>
               <div id="heap-array-view" class="flex flex-wrap gap-2 overflow-x-auto pb-1 font-mono"></div>
             </div>
 
             <!-- Heap Tree Hierarchy -->
             <div>
-              <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 font-mono">2. Complete Binary Tree Hierarchy:</p>
+              <p class="text-[10px] font-bold text-slate-500 font-medium mb-2 font-mono">2. Priority hierarchy tree:</p>
               <div id="heap-tree-view" class="bg-ivory/60 rounded-xl p-4 border border-sand overflow-x-auto shadow-inner font-mono"></div>
             </div>
           </div>
@@ -848,12 +841,12 @@
       <div id="tab-panel-my-claims" class="hidden">
         <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 class="text-xl font-extrabold text-gray-900">My Ownership Claims</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Track review decisions and physical handover status for items you've claimed.</p>
+            <h3 class="text-xl font-extrabold text-gray-900">My claims</h3>
+            <p class="text-xs text-gray-500 mt-0.5">Track review updates and pickup status for items you've claimed.</p>
           </div>
           <button onclick="switchTab('reports')"
             class="text-xs font-bold text-forest hover:text-forest-d bg-forest/10 hover:bg-forest/15 px-3.5 py-2 rounded-xl transition-all self-start sm:self-auto border border-forest/20 flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><span>Browse Items to Claim</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><span>Browse found items</span>
           </button>
         </div>
         <div id="my-claims-list"></div>
@@ -870,28 +863,28 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-base font-black text-gray-900">FIFO Claim Verification Queue</h3>
+                  <h3 class="text-base font-black text-gray-900">Claim review queue</h3>
                   <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-forest/10 text-forest border border-forest/20">
-                    dsa.js · Custom ClaimQueue (Linked List)
+                    Review queue
                   </span>
                 </div>
                 <p class="text-xs text-gray-600 mt-1">
-                  Pending claims are strictly ordered in FIFO sequence (submission order). Deciding or handing over a claim removes it from the processing queue in O(1)/O(n).
+                  Claims are reviewed in the order students submit them. Approving or rejecting moves to the next claim automatically.
                 </p>
                 <!-- Queue Stats & Chain Display -->
                 <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold">
                   <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
-                    <span class="text-terracotta font-bold">Queue Size:</span>
+                    <span class="text-terracotta font-bold">Waiting for review:</span>
                     <span id="queue-count-display" class="font-mono font-black text-gray-900">0 Pending</span>
                   </div>
                   <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
-                    <span class="text-forest font-bold">Next in Queue:</span>
+                    <span class="text-forest font-bold">Next to review:</span>
                     <span id="queue-front-display" class="font-mono font-bold text-gray-800">None</span>
                   </div>
                 </div>
                 <!-- Visual Data Structure Chain -->
-                <div class="mt-2 text-[11px] font-mono text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
-                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Queue State:</span>
+                <div class="mt-2 text-xs font-medium text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
+                  <span class="text-gray-400 font-semibold text-[9px]">Queue State:</span>
                   <span id="queue-chain-display" class="font-bold text-forest">FRONT → NULL (empty queue)</span>
                 </div>
               </div>
@@ -902,13 +895,13 @@
               <button onclick="processNextInQueue()"
                 class="visionos-btn text-white text-xs font-bold px-5 py-3 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-2 shadow-md">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>Inspect Next in Queue (FIFO)</span>
+                <span>Review next claim</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- LIFO Admin Undo Stack Inspector Card (Feature B & DSA Demo) -->
+        <!-- Undo staff actions Inspector Card (Feature B & DSA Demo) -->
         <div class="visionos-panel rounded-3xl p-6 mb-6 border border-white/80 shadow-md bg-gradient-to-r from-orange-50/80 via-white to-amber-50/60">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div class="flex items-start gap-3.5">
@@ -917,28 +910,28 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-base font-black text-gray-900">LIFO Admin Undo Stack</h3>
+                  <h3 class="text-base font-black text-gray-900">Undo staff actions</h3>
                   <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-terracotta/15 text-terracotta border border-terracotta/25">
-                    dsa.js · Custom ActionStack (Max 20)
+                    Action history
                   </span>
                 </div>
                 <p class="text-xs text-gray-600 mt-1">
-                  Tracks undoable administrative operations in LIFO order (Last-In, First-Out). Fully restores Linked List membership, Hash Table indices, and claim states.
+                  Easily undo recent staff decisions like approvals, rejections, and handovers.
                 </p>
                 <!-- Stack Stats & Chain Display -->
                 <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold">
                   <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
-                    <span class="text-terracotta font-bold">Stack Depth:</span>
+                    <span class="text-terracotta font-bold">Recent actions:</span>
                     <span id="undo-stack-size-display" class="font-mono font-black text-gray-900">0 Actions</span>
                   </div>
                   <div class="flex items-center gap-1.5 text-gray-700 bg-white/90 px-3 py-1 rounded-lg border border-sand">
-                    <span class="text-forest font-bold">Top of Stack (Next Undo):</span>
+                    <span class="text-forest font-bold">Last action:</span>
                     <span id="undo-top-action-display" class="font-bold text-gray-800">None (Stack Empty)</span>
                   </div>
                 </div>
                 <!-- Visual Data Structure Chain -->
-                <div class="mt-2 text-[11px] font-mono text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
-                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Stack State:</span>
+                <div class="mt-2 text-xs font-medium text-gray-600 bg-black/5 rounded-lg px-3 py-1.5 border border-black/10 inline-flex items-center gap-2 max-w-full overflow-x-auto">
+                  <span class="text-gray-400 font-semibold text-[9px]">Stack State:</span>
                   <span id="undo-chain-display" class="font-bold text-terracotta">TOP → NULL (empty stack)</span>
                 </div>
               </div>
@@ -951,11 +944,11 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/>
                 </svg>
-                <span>Undo Last Admin Action</span>
+                <span>Undo last action</span>
               </button>
               <button onclick="openUndoHistoryModal()"
                 class="text-xs font-bold text-gray-700 hover:text-gray-900 bg-white/90 hover:bg-white border border-sand px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Action Stack History</span>
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>View action history</span>
               </button>
             </div>
           </div>
@@ -964,7 +957,7 @@
         <!-- Filters Row -->
         <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide mr-1">Filter:</span>
+            <span class="text-xs font-bold text-gray-500 font-medium mr-1">Filter:</span>
             <button id="filter-claim-all" onclick="filterClaims('All')"
               class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-forest text-white shadow-xs transition-all">
               All Claims
@@ -992,8 +985,8 @@
     <!-- Dashboard Footer -->
     <footer class="bg-neutral-900 text-gray-400 py-6 border-t border-neutral-800 mt-auto text-xs">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p class="font-bold text-gray-300">FindIt: Campus Lost-and-Found Tracker</p>
-        <p>&copy; 2026 Siddhraj Nimje (Roll No: 23CS101). Real-time Linked List &amp; Hash Table synchronization.</p>
+        <p class="font-bold text-gray-300">FindIt: Fr. CRCE Campus</p>
+        <p>&copy; 2026 Siddhraj Nimje (Roll number: 23CS101) · Fr. CRCE Campus Lost &amp; Found</p>
       </div>
     </footer>
   </div>
@@ -1007,8 +1000,8 @@
     <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 z-10 border border-sand">
       <div class="flex items-center justify-between pb-3 border-b border-sand-l">
         <div>
-          <h2 id="auth-modal-title" class="text-xl font-black text-gray-900">Welcome Back</h2>
-          <p id="auth-modal-subtitle" class="text-xs text-gray-500 mt-0.5">Enter your campus credentials</p>
+          <h2 id="auth-modal-title" class="text-xl font-black text-gray-900">Welcome back</h2>
+          <p id="auth-modal-subtitle" class="text-xs text-gray-500 mt-0.5">Sign in with your campus roll number</p>
         </div>
         <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1022,28 +1015,28 @@
       <form id="auth-form" class="mt-4 space-y-4">
         <!-- Full Name (Only for Sign Up) -->
         <div id="field-name" class="hidden">
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Full Name</label>
+          <label class="block text-xs font-semibold text-gray-800 mb-1">Full name</label>
           <input id="auth-name" type="text" placeholder="e.g. Siddhraj Nimje"
             class="w-full px-4 py-2.5 text-sm bg-ivory border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest" />
         </div>
 
         <!-- Roll Number -->
         <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Campus Roll Number</label>
+          <label class="block text-xs font-semibold text-gray-800 mb-1">Roll number</label>
           <input id="auth-roll" type="text" required placeholder="e.g. 23CS101"
             class="w-full px-4 py-2.5 text-sm bg-ivory border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest uppercase" />
         </div>
 
         <!-- Password -->
         <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Password</label>
+          <label class="block text-xs font-semibold text-gray-800 mb-1">Password</label>
           <input id="auth-password" type="password" required placeholder="Enter password"
             class="w-full px-4 py-2.5 text-sm bg-ivory border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest" />
         </div>
 
         <!-- Confirm Password (Only for Sign Up) -->
         <div id="field-confirm" class="hidden">
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Confirm Password</label>
+          <label class="block text-xs font-semibold text-gray-800 mb-1">Confirm password</label>
           <input id="auth-confirm" type="password" placeholder="Re-enter password"
             class="w-full px-4 py-2.5 text-sm bg-ivory border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest" />
         </div>
@@ -1058,18 +1051,18 @@
       <!-- Quick Demo Login Divider -->
       <div class="flex items-center gap-3 my-4">
         <div class="flex-1 h-px bg-sand"></div>
-        <span class="text-[10px] font-bold text-gray-400 uppercase">Or Demo Access</span>
+        <span class="text-[10px] font-bold text-gray-400 uppercase">Or try a demo account</span>
         <div class="flex-1 h-px bg-sand"></div>
       </div>
 
       <button type="button" onclick="quickDemoLogin()"
         class="w-full py-2.5 border-2 border-sand rounded-xl text-xs font-bold text-gray-700 hover:border-terracotta hover:bg-terracotta/5 transition-all flex items-center justify-center gap-1.5">
-        <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span>Student Demo Login (Siddhraj Nimje · 23CS101)</span>
+        <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span>Log in as student (Siddhraj · 23CS101)</span>
       </button>
 
       <button type="button" onclick="quickReviewerLogin()"
         class="w-full mt-2 py-2.5 border-2 border-sand rounded-xl text-xs font-bold text-gray-700 hover:border-forest hover:bg-forest/5 transition-all flex items-center justify-center gap-1.5">
-        <svg class="w-4 h-4 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><span>Reviewer Login (Dr. Aris Thorne · FAC-901)</span>
+        <svg class="w-4 h-4 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><span>Log in as reviewer (Dr. Aris Thorne · Staff)</span>
       </button>
 
       <!-- Toggle mode -->
@@ -1091,8 +1084,8 @@
     <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto z-10 border border-sand">
       <div class="flex items-center justify-between px-6 pt-6 pb-2 border-b border-sand-l">
         <div>
-          <h2 class="text-xl font-extrabold text-gray-900">Post an Item Report</h2>
-          <p class="text-xs text-gray-500 mt-0.5">Submit to campus Linked List &amp; Hash Table index</p>
+          <h2 class="text-xl font-extrabold text-gray-900">Report an item</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Let the campus community know what you lost or found</p>
         </div>
         <button id="btn-close-modal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1101,34 +1094,34 @@
 
       <form id="report-form" class="px-6 pb-6 pt-4 space-y-4">
         <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Report Type</label>
+          <label class="block text-xs font-semibold text-gray-800 mb-2">What are you reporting?</label>
           <div class="grid grid-cols-2 gap-3">
             <label class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-sand cursor-pointer hover:border-red-400 transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
               <input type="radio" name="report-type" value="Lost" class="sr-only" checked />
               <span class="text-base">🔴</span>
-              <span class="font-bold text-sm text-red-700">Lost Item</span>
+              <span class="font-bold text-sm text-red-700">I lost an item</span>
             </label>
             <label class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-sand cursor-pointer hover:border-forest transition-all has-[:checked]:border-forest has-[:checked]:bg-forest/10">
               <input type="radio" name="report-type" value="Found" class="sr-only" />
               <span class="text-base">🟢</span>
-              <span class="font-bold text-sm text-forest">Found Item</span>
+              <span class="font-bold text-sm text-forest">I found an item</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label for="input-title" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Item Title</label>
-          <input id="input-title" name="title" type="text" required placeholder="e.g. iPhone 14, Dell Laptop, Student ID Card, Bike Keys, Wallet"
+          <label for="input-title" class="block text-xs font-semibold text-gray-800 mb-1">What did you lose or find?</label>
+          <input id="input-title" name="title" type="text" required placeholder="e.g., Black wallet, Casio calculator, blue water bottle"
             class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label for="input-category" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Category</label>
+            <label for="input-category" class="block text-xs font-semibold text-gray-800 mb-1">Category</label>
             <select id="input-category" name="category" required
               class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory cursor-pointer">
               <option value="Electronics">Electronics</option>
-              <option value="ID/Wallet">ID / Wallet</option>
+              <option value="ID/Wallet">IDs &amp; Wallets</option>
               <option value="Books">Books</option>
               <option value="Keys">Keys</option>
               <option value="Accessories">Accessories</option>
@@ -1137,9 +1130,9 @@
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label for="input-location" class="block text-xs font-bold text-gray-700 uppercase tracking-wide">Campus Spot</label>
+              <label for="input-location" class="block text-xs font-semibold text-gray-800">Where on campus?</label>
               <span id="input-location-floor-badge" class="text-[10px] font-mono font-bold text-forest bg-forest/15 px-2 py-0.5 rounded">
-                FRCRCE Floor Map
+                Campus map
               </span>
             </div>
             <select id="input-location" name="location" required
@@ -1147,7 +1140,7 @@
               <!-- Dynamically populated from CampusGraph based on floormaps.vercel.app -->
             </select>
             <p class="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-              <svg class="w-3.5 h-3.5 text-forest inline shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> <span class="text-[11px]">Directly mapped to campus graph vertex for BFS proximity search &amp; route navigation.</span>
+              <svg class="w-3.5 h-3.5 text-forest inline shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> <span class="text-[11px]">Choose the floor or room so owners know where to look.</span>
             </p>
           </div>
         </div>
@@ -1156,11 +1149,11 @@
         <div class="rounded-2xl border border-forest/25 bg-gradient-to-br from-forest/5 via-ivory to-amber-50/50 p-4 shadow-xs">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg><span class="text-xs font-bold text-gray-900 tracking-tight">Autonomous Urgency Assessment</span>
+              <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg><span class="text-xs font-bold text-gray-900 tracking-tight">How urgent is this?</span>
             </div>
             <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-forest bg-forest/15 px-2 py-0.5 rounded-full border border-forest/20">
               <span class="w-1.5 h-1.5 rounded-full bg-forest animate-pulse"></span>
-              Auto-Evaluated by AI
+              Automatic urgency
             </span>
           </div>
 
@@ -1169,32 +1162,32 @@
             <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
               <div class="flex items-center gap-2">
                 <span id="llm-tier-badge" class="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-stone-500 text-white shadow-xs">
-                  Low Priority (P1)
+                  Low priority
                 </span>
-                <span id="llm-score-badge" class="text-[10px] font-mono text-gray-500 font-bold">Urgency Score: 20/100</span>
+                <span id="llm-score-badge" class="text-[10px] font-mono text-gray-500 font-bold"></span>
               </div>
-              <span id="llm-model-badge" class="text-[9px] font-mono text-forest font-semibold bg-forest/10 px-2 py-0.5 rounded">Gemini-Campus-Reasoner</span>
+              <span id="llm-model-badge" class="text-[9px] font-mono text-forest font-semibold bg-forest/10 px-2 py-0.5 rounded">Urgency guide</span>
             </div>
             <p id="llm-reasoning-text" class="text-xs text-gray-700 leading-relaxed italic">
-              "Type the item name and details above. The LLM continuously analyzes credential risk, access privilege, and replacement difficulty to assign the exact Binary Max-Heap priority tier automatically."
+              "We automatically set the urgency based on what the item is. For example, keys and wallets get high priority because you need them right away."
             </p>
             <div id="llm-factors-list" class="flex flex-wrap gap-1.5 mt-2"></div>
           </div>
           <p class="text-[10px] text-gray-500 mt-2 flex items-center gap-1 font-medium">
-            <svg class="w-3.5 h-3.5 text-slate-400 inline shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> <span>Priorities are calculated autonomously to eliminate reporter bias and preserve queue integrity.</span>
+            <svg class="w-3.5 h-3.5 text-slate-400 inline shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> <span>Urgent items like phones, IDs, and keys appear first so they can be returned quickly.</span>
           </p>
           <input type="hidden" id="input-assigned-priority" name="priority" value="1" />
         </div>
 
         <div>
-          <label for="input-description" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Description &amp; Contact Info</label>
-          <textarea id="input-description" name="description" rows="3" required placeholder="Provide details like color, distinguishing features, and contact details."
+          <label for="input-description" class="block text-xs font-semibold text-gray-800 mb-1">Description and details</label>
+          <textarea id="input-description" name="description" rows="3" required placeholder="Describe details like color, scratches, brand, or where to reach you."
             class="w-full px-4 py-2.5 text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory resize-none"></textarea>
         </div>
 
         <button type="submit"
           class="w-full visionos-btn text-white font-bold py-3.5 rounded-xl shadow-lg hover:brightness-110 transition-all">
-          Submit to Active Reports
+          Submit report
         </button>
       </form>
     </div>
@@ -1220,9 +1213,9 @@
       <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-sand-l">
         <div>
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-forest/10 flex items-center justify-center text-forest"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><h2 class="text-xl font-bold text-gray-900 tracking-tight">Claim Item Verification</h2>
+            <div class="w-8 h-8 rounded-lg bg-forest/10 flex items-center justify-center text-forest"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><h2 class="text-xl font-bold text-gray-900 tracking-tight">Claim this item</h2>
           </div>
-          <p class="text-xs text-gray-500 mt-0.5">Submit private proof to verify ownership with campus reviewer</p>
+          <p class="text-xs text-gray-500 mt-0.5">Answer a few questions so campus staff can verify this is yours.</p>
         </div>
         <button onclick="closeClaimModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1236,7 +1229,7 @@
             <span class="text-[10px] font-mono font-bold text-gray-500 bg-white px-2 py-0.5 rounded border border-sand" id="claim-item-id">REP-0000</span>
             <span class="text-[10px] font-bold text-forest bg-forest/10 px-2 py-0.5 rounded-full" id="claim-item-category">Category</span>
           </div>
-          <h3 id="claim-item-title" class="text-base font-extrabold text-gray-900">Item Title</h3>
+          <h3 id="claim-item-title" class="text-base font-extrabold text-gray-900">What did you lose or find?</h3>
           <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
             <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> <span>Found at:</span></span>
             <strong id="claim-item-location" class="text-gray-700">Location</strong>
@@ -1245,11 +1238,11 @@
 
         <div class="bg-white/90 rounded-xl p-3 border border-sand/80 flex items-center justify-between text-xs">
           <div>
-            <span class="text-gray-500 font-medium">Claimant: </span>
+            <span class="text-gray-500 font-medium">Your name: </span>
             <strong id="claimant-name-display" class="text-gray-900">Student Name</strong>
           </div>
           <div>
-            <span class="text-gray-500 font-medium">Roll No: </span>
+            <span class="text-gray-500 font-medium">Roll number: </span>
             <strong id="claimant-roll-display" class="font-mono text-terracotta font-bold">23CS101</strong>
           </div>
         </div>
@@ -1261,45 +1254,45 @@
       <!-- Claim Submission Form -->
       <form id="claim-submission-form" onsubmit="handleClaimSubmit(event)" class="px-6 pb-6 pt-2 space-y-4">
         <div>
-          <label for="claim-explanation" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">
-            Why do you believe this is your item? <span class="text-red-500">*</span>
+          <label for="claim-explanation" class="block text-xs font-semibold text-gray-800 mb-1">
+            How do you know this is yours? <span class="text-red-500">*</span>
           </label>
           <textarea id="claim-explanation" rows="3" required
-            placeholder="Explain where and when you lost it, how it looks, or circumstances that match this found report..."
+            placeholder="e.g., I left it on the canteen table after lunch around 1:30 PM."
             class="w-full px-4 py-2.5 text-xs sm:text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory resize-none"></textarea>
-          <p class="text-[10px] text-gray-500 mt-1">General description of your loss circumstances.</p>
+          <p class="text-[10px] text-gray-500 mt-1">Tell us when and where you lost it.</p>
         </div>
 
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label for="claim-details" class="block text-xs font-bold text-gray-700 uppercase tracking-wide">
-              Private Identifying Details <span class="text-red-500">*</span>
+            <label for="claim-details" class="block text-xs font-semibold text-gray-800">
+              Private identifying details <span class="text-red-500">*</span>
             </label>
             <span class="text-[10px] text-forest font-bold bg-forest/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <svg class="w-3 h-3 text-slate-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> Private to Reviewer
+              <svg class="w-3 h-3 text-slate-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> Kept private
             </span>
           </div>
           <textarea id="claim-details" rows="3" required
-            placeholder="Specific hidden details only the true owner would know: e.g. distinctive scratch, sticker, engraving, phone case color, exact contents inside, lock pattern..."
+            placeholder="e.g., Scratch on the back cover, photo inside the wallet, or lock pattern."
             class="w-full px-4 py-2.5 text-xs sm:text-sm border border-forest/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-emerald-50/20 resize-none"></textarea>
           <p class="text-[10px] text-forest font-medium mt-1">
-            Never posted publicly. Used exclusively by the campus reviewer to authenticate your claim.
+            Only campus staff will see this. It proves you're the real owner.
           </p>
         </div>
 
         <div>
-          <label for="claim-notes" class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">
-            Additional Note / Preferred Pickup Time (Optional)
+          <label for="claim-notes" class="block text-xs font-semibold text-gray-800 mb-1">
+            Pickup note (optional)
           </label>
           <input id="claim-notes" type="text"
-            placeholder="e.g. Can visit security desk between 2-4 PM; Phone: 9876543210"
+            placeholder="e.g., I can pick this up today after 3 PM. Phone: 9876543210"
             class="w-full px-4 py-2.5 text-xs sm:text-sm border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-forest bg-ivory" />
         </div>
 
         <div class="pt-2 flex gap-3">
           <button type="submit"
             class="flex-1 visionos-btn text-white font-bold py-3.5 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
-            <span>Submit Ownership Claim</span>
+            <span>Submit claim</span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
           <button type="button" onclick="closeClaimModal()"
@@ -1321,10 +1314,10 @@
       <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-sand-l">
         <div>
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-terracotta/10 flex items-center justify-center text-terracotta"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><h2 class="text-xl font-bold text-gray-900 tracking-tight">Claim Verification Dossier</h2>
+            <div class="w-8 h-8 rounded-lg bg-terracotta/10 flex items-center justify-center text-terracotta"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><h2 class="text-xl font-bold text-gray-900 tracking-tight">Review claim</h2>
           </div>
           <div class="flex items-center gap-2 mt-1">
-            <span id="review-claim-id" class="font-mono text-xs font-bold text-gray-600 bg-sand/40 px-2 py-0.5 rounded">CLM-0000</span>
+            <span id="review-claim-id" class="text-xs font-semibold text-gray-600 bg-sand/40 px-2 py-0.5 rounded">CLM-0000</span>
             <span id="review-claim-status-badge"></span>
             <span id="review-queue-position" class="hidden text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300"></span>
           </div>
@@ -1338,8 +1331,8 @@
         <!-- Item Overview & Claimant Card -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="bg-ivory rounded-2xl p-4 border border-sand">
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Found Item Reported</p>
-            <h4 id="review-item-title" class="font-extrabold text-sm text-gray-900">Item Title</h4>
+            <p class="text-[10px] font-bold text-gray-400 font-medium mb-1">Found item</p>
+            <h4 id="review-item-title" class="font-extrabold text-sm text-gray-900">What did you lose or find?</h4>
             <div class="text-xs text-gray-600 mt-1 space-y-0.5">
               <p class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> <span id="review-item-location">Location</span></p>
               <p>🏷️ <span id="review-item-category">Category</span></p>
@@ -1348,7 +1341,7 @@
           </div>
 
           <div class="bg-ivory rounded-2xl p-4 border border-sand">
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Claimant Identity</p>
+            <p class="text-[10px] font-bold text-gray-400 font-medium mb-1">Student info</p>
             <h4 id="review-claimant-name" class="font-extrabold text-sm text-gray-900">Student Name</h4>
             <div class="text-xs text-gray-600 mt-1 space-y-0.5">
               <p>🎓 Roll: <strong id="review-claimant-roll" class="font-mono text-terracotta">23CS101</strong></p>
@@ -1359,35 +1352,35 @@
 
         <!-- Ownership Explanation -->
         <div class="bg-white rounded-2xl p-4 border border-sand shadow-xs">
-          <h5 class="text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Submitted Ownership Explanation</h5>
+          <h5 class="text-xs font-semibold text-gray-800 mb-1.5">Student's explanation</h5>
           <p id="review-explanation-text" class="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap"></p>
         </div>
 
         <!-- Confidential Private Details (Highlighted) -->
         <div class="bg-gradient-to-r from-emerald-50 to-teal-50/50 rounded-2xl p-4 border-2 border-forest/30 shadow-xs">
           <div class="flex items-center justify-between mb-2">
-            <h5 class="text-xs font-bold text-forest uppercase tracking-wide flex items-center gap-1.5">
-              <span>🔒</span> Private Identifying Evidence (Confidential)
+            <h5 class="text-xs font-bold text-forest font-medium flex items-center gap-1.5">
+              <span>🔒</span> Private proof (confidential)
             </h5>
             <span class="text-[10px] font-bold text-forest-d bg-forest/10 px-2 py-0.5 rounded-full">
-              For Reviewer Eyes Only
+              Staff only
             </span>
           </div>
           <div id="review-details-text" class="text-xs sm:text-sm text-gray-800 leading-relaxed font-medium bg-white/80 p-3 rounded-xl border border-forest/20 whitespace-pre-wrap"></div>
           <p class="text-[10px] text-forest/80 mt-2 italic">
-            Check whether these private characteristics (scratches, marks, internal contents, etc.) match the physical found item in possession.
+            Check if these private details match the physical item before approving.
           </p>
         </div>
 
         <!-- Notes -->
         <div class="bg-sand/30 rounded-xl p-3 border border-sand text-xs">
-          <span class="font-bold text-gray-600">Claimant Notes: </span>
+          <span class="font-bold text-gray-600">Student's note: </span>
           <span id="review-notes-text" class="text-gray-700">None</span>
         </div>
 
         <!-- Audit & Decision History -->
         <div id="review-audit-section" class="hidden bg-stone-50 rounded-2xl p-4 border border-sand space-y-2 text-xs">
-          <h5 class="font-bold text-gray-800 uppercase tracking-wide text-[10px]">Review Audit Record</h5>
+          <h5 class="font-bold text-gray-800 font-medium text-[10px]">Review history</h5>
           <div class="flex items-center justify-between text-gray-600">
             <span>Reviewed by: <strong id="review-decision-by" class="text-gray-900">Staff</strong></span>
             <span id="review-decision-at" class="text-gray-500 font-mono">Date</span>
@@ -1403,7 +1396,7 @@
 
         <!-- Non-Reviewer Notice (if viewed in student mode) -->
         <div id="review-non-reviewer-notice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-center justify-between">
-          <span>Logged in as Student. Switch to Reviewer mode to approve or reject claims.</span>
+          <span>You're viewing as a student. Switch to reviewer mode to approve or reject claims.</span>
           <button onclick="toggleDemoRole()" class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-[10px] transition-all">
             Switch to Reviewer
           </button>
@@ -1416,15 +1409,15 @@
             <!-- Inline Approve Input Group -->
             <div id="approve-input-group" class="hidden bg-emerald-50/70 p-4 rounded-2xl border border-emerald-300 space-y-2">
               <label for="review-note-input" class="block text-xs font-bold text-forest">
-                Verification Note for Approval (Optional):
+                Note for approval (optional):
               </label>
               <input id="review-note-input" type="text"
-                placeholder="e.g. Scratches and serial marks matched physical item."
+                placeholder="e.g., Markings and details matched the item."
                 class="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest" />
               <div class="flex gap-2 justify-end pt-1">
                 <button type="button" onclick="toggleApproveInput()" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
                 <button type="button" onclick="confirmApproveClaim()" class="visionos-btn text-white text-xs font-bold px-4 py-1.5 rounded-xl">
-                  Confirm Approval
+                  Confirm approval
                 </button>
               </div>
             </div>
@@ -1432,15 +1425,15 @@
             <!-- Inline Reject Input Group -->
             <div id="reject-input-group" class="hidden bg-red-50 p-4 rounded-2xl border border-red-300 space-y-2">
               <label for="review-reject-reason-input" class="block text-xs font-bold text-red-700">
-                Reason for Rejection <span class="text-red-500">* (Required)</span>:
+                Reason for rejection <span class="text-red-500">* (required)</span>:
               </label>
               <textarea id="review-reject-reason-input" rows="2"
-                placeholder="Explain why the claim is rejected (e.g. Described markings did not match the calculator model)..."
+                placeholder="e.g., The markings described did not match the item."
                 class="w-full px-3 py-2 text-xs bg-white border border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
               <div class="flex gap-2 justify-end pt-1">
                 <button type="button" onclick="toggleRejectInput()" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
                 <button type="button" onclick="confirmRejectClaim()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded-xl transition-all">
-                  Confirm Rejection
+                  Confirm rejection
                 </button>
               </div>
             </div>
@@ -1450,12 +1443,12 @@
               <button type="button" onclick="toggleApproveInput()"
                 class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 flex items-center justify-center gap-1.5 shadow-md">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                <span>Approve Claim</span>
+                <span>Approve claim</span>
               </button>
               <button type="button" onclick="toggleRejectInput()"
                 class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                <span>Reject Claim</span>
+                <span>Reject claim</span>
               </button>
             </div>
           </div>
@@ -1464,15 +1457,15 @@
           <div id="review-handover-actions" class="hidden pt-2">
             <div class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 mb-3 text-xs text-emerald-900">
               <p class="font-bold flex items-center gap-1 text-forest">
-                <span>✓</span> Claim is Approved. Item remains in Found status until physical handover.
+                <span>✓</span> Claim approved. The item is waiting for the student to pick it up.
               </p>
               <p class="mt-1 text-emerald-700">
-                When the claimant arrives at the lost &amp; found desk and receives the item, click below to finalize handover.
+                Once the student arrives and collects their item, click below to finish the handover.
               </p>
             </div>
             <button type="button" onclick="triggerHandoverConfirmation()"
               class="w-full visionos-btn-terracotta text-white font-extrabold py-3.5 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2">
-              <span>🤝 Confirm Physical Handover &amp; Mark as Recovered</span>
+              <span>Confirm handover to student</span>
             </button>
           </div>
         </div>
@@ -1491,9 +1484,9 @@
         🤝
       </div>
 
-      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Physical Handover</h3>
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm item handover</h3>
       <p class="text-xs text-center text-gray-600 mb-4">
-        Are you certain you want to confirm handover of this item?
+        Has the student collected their item?
       </p>
 
       <div class="bg-ivory rounded-2xl p-4 border border-sand mb-5 text-xs space-y-1.5">
@@ -1503,26 +1496,25 @@
         </div>
         <div class="flex justify-between">
           <span class="text-gray-500">Item:</span>
-          <span id="handover-item-title" class="font-bold text-gray-900">Item Title</span>
+          <span id="handover-item-title" class="font-bold text-gray-900">What did you lose or find?</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500">Receiving Owner:</span>
+          <span class="text-gray-500">Student:</span>
           <span id="handover-claimant-name" class="font-bold text-forest">Student Name</span>
         </div>
       </div>
 
       <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-200 text-[11px] text-emerald-800 mb-5 space-y-1">
-        <p class="font-bold">✨ What happens next:</p>
-        <p>• Item is unlinked from Active Reports Linked List in O(n).</p>
-        <p>• Prepended into Recovery History Linked List in O(1).</p>
-        <p>• Category Hash Table index entries are cleaned up.</p>
-        <p>• Any other pending claims for this item are closed.</p>
+        <p class="font-bold">What happens next:</p>
+        <p>• The item is marked as returned and moved to history.</p>
+        <p>• It will no longer show up in active lost and found searches.</p>
+        <p>• Any other claims for this item will be closed.</p>
       </div>
 
       <div class="flex gap-3">
         <button onclick="executeHandover()"
           class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs">
-          Yes, Confirm Handover
+          Yes, complete handover
         </button>
         <button onclick="closeHandoverConfirmModal()"
           class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs">
@@ -1541,27 +1533,27 @@
     <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto z-10 border border-sand p-6">
       <div class="flex items-center justify-between pb-3 border-b border-sand">
         <div>
-          <span id="my-claim-detail-id" class="font-mono text-xs font-bold text-gray-500">CLM-0000</span>
-          <h3 id="my-claim-detail-title" class="text-base font-extrabold text-gray-900 mt-0.5">Item Title</h3>
+          <span id="my-claim-detail-id" class="text-xs font-semibold text-gray-500">CLM-0000</span>
+          <h3 id="my-claim-detail-title" class="text-base font-extrabold text-gray-900 mt-0.5">What did you lose or find?</h3>
         </div>
         <div id="my-claim-detail-status"></div>
       </div>
 
       <div class="mt-4 space-y-3.5 text-xs">
         <div>
-          <h5 class="font-bold text-gray-700 uppercase tracking-wide text-[10px] mb-1">Your Ownership Explanation</h5>
+          <h5 class="font-semibold text-gray-800 text-[10px] mb-1">Your explanation</h5>
           <p id="my-claim-detail-explanation" class="bg-ivory p-3 rounded-xl border border-sand text-gray-700 leading-relaxed whitespace-pre-wrap"></p>
         </div>
 
         <div>
-          <h5 class="font-bold text-forest uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1">
-            <span>🔒</span> Your Private Identifying Details
+          <h5 class="font-bold text-forest font-medium text-[10px] mb-1 flex items-center gap-1">
+            <span>🔒</span> Your private details
           </h5>
           <p id="my-claim-detail-evidence" class="bg-emerald-50/50 p-3 rounded-xl border border-forest/20 text-gray-800 leading-relaxed whitespace-pre-wrap font-medium"></p>
         </div>
 
         <div>
-          <h5 class="font-bold text-gray-500 uppercase tracking-wide text-[10px] mb-1">Additional Notes</h5>
+          <h5 class="font-bold text-gray-500 font-medium text-[10px] mb-1">Additional notes</h5>
           <p id="my-claim-detail-notes" class="bg-sand/30 p-2.5 rounded-xl border border-sand text-gray-600"></p>
         </div>
       </div>
@@ -1586,9 +1578,9 @@
         ↶
       </div>
 
-      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Undo Last Action</h3>
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Undo last action</h3>
       <p class="text-xs text-center text-gray-600 mb-4">
-        Are you sure you want to reverse this administrative action?
+        Do you want to undo your last action?
       </p>
 
       <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
@@ -1615,7 +1607,7 @@
         <button onclick="confirmUndoModalAction()"
           class="flex-1 visionos-btn-terracotta text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6"/></svg>
-          <span>Yes, Undo Action</span>
+          <span>Yes, undo action</span>
         </button>
         <button onclick="closeUndoConfirmModal()"
           class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
@@ -1636,9 +1628,9 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="text-xl">📜</span>
-            <h3 class="text-lg font-extrabold text-gray-900">Admin Undo Stack History</h3>
+            <h3 class="text-lg font-extrabold text-gray-900">Recent staff actions</h3>
           </div>
-          <p class="text-xs text-gray-500 mt-0.5">LIFO Order · Most recent action is at the top of the stack</p>
+          <p class="text-xs text-gray-500 mt-0.5">Most recent actions are listed first</p>
         </div>
         <button onclick="closeUndoHistoryModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1652,7 +1644,7 @@
       <div class="p-4 bg-stone-50 border-t border-sand flex items-center justify-between gap-3">
         <button onclick="clearUndoHistory()"
           class="text-xs font-bold text-red-600 hover:text-red-700 px-3 py-2 rounded-xl hover:bg-red-50 border border-red-200 transition-all cursor-pointer">
-          🗑️ Clear Stack
+          Clear action history
         </button>
         <button onclick="closeUndoHistoryModal()"
           class="visionos-btn text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer">
@@ -1673,9 +1665,9 @@
         🎉
       </div>
 
-      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Confirm Item Found</h3>
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Did you find your item?</h3>
       <p class="text-xs text-center text-gray-600 mb-4">
-        Did you find your missing item?
+        Glad you found it! We'll move it to resolved history.
       </p>
 
       <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
@@ -1696,16 +1688,15 @@
       <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-200 text-[11px] text-emerald-900 mb-5">
         <p class="font-bold mb-1">📋 What happens next:</p>
         <p class="leading-relaxed">
-          • Item will be marked as <strong>Found</strong> and moved to resolved recovery history.<br>
-          • It will be unlinked from active campus lost-item listings in O(1).<br>
-          • This prevents further changes to a resolved report while preserving record history.
+          • This report will be marked as found and moved to your history.<br>
+          • It will be removed from active campus listings so others know it's resolved.
         </p>
       </div>
 
       <div class="flex gap-3">
         <button id="btn-confirm-mark-found" onclick="confirmMarkLostItemFound()"
           class="flex-1 visionos-btn text-white font-bold py-3 rounded-xl transition-all hover:brightness-110 shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
-          <span>✨ Yes, Mark as Found</span>
+          <span>Yes, mark as found</span>
         </button>
         <button onclick="closeMarkFoundConfirmModal()"
           class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
@@ -1726,9 +1717,9 @@
         🗑️
       </div>
 
-      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Remove Lost Item Report</h3>
+      <h3 class="text-lg font-black text-center text-gray-900 mb-1">Delete this report</h3>
       <p class="text-xs text-center text-gray-600 mb-4">
-        Are you sure you want to remove your report?
+        Are you sure you want to delete this report?
       </p>
 
       <div class="bg-ivory rounded-2xl p-4 border border-sand mb-4 text-xs space-y-2">
@@ -1745,16 +1736,15 @@
       <div class="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[11px] text-amber-900 mb-5">
         <p class="font-bold mb-1">⚠️ Notice:</p>
         <p class="leading-relaxed">
-          • Your report will be unlinked from active listings in O(1).<br>
-          • Other students will no longer see it in campus searches.<br>
-          • Related records and claim histories are safely preserved per data-integrity rules.
+          • Your report will be removed from active campus listings.<br>
+          • Other students and staff won't see it in searches anymore.
         </p>
       </div>
 
       <div class="flex gap-3">
         <button id="btn-confirm-remove-report" onclick="confirmRemoveReport()"
           class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer">
-          <span>🗑️ Yes, Remove Report</span>
+          <span>Yes, delete report</span>
         </button>
         <button onclick="closeRemoveReportConfirmModal()"
           class="px-5 py-3 border-2 border-sand text-gray-700 font-bold rounded-xl transition-all hover:bg-gray-50 text-xs cursor-pointer">
